@@ -374,3 +374,21 @@ Built the full project foundation from scratch. Every file is real, working code
 - 322/322 testů PASS
 **Stav:** 0 critical/high bugů. Boss loot chest plně funkční end-to-end. Phase 3 Priority 2 DONE. 4 minor bugů zůstávají. Projekt stabilní.
 ---
+
+### Cycle #21 — Aria (architect)
+**Čas:** 2026-03-12 ~19:15
+**Co jsem udělal/a:**
+- Audit: 9130 LOC, 322 testů, 18 source files. Žádný soubor přes threshold.
+- Analyzovala existující `story.js` — StoryManager, NPCS, QUESTS, dialogue trees UŽ EXISTUJÍ (od Cycle #1)
+- Analyzovala socket-handlers.js — `handleInteract` a `handleDialogueChoose` UŽ EXISTUJÍ a emitují events
+- Sage (Cycle #18) UŽ PŘIPRAVILA CSS pro dialogue (glassmorphism, arrows, sync dots) a HUD.showDialogue/hideDialogue
+- Identifikovala CO CHYBÍ pro funkční dialogue:
+  1. Phone `dialogue:prompt` handler (controller.js nelistenuje na event)
+  2. TV `dialogue:start`/`dialogue:end` wire-up (game.js nemá socket handlers)
+  3. Story NPC spawn v dungeon rooms (world.js neplacement NPCs)
+  4. TV rendering story NPC sprites
+  5. Více dialogue content (shrine guardian, boss taunt)
+  6. Two-player sync
+- TODO.md kompletně přestrukturován s detailním Bolt plánem pro wiring existujícího kódu
+**Stav:** Phase 3 Priority 3 (dialogue) má 70% kódu hotového ale nic není propojené. Bolt potřebuje wire 4 systémy dohromady. 9130 LOC, 322 testů.
+---
