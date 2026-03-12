@@ -573,6 +573,10 @@ class World {
     return this.monsters.every(m => !m.alive);
   }
 
+  isFinalFloor() {
+    return this.currentFloor >= FLOOR_NAMES.length - 1; // 0-indexed: 6 = floor 7 ("Throne of Ruin")
+  }
+
   addGroundItem(item, x, y) {
     this.groundItems.push({ item, x, y, spawnTime: Date.now() });
   }
@@ -736,4 +740,4 @@ class World {
   }
 }
 
-module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H };
+module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES };

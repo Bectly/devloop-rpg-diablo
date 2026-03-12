@@ -87,6 +87,37 @@ const PREFIXES = {
   legendary: ['Godslayer', 'Ancient', 'Eternal', 'Void-Touched'],
 };
 
+// Name suffixes based on highest bonus stat
+const SUFFIXES = {
+  str: ['of the Bear', 'of Might', 'of the Titan', 'of Brawn'],
+  dex: ['of the Fox', 'of Agility', 'of the Wind', 'of Swiftness'],
+  int: ['of Wisdom', 'of the Sage', 'of Arcana', 'of the Mind'],
+  vit: ['of Vitality', 'of the Oak', 'of Endurance', 'of Fortitude'],
+  armor: ['of the Fortress', 'of Warding', 'of the Bulwark', 'of Iron'],
+  damage: ['of Slaying', 'of Ruin', 'of Carnage', 'of the Destroyer'],
+};
+
+// Unique handcrafted names for legendary items
+const LEGENDARY_NAMES = {
+  weapon: {
+    sword: ['Shadowfang', 'Dawnbreaker', 'Soul Reaver', 'Grimthorn', 'Moonblade'],
+    axe: ['Skullcleaver', 'Worldsplitter', 'Ragecutter', 'Bonegrinder', 'Hellchopper'],
+    bow: ['Whisperstring', 'Deathsong', 'Starfall', 'Voidshot', 'Ghostaim'],
+    staff: ['Mindshatter', 'Thundercall', 'Frostweave', 'Dreamspire', 'Runekeeper'],
+    dagger: ['Viperstrike', 'Nightwhisper', 'Bloodthorn', 'Silentshadow', 'Deathkiss'],
+  },
+  armor: {
+    plate: ['Aegis of the Fallen', 'Ironheart Bulwark', 'Titan\'s Embrace', 'Doomplate', 'Dragonscale Mail'],
+    leather: ['Shadowskin', 'Windrunner\'s Hide', 'Nightstalker Vest', 'Ghostweave', 'Serpent\'s Coil'],
+    cloth: ['Archmage\'s Shroud', 'Voidweave Robe', 'Starlight Mantle', 'Dreamcloth', 'Whispersilk'],
+    shield: ['Bulwark of Ages', 'Demonward', 'Sentinel\'s Wall', 'Stonebreaker', 'Aegis Eternal'],
+  },
+  accessory: {
+    ring: ['Band of the Infinite', 'Serpent\'s Coil', 'Signet of Ruin', 'Ring of Echoes', 'Voidcircle'],
+    amulet: ['Heart of the Mountain', 'Eye of the Abyss', 'Soulchain', 'Pendant of Ages', 'Starcore'],
+  },
+};
+
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -127,6 +158,39 @@ function generateBonuses(rarity) {
   return bonuses;
 }
 
+function getSuffix(bonuses) {
+  if (!bonuses || Object.keys(bonuses).length === 0) return '';
+  let maxStat = null, maxVal = 0;
+  for (const [stat, val] of Object.entries(bonuses)) {
+    if (val > maxVal) { maxStat = stat; maxVal = val; }
+  }
+  if (!maxStat || !SUFFIXES[maxStat]) return '';
+  const pool = SUFFIXES[maxStat];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function getLegendaryName(category, subType) {
+  const pool = LEGENDARY_NAMES[category] && LEGENDARY_NAMES[category][subType];
+  if (!pool || pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function buildItemName(prefix, baseName, rarity, bonuses, category, subType) {
+  if (rarity === 'legendary') {
+    const uniqueName = getLegendaryName(category, subType);
+    if (uniqueName) return uniqueName;
+  }
+  if (rarity === 'epic') {
+    const suffix = getSuffix(bonuses);
+    return suffix ? `${prefix} ${baseName} ${suffix}` : `${prefix} ${baseName}`;
+  }
+  if (rarity === 'rare' && Math.random() < 0.6) {
+    const suffix = getSuffix(bonuses);
+    return suffix ? `${prefix} ${baseName} ${suffix}` : `${prefix} ${baseName}`;
+  }
+  return `${prefix} ${baseName}`;
+}
+
 function generateWeapon(tierBoost = 0) {
   const keys = Object.keys(WEAPONS);
   const base = WEAPONS[keys[randomInt(0, keys.length - 1)]];
@@ -139,7 +203,7 @@ function generateWeapon(tierBoost = 0) {
 
   return {
     id: uuidv4(),
-    name: `${prefix} ${base.name}`,
+    name: buildItemName(prefix, base.name, rarity, bonuses, 'weapon', base.subType),
     type: base.type,
     subType: base.subType,
     slot: base.slot,
@@ -168,7 +232,7 @@ function generateArmor(tierBoost = 0) {
 
   return {
     id: uuidv4(),
-    name: `${prefix} ${base.name}`,
+    name: buildItemName(prefix, base.name, rarity, bonuses, 'armor', base.subType),
     type: base.type,
     subType: base.subType,
     slot: base.slot,
@@ -193,7 +257,7 @@ function generateAccessory(tierBoost = 0) {
   const bonuses = generateBonuses(rarity);
   const item = {
     id: uuidv4(),
-    name: `${prefix} ${base.name}`,
+    name: buildItemName(prefix, base.name, rarity, bonuses, 'accessory', base.subType),
     type: base.type,
     subType: base.subType,
     slot: base.slot,
@@ -279,8 +343,11 @@ function generateLoot(lootTier, monsterType, floor = 0) {
       bossItem.rarity = 'rare';
       bossItem.rarityColor = RARITIES.rare.color;
       const prefix = PREFIXES.rare[randomInt(0, PREFIXES.rare.length - 1)];
-      const baseName = bossItem.name.split(' ').slice(1).join(' ');
-      bossItem.name = `${prefix} ${baseName}`;
+      // Extract the base item name (last word(s) after the old prefix)
+      const nameParts = bossItem.name.split(' ');
+      const baseName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0];
+      const category = bossItem.type === 'weapon' ? 'weapon' : (bossItem.type === 'accessory' ? 'accessory' : 'armor');
+      bossItem.name = buildItemName(prefix, baseName, 'rare', bossItem.bonuses, category, bossItem.subType);
     }
     drops.push(bossItem);
   }

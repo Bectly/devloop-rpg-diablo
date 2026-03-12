@@ -125,6 +125,9 @@ class Player {
     // Gold
     this.gold = 0;
 
+    // Kill counter (for victory stats)
+    this.kills = 0;
+
     // Quests
     this.questManager = new QuestManager();
 

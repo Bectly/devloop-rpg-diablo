@@ -196,6 +196,51 @@ window.Sound = {
     }, 200);
   },
 
+  victory() {
+    // Epic victory fanfare — ascending major chord arpeggio + triumphant finale
+    if (!this.ctx || this._muted) return;
+    const t = this.ctx.currentTime;
+    // First: ascending arpeggio C-E-G-C (celebratory)
+    const notes = [523, 659, 784, 1047, 1319];
+    notes.forEach((freq, i) => {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.2 * this.masterVol, t + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.5);
+      g.connect(this.ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, t + i * 0.12);
+      o.connect(g);
+      o.start(t + i * 0.12);
+      o.stop(t + i * 0.12 + 0.5);
+    });
+    // Triumphant chord at the end
+    const chordStart = t + 0.7;
+    [523, 659, 784, 1047].forEach(freq => {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.15 * this.masterVol, chordStart);
+      g.gain.exponentialRampToValueAtTime(0.001, chordStart + 1.5);
+      g.connect(this.ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, chordStart);
+      o.connect(g);
+      o.start(chordStart);
+      o.stop(chordStart + 1.6);
+    });
+    // Sub-bass rumble for grandeur
+    const sub = this.ctx.createOscillator();
+    const sg = this.ctx.createGain();
+    sg.gain.setValueAtTime(0.15 * this.masterVol, chordStart);
+    sg.gain.exponentialRampToValueAtTime(0.001, chordStart + 1.8);
+    sg.connect(this.ctx.destination);
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(65, chordStart);
+    sub.connect(sg);
+    sub.start(chordStart);
+    sub.stop(chordStart + 2.0);
+  },
+
   floorTransition() {
     // Low sweep + reverb-like decay
     if (!this.ctx || this._muted) return;

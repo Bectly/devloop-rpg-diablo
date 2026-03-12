@@ -893,6 +893,192 @@ window.HUD = {
     });
   },
 
+  // ── Victory Screen ──
+  _victoryObjects: null,
+
+  showVictoryScreen(scene, data) {
+    const GAME_W = 1280;
+    const GAME_H = 720;
+
+    // Clean up any previous victory screen
+    HUD._destroyVictoryScreen();
+
+    const objs = [];
+
+    // Dark overlay with gold tint
+    const overlay = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x0a0805, 0.92)
+      .setScrollFactor(0).setDepth(3000);
+    objs.push(overlay);
+
+    // Decorative gold border lines
+    const borderTop = scene.add.rectangle(GAME_W / 2, 30, GAME_W - 100, 2, 0xffd700, 0.6)
+      .setScrollFactor(0).setDepth(3001);
+    const borderBot = scene.add.rectangle(GAME_W / 2, GAME_H - 30, GAME_W - 100, 2, 0xffd700, 0.6)
+      .setScrollFactor(0).setDepth(3001);
+    objs.push(borderTop, borderBot);
+
+    // "DUNGEON CONQUERED" title with glow
+    const titleGlow = scene.add.text(GAME_W / 2, 140, 'DUNGEON CONQUERED', {
+      fontSize: '48px', fontFamily: 'Courier New', color: '#ffd700', fontStyle: 'bold',
+      stroke: '#aa8800', strokeThickness: 6,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+    objs.push(titleGlow);
+
+    // Subtitle
+    const subtitle = scene.add.text(GAME_W / 2, 190, 'The Throne of Ruin has fallen', {
+      fontSize: '16px', fontFamily: 'Courier New', color: '#ccaa66',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+    objs.push(subtitle);
+
+    // Time display
+    const totalSecs = Math.floor((data.totalTime || 0) / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    const timeStr = `Time: ${mins}m ${secs.toString().padStart(2, '0')}s`;
+    const timeText = scene.add.text(GAME_W / 2, 230, timeStr, {
+      fontSize: '14px', fontFamily: 'Courier New', color: '#888888',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+    objs.push(timeText);
+
+    // Player stat cards
+    const playerData = data.players || [];
+    const cardWidth = 280;
+    const totalWidth = playerData.length * cardWidth + (playerData.length - 1) * 40;
+    const startX = (GAME_W - totalWidth) / 2 + cardWidth / 2;
+
+    const classIcons = { warrior: '\u2694', ranger: '\uD83C\uDFF9', mage: '\uD83D\uDD2E' };
+
+    for (let i = 0; i < playerData.length; i++) {
+      const p = playerData[i];
+      const cx = startX + i * (cardWidth + 40);
+      const cy = 380;
+
+      // Card background
+      const card = scene.add.rectangle(cx, cy, cardWidth, 200, 0x1a1a2e, 0.8)
+        .setStrokeStyle(2, 0xffd700, 0.4).setScrollFactor(0).setDepth(3001).setAlpha(0);
+      objs.push(card);
+
+      // Class icon
+      const icon = scene.add.text(cx, cy - 70, classIcons[p.characterClass] || '\u2694', {
+        fontSize: '32px', fontFamily: 'Courier New',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+      objs.push(icon);
+
+      // Player name
+      const nameText = scene.add.text(cx, cy - 35, p.name, {
+        fontSize: '20px', fontFamily: 'Courier New', color: '#ffffff', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+      objs.push(nameText);
+
+      // Class label
+      const classText = scene.add.text(cx, cy - 12, p.characterClass.toUpperCase(), {
+        fontSize: '11px', fontFamily: 'Courier New', color: '#ffd700',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+      objs.push(classText);
+
+      // Stats
+      const statsLines = [
+        `Level ${p.level}`,
+        `${p.kills} kills`,
+        `${p.gold}g earned`,
+      ];
+      for (let j = 0; j < statsLines.length; j++) {
+        const statText = scene.add.text(cx, cy + 15 + j * 22, statsLines[j], {
+          fontSize: '14px', fontFamily: 'Courier New', color: '#aaaaaa',
+          stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+        objs.push(statText);
+      }
+    }
+
+    // "Waiting for NEW GAME..." text at bottom
+    const waitText = scene.add.text(GAME_W / 2, GAME_H - 70, 'Awaiting new game from controllers...', {
+      fontSize: '12px', fontFamily: 'Courier New', color: '#666666',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3002).setAlpha(0);
+    objs.push(waitText);
+
+    // Animate everything in with staggered timing
+    // Title first
+    scene.tweens.add({
+      targets: titleGlow, alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 800, delay: 200, ease: 'Back.easeOut',
+    });
+    titleGlow.setScale(0.5);
+
+    // Subtitle
+    scene.tweens.add({
+      targets: subtitle, alpha: 1, duration: 600, delay: 600,
+    });
+
+    // Time
+    scene.tweens.add({
+      targets: timeText, alpha: 1, duration: 400, delay: 800,
+    });
+
+    // Player cards — stagger by 200ms each
+    const cardObjs = objs.filter(o => o !== overlay && o !== borderTop && o !== borderBot
+      && o !== titleGlow && o !== subtitle && o !== timeText && o !== waitText);
+    cardObjs.forEach((obj, i) => {
+      scene.tweens.add({
+        targets: obj, alpha: 1, duration: 400, delay: 1000 + i * 50,
+      });
+    });
+
+    // Wait text
+    scene.tweens.add({
+      targets: waitText, alpha: 0.6, duration: 400, delay: 2000,
+    });
+    // Pulsing wait text
+    scene.tweens.add({
+      targets: waitText, alpha: { from: 0.4, to: 0.8 },
+      duration: 1200, delay: 2500, yoyo: true, repeat: -1,
+    });
+
+    // Gold celebration particles floating upward
+    for (let i = 0; i < 40; i++) {
+      const px = Math.random() * GAME_W;
+      const py = GAME_H + 20;
+      const particle = scene.add.graphics().setScrollFactor(0).setDepth(3003);
+      const size = 1.5 + Math.random() * 3;
+      const gold = 0xffd700 + Math.floor(Math.random() * 0x002200);
+      particle.fillStyle(gold, 0.7);
+      particle.fillCircle(0, 0, size);
+      particle.setPosition(px, py);
+      objs.push(particle);
+
+      // Float upward with drift
+      scene.tweens.add({
+        targets: particle,
+        y: -30,
+        x: px + (Math.random() - 0.5) * 100,
+        alpha: 0,
+        duration: 4000 + Math.random() * 4000,
+        delay: Math.random() * 3000,
+        repeat: -1,
+        onRepeat: () => {
+          particle.setPosition(Math.random() * GAME_W, GAME_H + 20);
+          particle.setAlpha(0.7);
+        },
+      });
+    }
+
+    HUD._victoryObjects = objs;
+  },
+
+  _destroyVictoryScreen() {
+    if (HUD._victoryObjects) {
+      HUD._victoryObjects.forEach(obj => {
+        if (obj && obj.destroy) obj.destroy();
+      });
+      HUD._victoryObjects = null;
+    }
+  },
+
   // ── Cleanup on scene shutdown ──
   shutdown() {
     for (const obj of this._activeBannerObjs) {
@@ -919,6 +1105,8 @@ window.HUD = {
     }
     // Clean up any active dialogue overlay
     HUD._forceDestroyDialogue();
+    // Clean up victory screen
+    HUD._destroyVictoryScreen();
     // Clean up any active loot chests
     if (HUD._chests) {
       for (const id in HUD._chests) {

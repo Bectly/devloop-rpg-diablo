@@ -104,7 +104,8 @@ class CombatSystem {
       };
       this.events.push(deathEvent);
 
-      // Award XP
+      // Award XP and track kill
+      player.kills = (player.kills || 0) + 1;
       const levelResult = player.gainXp(nearest.xpReward);
       if (levelResult) {
         this.events.push({
@@ -158,6 +159,7 @@ class CombatSystem {
             });
 
             if (!monster.alive) {
+              player.kills = (player.kills || 0) + 1;
               const loot = generateLoot(monster.lootTier, monster.type);
               results.push({
                 type: 'combat:death',
@@ -210,6 +212,7 @@ class CombatSystem {
           });
 
           if (!nearest.alive) {
+            player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(nearest.lootTier, nearest.type);
             results.push({
               type: 'combat:death',
@@ -258,6 +261,7 @@ class CombatSystem {
           });
 
           if (!t.alive) {
+            player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(t.lootTier, t.type);
             results.push({
               type: 'combat:death',
@@ -311,6 +315,7 @@ class CombatSystem {
           });
 
           if (!nearest.alive) {
+            player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(nearest.lootTier, nearest.type);
             results.push({
               type: 'combat:death',

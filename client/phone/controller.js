@@ -219,6 +219,20 @@ socket.on('quest:claimed', (data) => {
   Screens.updateQuestBadge(questData);
 });
 
+socket.on('game:victory', (data) => {
+  console.log('[Phone] VICTORY!', data);
+  Sound.victory();
+
+  // Victory haptic pattern
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+
+  showVictoryScreen(data);
+});
+
+socket.on('game:restarted', () => {
+  hideVictoryScreen();
+});
+
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');
   showNotification('Disconnected from server', 'error');
@@ -286,6 +300,61 @@ function hideDeathScreen() {
   }
   const deathEl = document.getElementById('death-overlay');
   if (deathEl) deathEl.classList.add('hidden');
+}
+
+// ─── Victory Screen ──────────────────────────────────────────────
+function showVictoryScreen(data) {
+  const victoryEl = document.getElementById('victory-overlay');
+  if (!victoryEl) return;
+  victoryEl.classList.remove('hidden');
+
+  // Time display
+  const totalSecs = Math.floor((data.totalTime || 0) / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  document.getElementById('victory-time').textContent = `Time: ${mins}m ${secs.toString().padStart(2, '0')}s`;
+
+  // Player stats
+  const statsEl = document.getElementById('victory-stats');
+  statsEl.innerHTML = '';
+  const classIcons = { warrior: '\u2694\uFE0F', ranger: '\uD83C\uDFF9', mage: '\uD83D\uDD2E' };
+
+  for (const p of (data.players || [])) {
+    const card = document.createElement('div');
+    card.className = 'victory-player-card';
+    card.innerHTML = `
+      <div class="victory-player-icon">${classIcons[p.characterClass] || '\u2694\uFE0F'}</div>
+      <div class="victory-player-info">
+        <div class="victory-player-name">${p.name}</div>
+        <div class="victory-player-class">${p.characterClass}</div>
+        <div class="victory-player-stats">Lv.${p.level} &middot; ${p.kills} kills &middot; ${p.gold}g</div>
+      </div>
+    `;
+    statsEl.appendChild(card);
+  }
+
+  // New Game button handler
+  const newGameBtn = document.getElementById('btn-new-game');
+  // Remove old listener by cloning
+  const freshBtn = newGameBtn.cloneNode(true);
+  newGameBtn.parentNode.replaceChild(freshBtn, newGameBtn);
+
+  const handleNewGame = () => {
+    Sound.uiClick();
+    if (navigator.vibrate) navigator.vibrate(50);
+    socket.emit('game:restart');
+    hideVictoryScreen();
+  };
+  freshBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handleNewGame();
+  });
+  freshBtn.addEventListener('click', handleNewGame);
+}
+
+function hideVictoryScreen() {
+  const victoryEl = document.getElementById('victory-overlay');
+  if (victoryEl) victoryEl.classList.add('hidden');
 }
 
 // ─── HUD Update ─────────────────────────────────────────────────

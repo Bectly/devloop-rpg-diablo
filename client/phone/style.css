@@ -1462,3 +1462,138 @@ html, body {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Victory Overlay ──────────────────────────────────────── */
+#victory-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(26, 18, 8, 0.95) 0%, rgba(10, 10, 18, 0.98) 100%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: victory-fade-in 0.6s ease;
+}
+
+@keyframes victory-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#victory-content {
+  text-align: center;
+  padding: 24px;
+  max-width: 340px;
+  width: 100%;
+}
+
+#victory-crown {
+  font-size: 48px;
+  animation: victory-pulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
+  margin-bottom: 8px;
+}
+
+@keyframes victory-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+#victory-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  animation: victory-title-in 0.8s ease backwards 0.3s;
+}
+
+@keyframes victory-title-in {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+#victory-subtitle {
+  font-size: 12px;
+  color: #ccaa66;
+  margin-bottom: 16px;
+  animation: victory-title-in 0.6s ease backwards 0.6s;
+}
+
+#victory-time {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 20px;
+  animation: victory-title-in 0.5s ease backwards 0.8s;
+}
+
+#victory-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  animation: victory-title-in 0.5s ease backwards 1.0s;
+}
+
+.victory-player-card {
+  background: rgba(255, 215, 0, 0.06);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.victory-player-icon {
+  font-size: 24px;
+  width: 36px;
+  text-align: center;
+}
+
+.victory-player-info {
+  flex: 1;
+  text-align: left;
+}
+
+.victory-player-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.victory-player-class {
+  font-size: 10px;
+  color: #ffd700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.victory-player-stats {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+#btn-new-game {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #ffd700, #ff8800);
+  border: none;
+  border-radius: 12px;
+  color: #0a0a12;
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+  animation: victory-title-in 0.5s ease backwards 1.3s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#btn-new-game:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 10px rgba(255, 215, 0, 0.5);
+}

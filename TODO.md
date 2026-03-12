@@ -17,59 +17,27 @@
 - Sound effects system (13 procedural Web Audio sounds, TV + phone wired)
 - Two-player dialogue sync (vote collection, timeout, majority wins)
 - All bugs fixed through Cycle #30 (sprite null guards, sound bufSize, TV audio unlock)
+- game.js split → sprites.js (1553 → 1057 LOC) — Cycle #32
+- Victory condition + endgame screens (server + TV + phone) — Cycle #32
+- Procedural loot names (suffixes, legendary unique names) — Cycle #32
 
 ---
 
-## 🔥 BOLT CYCLE #32 PRIORITIES
+## 🔥 NEXT PRIORITIES (Phase 5: Persistence & Scale)
 
-### Priority 1: URGENT — Split game.js (1553 LOC, over 1500 threshold)
+### Priority 1: SQLite character save/load
+- `better-sqlite3` already in package.json but unused
+- New file: `server/game/database.js`
+- Schema: `characters` table (name, class, level, xp, stats JSON, equipment JSON, inventory JSON, gold, floor, kills)
+- Auto-save on floor transition + every 60s
+- Load on reconnect (match by player name)
+- Migrate Player constructor to accept saved data
 
-**1A. Extract `client/tv/sprites.js`** — all sprite creation/update/cleanup
-Move these out of game.js into a `window.Sprites` global:
-- `createPlayerSprite()`, `updatePlayerSprite()`, player sprite cleanup
-- `createMonsterSprite()`, `updateMonsterSprite()`, monster sprite cleanup (including null guards)
-- `createItemSprite()`, item sprite cleanup
-- Story NPC sprite creation (triangular sage, armored guardian, hunched herald), glow rings, "!" markers
-- NPC sprite cleanup (both in-update and dungeon:enter paths)
-- All `killTweensOf()` calls for sprite sub-objects
-
-Target: game.js drops to ~1000 LOC, sprites.js ~550 LOC.
-
-Script load order in tv/index.html: `phaser → socket.io → sound.js → sprites.js → hud.js → game.js`
-
-### Priority 2: Victory condition + endgame (CRITICAL gameplay gap)
-
-The game has 7 named floors but NO end state. Players can generate floors infinitely.
-
-**2A. Floor 7 boss = final boss** — `server/game/world.js`
-- After floor 7 boss dies → emit `game:victory` event instead of spawning exit
-- Victory data: `{ players: [{name, class, level, kills, gold}], floors: 7, time: elapsed }`
-
-**2B. TV victory screen** — `client/tv/game.js` (or hud.js)
-- On `game:victory`: fade to gold overlay, "DUNGEON CONQUERED" title with particle celebration
-- Show player stats (class, level, kills, gold collected)
-- "Play Again?" prompt
-
-**2C. Phone victory screen** — `client/phone/controller.js`
-- On `game:victory`: show victory panel with stats + "NEW GAME" button
-- Haptic burst (200ms vibrate)
-
-**2D. Server reset** — `server/index.js`
-- On "new game" from both players → `world.generateFloor(0)`, reset player stats to level 1
-- OR: keep levels, restart dungeon (NG+ lite)
-
-### Priority 3: Procedural loot names (quick win, big flavor)
-
-Current items are "Worn Sword", "Mythic Plate Helmet" — generic prefix + type.
-
-**3A. Name generator** — `server/game/items.js`
-Add procedural name parts:
-```
-Prefixes by rarity: Rusty, Sturdy, Gleaming, Infernal, Godforged
-Suffixes: "of the Bear" (+STR), "of the Fox" (+DEX), "of Wisdom" (+INT), "of Vitality" (+VIT)
-Legendary names: handcrafted pool of 15-20 unique names ("Shadowfang", "Dawnbreaker", etc.)
-```
-Result: "Gleaming Axe of the Bear" (rare, +STR) or "Shadowfang" (legendary).
+### Priority 2: Session reconnection
+- On disconnect → keep player alive for 30s (grace period)
+- On reconnect within grace → restore full state
+- On reconnect after grace → load from SQLite
+- Phone shows "Reconnecting..." overlay with countdown
 
 ---
 
@@ -99,10 +67,10 @@ Result: "Gleaming Axe of the Bear" (rare, +STR) or "Shadowfang" (legendary).
 
 ---
 
-## Architecture Notes (Updated Cycle #31)
-**Current LOC:** ~10,650 source + 3,500 tests = 14,150 total (21 source files, 10 test suites, 365 tests)
-**URGENT SPLIT:** `game.js` at 1553 lines — OVER 1500 threshold. Extract sprite logic into `sprites.js`.
-**Watch:** `controller.js` at 873, `socket-handlers.js` at 736 — both under threshold but growing.
+## Architecture Notes (Updated Cycle #32)
+**Current LOC:** ~11,500 source + 3,500 tests = 15,000 total (22 source files, 10 test suites, 365 tests)
+**Split DONE:** game.js 1553 → 1057 LOC. New sprites.js at 549 LOC.
+**Watch:** `controller.js` at ~900 (grew with victory screen), `socket-handlers.js` at 736 — both approaching threshold.
 **No persistence yet.** `better-sqlite3` in package.json, not imported anywhere.
 
 ## Open Bugs

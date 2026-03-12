@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const { Player, DEATH_GOLD_DROP_PERCENT } = require('./game/player');
-const { World, TILE, TILE_SIZE } = require('./game/world');
+const { World, TILE, TILE_SIZE, FLOOR_NAMES } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
@@ -49,6 +49,10 @@ const story = new StoryManager();
 world.generateFloor(0);
 story.placeNpcs(world.storyNpcs || []);
 console.log(`[World] Loaded floor: ${world.roomName}`);
+
+// Track game start time for victory stats
+let gameStartTime = Date.now();
+let gameWon = false;
 
 // ─── Socket.io: TV Namespace ───────────────────────────────────
 const gameNs = io.of('/game');
@@ -101,6 +105,56 @@ controllerNs.on('connection', (socket) => {
   socket.on('shrine:use', () => handlers.handleShrineUse(socket, null, ctx));
   socket.on('quest:claim', (data) => handlers.handleQuestClaim(socket, data, ctx));
   socket.on('chest:open', (data) => handlers.handleChestOpen(socket, data, ctx));
+
+  // ── New Game (restart after victory) ──
+  socket.on('game:restart', () => {
+    console.log('[Game] Restart requested — regenerating dungeon from floor 0');
+    gameWon = false;
+    gameStartTime = Date.now();
+    world.generateFloor(0);
+    story.placeNpcs(world.storyNpcs || []);
+
+    // Reposition all players, keep levels (NG+ lite)
+    let idx = 0;
+    for (const [sid, p] of players) {
+      const spawn = world.getSpawnPosition(idx);
+      p.x = spawn.x;
+      p.y = spawn.y;
+      p.setRespawnPoint(spawn.x, spawn.y);
+      p.kills = 0;
+      p.alive = true;
+      p.isDying = false;
+      p.deathTimer = 0;
+      p.hp = p.maxHp;
+      p.mp = p.maxMp;
+      idx++;
+    }
+
+    gameNs.emit('dungeon:enter', {
+      room: world.serialize(),
+      story: story.serialize(),
+      floor: world.currentFloor,
+      floorName: world.floorName,
+    });
+
+    controllerNs.emit('floor:change', {
+      floor: world.currentFloor,
+      floorName: world.floorName,
+    });
+    controllerNs.emit('notification', { text: `New Game! Floor 1: ${world.floorName}`, type: 'quest' });
+
+    // Generate fresh quests + update all phone stats
+    for (const [sid, p] of players) {
+      p.questManager.generateForFloor(0);
+      const sock = controllerNs.sockets.get(sid);
+      if (sock) {
+        sock.emit('stats:update', p.serializeForPhone());
+        sock.emit('quest:update', p.questManager.getActiveQuests());
+        sock.emit('game:restarted', {});
+      }
+    }
+  });
+
   socket.on('disconnect', () => handlers.handleDisconnect(socket, null, ctx));
 });
 
@@ -356,7 +410,7 @@ function gameLoop() {
   }
 
   // Check if player is on exit (floor progression)
-  if (!world.exitLocked && !world._advancing) {
+  if (!world.exitLocked && !world._advancing && !gameWon) {
     for (const player of allPlayers) {
       if (!player.alive || player.isDying) continue;
       if (world.isPlayerOnExit(player)) {
@@ -364,6 +418,31 @@ function gameLoop() {
         console.log(`[World] ${player.name} reached the exit! Advancing to floor ${world.currentFloor + 2}...`);
 
         setTimeout(() => {
+          // ── VICTORY CHECK: If on final floor, emit victory instead of advancing ──
+          if (world.isFinalFloor()) {
+            gameWon = true;
+            const elapsed = Date.now() - gameStartTime;
+            const playerStats = Array.from(players.values()).map(p => ({
+              name: p.name,
+              characterClass: p.characterClass,
+              level: p.level,
+              kills: p.kills || 0,
+              gold: p.gold,
+            }));
+
+            const victoryData = {
+              players: playerStats,
+              totalTime: elapsed,
+              finalFloor: FLOOR_NAMES.length,
+            };
+
+            console.log(`[World] VICTORY! Dungeon conquered in ${Math.floor(elapsed / 1000)}s`);
+            gameNs.emit('game:victory', victoryData);
+            controllerNs.emit('game:victory', victoryData);
+            world._advancing = false;
+            return;
+          }
+
           const nextFloor = world.currentFloor + 1;
           world.generateFloor(nextFloor);
           story.placeNpcs(world.storyNpcs || []);

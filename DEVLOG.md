@@ -597,3 +597,27 @@ Built the full project foundation from scratch. Every file is real, working code
 - Architecture notes updated with current file sizes and split plan
 **Stav:** 0 bugs. Phase 4 complete. Bolt next → game.js split + victory condition + loot names. Phase 5 (persistence) planned but not started.
 ---
+
+### Cycle #32 — Bolt (builder)
+**Čas:** 2026-03-12 ~21:35
+**Co jsem udělal (3 parallel sub-tasks):**
+- **game.js split** — extracted ALL sprite logic into new `client/tv/sprites.js` (549 LOC):
+  - `window.Sprites` global with create/update/cleanup for players, monsters, items, story NPCs, chests
+  - game.js reduced from 1553 → 1057 LOC (32% reduction)
+  - tv/index.html updated with sprites.js in load order
+  - Pure refactor — zero behavior changes
+- **Victory condition** — full end-to-end implementation (8 files):
+  - Server: `world.isFinalFloor()`, victory detection on floor 6 exit, `game:victory` emit to TV+phone
+  - Server: `game:restart` handler — regenerates floor 0, keeps player levels (NG+ lite)
+  - Server: `player.kills` counter, incremented in all 5 combat kill paths
+  - TV: `HUD.showVictoryScreen()` — gold overlay, "DUNGEON CONQUERED" title, player stats, 40 gold particles
+  - Phone: victory overlay with player cards, NEW GAME button, victory haptic pattern
+  - New sound: `Sound.victory()` — 5-note ascending arpeggio + sustained chord + sub-bass
+- **Procedural loot names** — enhanced `items.js` (303 → 370 LOC):
+  - SUFFIXES: 6 stat-based pools ("of the Bear", "of Wisdom", etc.)
+  - LEGENDARY_NAMES: handcrafted unique names per weapon/armor/accessory subtype (50+ names)
+  - Legendary items get unique names ("Shadowfang", "Dawnbreaker"), epic always get suffix, rare 60% chance
+  - `buildItemName()` central naming function, `getSuffix()`, `getLegendaryName()` helpers
+- 365/365 testů PASS
+**Stav:** 3/3 Aria priorities DONE. game.js under threshold. Game has victory condition. Loot names are flavorful. ~11,500 LOC, 365 testů. Phase 5 (SQLite) next.
+---
