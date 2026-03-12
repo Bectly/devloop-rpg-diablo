@@ -231,6 +231,9 @@ class GameScene extends Phaser.Scene {
     // Shrine sprites
     this.shrineSprites = new Map();
 
+    // Story NPC sprites
+    this.storyNpcSprites = {};
+
     this.discoveredRooms = new Set();
 
     // Smooth camera tracking position
@@ -662,6 +665,59 @@ class GameScene extends Phaser.Scene {
       if (this.shopNpcLabel) {
         this.shopNpcLabel.destroy();
         this.shopNpcLabel = null;
+      }
+    }
+
+    // ── Render Story NPCs ──
+    if (state.world.storyNpcs) {
+      const seenStoryNpcs = new Set();
+      for (const npc of state.world.storyNpcs) {
+        const key = `story_${npc.id}`;
+        seenStoryNpcs.add(key);
+
+        if (!this.storyNpcSprites[key]) {
+          // Color: purple for sage, green for shrine guardian, gray for herald
+          let color;
+          if (npc.id === 'old_sage') color = 0x8888ff;
+          else if (npc.id === 'shrine_guardian') color = 0x44cc44;
+          else color = 0x888888;
+
+          const body = this.add.circle(npc.x, npc.y, 10, color, 0.9);
+          body.setDepth(30);
+          const head = this.add.circle(npc.x, npc.y - 14, 6, color, 0.9);
+          head.setDepth(30);
+
+          // Name label
+          const label = this.add.text(npc.x, npc.y - 26, npc.name || npc.id, {
+            fontSize: '8px',
+            fontFamily: 'Courier New, monospace',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2,
+          });
+          label.setOrigin(0.5);
+          label.setDepth(31);
+
+          this.storyNpcSprites[key] = { body, head, label };
+        }
+
+        // Update position and idle bob
+        const sprite = this.storyNpcSprites[key];
+        const bob = Math.sin(Date.now() / 700 + npc.x) * 1.5;
+        sprite.body.setPosition(npc.x, npc.y + bob);
+        sprite.head.setPosition(npc.x, npc.y - 14 + bob);
+        sprite.label.setPosition(npc.x, npc.y - 26 + bob);
+      }
+
+      // Clean up story NPC sprites that are no longer present
+      for (const key in this.storyNpcSprites) {
+        if (!seenStoryNpcs.has(key)) {
+          const sprite = this.storyNpcSprites[key];
+          sprite.body.destroy();
+          sprite.head.destroy();
+          sprite.label.destroy();
+          delete this.storyNpcSprites[key];
+        }
       }
     }
 
@@ -1254,6 +1310,21 @@ socket.on('player:left', (data) => {
 
 socket.on('dialogue:start', (data) => {
   console.log(`[TV] Dialogue with ${data.npcName}: ${data.text}`);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.showDialogue(scene, data.npcName, data.text);
+    }
+  }
+});
+
+socket.on('dialogue:end', (data) => {
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.hideDialogue(scene);
+    }
+  }
 });
 
 socket.on('boss:chest', (data) => {

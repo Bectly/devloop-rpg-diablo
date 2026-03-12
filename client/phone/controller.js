@@ -102,6 +102,11 @@ socket.on('dialogue:prompt', (data) => {
   showDialogue(data);
 });
 
+socket.on('dialogue:end', () => {
+  currentDialogue = null;
+  dialogueScreen.classList.add('hidden');
+});
+
 socket.on('floor:change', (data) => {
   currentFloor = data.floor;
   currentFloorName = data.floorName || '';
@@ -637,6 +642,20 @@ function showDialogue(data) {
   document.getElementById('dialogue-npc-name').textContent = data.npcName;
   document.getElementById('dialogue-text').textContent = data.text;
 
+  // Set NPC type for color styling
+  const box = document.getElementById('dialogue-box');
+  if (box) {
+    if (data.npcId.includes('merchant') || data.npcId.includes('shop')) {
+      box.setAttribute('data-npc-type', 'shop');
+    } else if (data.npcId.includes('shrine')) {
+      box.setAttribute('data-npc-type', 'shrine');
+    } else if (data.npcId.includes('boss')) {
+      box.setAttribute('data-npc-type', 'boss');
+    } else {
+      box.setAttribute('data-npc-type', 'lore');
+    }
+  }
+
   const choicesEl = document.getElementById('dialogue-choices');
   choicesEl.innerHTML = '';
 
@@ -650,7 +669,10 @@ function showDialogue(data) {
         dialogueKey: data.dialogueKey || 'intro',
         choiceIndex: choice.index,
       });
-      dialogueScreen.classList.add('hidden');
+      // Don't hide here — server will send dialogue:prompt (follow-up)
+      // or dialogue:end (conversation over). Disable buttons to prevent
+      // double-taps while waiting for server response.
+      choicesEl.querySelectorAll('button').forEach(b => b.disabled = true);
     };
     btn.addEventListener('touchstart', (e) => {
       e.preventDefault();

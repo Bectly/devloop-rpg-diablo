@@ -51,6 +51,48 @@ const NPCS = {
       },
     },
   },
+  shrine_guardian: {
+    id: 'shrine_guardian',
+    name: 'Shrine Guardian',
+    x: 0,
+    y: 0,
+    dialogues: {
+      intro: {
+        text: 'The ancient power here responds to those who prove themselves. Clear every room, and the shrine shall grant you its full blessing.',
+        choices: [
+          { text: 'I will clear this floor.', next: 'accepted' },
+          { text: 'Just heal me.', next: null },
+        ],
+      },
+      accepted: {
+        text: 'Go forth, warrior. Return when every shadow is banished from these halls.',
+        choices: [
+          { text: 'It will be done.', next: null },
+        ],
+      },
+    },
+  },
+  floor_herald: {
+    id: 'floor_herald',
+    name: 'Dying Adventurer',
+    x: 0,
+    y: 0,
+    dialogues: {
+      intro: {
+        text: 'Turn back... the dark knight below is unlike anything... *cough* ...he has three forms. Each more deadly than the last.',
+        choices: [
+          { text: 'What are his weaknesses?', next: 'weakness' },
+          { text: 'Rest easy. We will finish this.', next: null },
+        ],
+      },
+      weakness: {
+        text: 'In his first form, he charges. Dodge sideways. In his rage form, he is slow but devastating. His final form... I could not see it.',
+        choices: [
+          { text: 'Thank you. Your sacrifice won\'t be in vain.', next: null, action: 'give_items:health_potion:2' },
+        ],
+      },
+    },
+  },
 };
 
 const QUESTS = {
@@ -117,6 +159,7 @@ class StoryManager {
     return {
       npcId: npc.id,
       npcName: npc.name,
+      dialogueKey: key,
       text: dialogue.text,
       choices: dialogue.choices.map((c, i) => ({
         index: i,
@@ -150,6 +193,16 @@ class StoryManager {
     }
 
     return { next: choice.next || null, actions };
+  }
+
+  placeNpcs(placements) {
+    // placements = [{id: 'old_sage', x: 100, y: 200}, ...]
+    for (const placement of placements) {
+      if (this.npcs[placement.id]) {
+        this.npcs[placement.id].x = placement.x;
+        this.npcs[placement.id].y = placement.y;
+      }
+    }
   }
 
   getActiveQuests() {

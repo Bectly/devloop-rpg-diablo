@@ -389,6 +389,9 @@ class World {
 
     // Shop NPC
     this.shopNpc = null;
+
+    // Story NPCs placed in rooms
+    this.storyNpcs = [];
   }
 
   generateFloor(floorNum) {
@@ -412,6 +415,9 @@ class World {
 
     // Spawn shop NPC in start room
     this.spawnShopNpc(floorNum);
+
+    // Place story NPCs in dungeon rooms
+    this.placeStoryNpcs(floorNum);
 
     console.log(`[World] Generated floor ${floorNum + 1}: ${this.floorName} with ${this.rooms.length} rooms`);
     return this.getFloorInfo();
@@ -607,6 +613,57 @@ class World {
     };
   }
 
+  placeStoryNpcs(floor) {
+    this.storyNpcs = [];
+
+    // Old Sage in start room on floor 1
+    if (floor === 0) {
+      const startRoom = this.rooms.find(r => r.type === 'start');
+      if (startRoom) {
+        const r = startRoom.room;
+        const cx = (r.x + 1 + Math.floor((r.w - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+        const cy = (r.y + 1 + Math.floor((r.h - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+        this.storyNpcs.push({
+          id: 'old_sage',
+          name: 'Old Sage',
+          x: cx - 50,
+          y: cy - 20,
+        });
+      }
+    }
+
+    // Shrine Guardian near first room with a shrine
+    const shrineRoom = this.rooms.find(r => r.hasShrine);
+    if (shrineRoom) {
+      const r = shrineRoom.room;
+      const sx = (r.x + r.w / 2) * TILE_SIZE + 30;
+      const sy = (r.y + r.h / 2) * TILE_SIZE;
+      this.storyNpcs.push({
+        id: 'shrine_guardian',
+        name: 'Shrine Guardian',
+        x: sx,
+        y: sy,
+      });
+    }
+
+    // Floor Herald on floor 3+ (floorNum is 0-indexed, so >= 2)
+    if (floor >= 2) {
+      const candidateRooms = this.rooms.filter(r => r.type !== 'start' && r.type !== 'boss');
+      if (candidateRooms.length > 0) {
+        const room = candidateRooms[Math.floor(Math.random() * candidateRooms.length)];
+        const r = room.room;
+        const hx = (r.x + r.w / 2) * TILE_SIZE;
+        const hy = (r.y + r.h / 2) * TILE_SIZE + 15;
+        this.storyNpcs.push({
+          id: 'floor_herald',
+          name: 'Dying Adventurer',
+          x: hx,
+          y: hy,
+        });
+      }
+    }
+  }
+
   getShopNpc() {
     return this.shopNpc;
   }
@@ -669,6 +726,12 @@ class World {
         x: Math.round(this.shopNpc.x),
         y: Math.round(this.shopNpc.y),
       } : null,
+      storyNpcs: (this.storyNpcs || []).map(npc => ({
+        id: npc.id,
+        name: npc.name,
+        x: Math.round(npc.x),
+        y: Math.round(npc.y),
+      })),
     };
   }
 }

@@ -47,6 +47,7 @@ const story = new StoryManager();
 
 // Generate first dungeon floor
 world.generateFloor(0);
+story.placeNpcs(world.storyNpcs || []);
 console.log(`[World] Loaded floor: ${world.roomName}`);
 
 // ─── Socket.io: TV Namespace ───────────────────────────────────
@@ -365,6 +366,7 @@ function gameLoop() {
         setTimeout(() => {
           const nextFloor = world.currentFloor + 1;
           world.generateFloor(nextFloor);
+          story.placeNpcs(world.storyNpcs || []);
 
           // Reposition all players at new spawn
           let i = 0;

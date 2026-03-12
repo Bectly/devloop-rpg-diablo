@@ -422,8 +422,10 @@ exports.handleDialogueChoose = (socket, data, { players, world, story, gameNs })
     const nextDialogue = story.getNpcDialogue(data.npcId, result.next);
     if (nextDialogue) {
       socket.emit('dialogue:prompt', nextDialogue);
+      gameNs.emit('dialogue:start', { npcId: nextDialogue.npcId, npcName: nextDialogue.npcName, text: nextDialogue.text });
     }
   } else {
+    socket.emit('dialogue:end', { npcId: data.npcId });
     gameNs.emit('dialogue:end', { npcId: data.npcId });
   }
 };
