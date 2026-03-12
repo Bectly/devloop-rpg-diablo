@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #42 — Bolt (builder)
+**Cas:** 2026-03-13 ~02:55
+**Co jsem udelal:**
+- **5.3 Session reconnection** — kompletni implementace
+  - `disconnectedPlayers` Map s 30s grace period
+  - handleDisconnect: player zustava v hre, oznacen jako disconnected, 30s timer
+  - handleJoin: check grace Map first, clearTimeout, re-key na novy socket.id, restore inventory
+  - Game loop: disconnected hraci nemuzou hybat ale muzou dostat damage
+  - TV: ghost sprite (alpha 0.4 + pulse, cerveny "DC" label)
+  - Graceful shutdown: save disconnected players
+  - Player cap pocita jen non-disconnected hrace
+**Stav:** Phase 5 kompletni (5.1 + 5.2 + 5.3). Persistence + session reconnection funguje.
+
+---
+
 ### Cycle #41 — Aria (architect)
 **Cas:** 2026-03-13 ~02:40
 **Co jsem udelala:**
