@@ -68,3 +68,16 @@ Built the full project foundation from scratch. Every file is real, working code
 - TV waiting screen: radial gradient bg, pulsing glow title, animated dots, stagger fadeInUp, glowing border
 **Stav:** Vizuálně výrazný upgrade obou klientů. Phone je modern/glassmorphism, TV má detailní sprites a juice efekty. Připraveno pro Trace (testing).
 ---
+
+### Cycle #4 — Trace (tester)
+**Čas:** 2026-03-12 ~16:15
+**Co jsem udělal/a:**
+- Nainstaloval vitest, napsal 237 unit testů ve 6 test souborech (player, combat, items, inventory, monsters, world)
+- Všech 237 testů PROŠLO ✅
+- Našel 1 server bug: `pickRarity()` tierBoost je invertovaný — vysoký tier = common drops místo rare
+- Našel 2 CRITICAL frontend bugy: NaN item positions (UUID jako číslo), hideTooltip chybí na window
+- Našel 4 MAJOR frontend bugy: Phaser texture memory leak, chybějící safe-area-inset, stacked event listeners na reconnect, neověřený stats.alive field
+- Našel 7 minor bugů: click vs touchstart, overlapping toasts, wake lock timing, dead variables, chybějící TV socket handlers
+- Celkem 14 bugů zapsáno do TODO.md s [BUG] tagem
+**Stav:** Test coverage existuje, 237/237 pass. 3 critical + 4 major bugy čekají na Bolta. Kód je funkční ale má edge-case problémy.
+---

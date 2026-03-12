@@ -52,7 +52,26 @@
 - [ ] Session reconnection handling — **Backend Agent**
 
 ## Bugs & Issues
-(none yet)
+
+### Critical
+- [ ] [BUG] `pickRarity()` tierBoost inverted — tierBoost >= 5 makes ALL drops common instead of rarer — `server/game/items.js:94-107`
+- [ ] [BUG] Ground item bobbing uses `gi.id * 1.7` but IDs may be UUID strings → NaN positions — `client/tv/game.js:~635`
+- [ ] [BUG] `hideTooltip` not on `window` — tooltip close button crashes — `client/phone/controller.js:~473`
+
+### Major
+- [ ] [BUG] Monster textures never removed from TextureManager → memory leak — `client/tv/game.js:~548`
+- [ ] [BUG] No `safe-area-inset` padding → notch/Dynamic Island overlap — `client/phone/style.css`
+- [ ] [BUG] `initButtons()` stacks duplicate event listeners on reconnect — `client/phone/controller.js:~262`
+- [ ] [BUG] `stats.alive` field name unverified in updateHUD respawn check — `client/phone/controller.js:~227`
+
+### Minor
+- [ ] [BUG] Tile textures regenerated without cleanup (console warnings) — `client/tv/game.js:~762`
+- [ ] [BUG] Class card/join/inventory/dialogue buttons use `click` not `touchstart` — `client/phone/controller.js`
+- [ ] [BUG] Wake lock request before user gesture (silently fails) — `client/phone/controller.js:~562`
+- [ ] [BUG] Overlapping notification toasts at same position — `client/phone/controller.js:~317`
+- [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn, dialogue:end
+- [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
+- [ ] [BUG] Player sprites not cleared on dungeon:enter (transient stale positions)
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
