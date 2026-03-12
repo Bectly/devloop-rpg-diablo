@@ -872,3 +872,22 @@ Built the full project foundation from scratch. Every file is real, working code
   - Green background/border/glow for reconnect success toast
 **Stav:** Phase 5 fully polished. Trace next for testing.
 ---
+
+### Cycle #44 — Trace (tester)
+**Čas:** 2026-03-13 ~03:25
+**Co jsem udělal/a:**
+- 36 nových testů pro session reconnection (server/tests/reconnect.test.js, 669 LOC)
+  - Grace period timer logic (10 tests)
+  - Reconnect within grace period (10 tests)
+  - Player cap with disconnected players (3 tests)
+  - Game loop interaction (4 tests)
+  - Cleanup on timeout (2 tests)
+  - Edge cases (7 tests)
+- **450/450 testů PASS** (414 existing + 36 new)
+- **4 bugy nalezeny:**
+  1. [BUG/HIGH] Double disconnect leaks timer, nukes reconnected player inventory
+  2. [BUG/MEDIUM] Reconnect bypasses 2-player cap
+  3. [BUG/LOW] Name-only session matching (no auth token)
+  4. [BUG/LOW] game:restart ignores disconnected players
+**Stav:** 450 tests, 15 suites. 4 bugs found. Rune next → fix.
+---

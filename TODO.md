@@ -76,7 +76,13 @@
 **Persistence:** `database.js` (155 LOC) + wiring complete (Cycles #36-39). Public API (`saveCharacter(player, inv, floor)`) used consistently.
 
 ## Open Bugs
-None. All bugs resolved through Cycle #39.
+
+### Found in Cycle #44 (Trace — Session Reconnection QA)
+
+- [ ] [BUG/HIGH] `socket-handlers.js:handleDisconnect` — **Double disconnect leaks timer, nukes reconnected player's inventory.** When `handleDisconnect` fires twice for the same socket (possible with socket.io transport issues), the first `setTimeout` is never `clearTimeout()`'d before `disconnectedPlayers.set()` overwrites the Map entry. The leaked timer's closure still calls `inventories.delete(player.id)` after 30s, deleting the inventory of a player who already reconnected. **Fix:** Before creating a new grace entry, check if `disconnectedPlayers.has(player.name)` and `clearTimeout()` the existing timer.
+- [ ] [BUG/MEDIUM] `socket-handlers.js:handleJoin` reconnect path — **Reconnect bypasses 2-player cap, allowing 3+ concurrent players.** When player A disconnects, player C fills the slot (B+C = 2 active), then A reconnects via grace period. The reconnect path runs before the cap check, so A is restored without checking whether the game is now over capacity. Result: 3 active players. **Fix:** After restoring a reconnected player, check active count. If over cap, either block the reconnect (send to join screen) or boot the newest non-original player.
+- [ ] [BUG/LOW] `socket-handlers.js:handleJoin` — **Name-only session matching allows anyone to hijack a disconnected player's session.** The grace period Map is keyed by player name with no authentication. If a different person types the same name on the join screen during the 30s window, they inherit the original player's gold, level, equipment, and inventory. **Fix:** Add a session token (random UUID) emitted on first join, stored in `localStorage`, and sent with reconnect attempts. Match on `(name, token)` instead of name alone.
+- [ ] [BUG/LOW] `server/index.js:game:restart` — **Restart does not clear disconnected players or their grace timers.** The restart loop repositions all players in the `players` Map (including disconnected ghosts) but doesn't clear their `disconnected` flag or cancel their grace timers. If a timer expires mid-game, the repositioned player silently disappears.
 
 ### Fixed (Cycle #35)
 - [x] ~~[BUG/HIGH] sprites.js:88-89 — Missing null guards on partial player cleanup~~ FIXED
