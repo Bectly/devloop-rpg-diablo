@@ -742,6 +742,9 @@ function renderStats() {
 
   const statList = document.getElementById('stat-list');
   statList.innerHTML = '';
+  // Remove previous resistance section on re-render
+  const oldResist = statList.parentNode.querySelector('.resist-section');
+  if (oldResist) oldResist.remove();
 
   const hasFreePoints = playerStats.freeStatPoints > 0;
   document.getElementById('stat-points-display').textContent =
@@ -782,6 +785,34 @@ function renderStats() {
 
     statList.appendChild(row);
   }
+
+  // Resistance display
+  const resistances = playerStats.resistances;
+  if (resistances) {
+    const resistSection = document.createElement('div');
+    resistSection.className = 'resist-section';
+
+    const resistTitle = document.createElement('div');
+    resistTitle.className = 'resist-title';
+    resistTitle.textContent = 'Resistances';
+    resistSection.appendChild(resistTitle);
+
+    const resistTypes = [
+      { key: 'fire', icon: '\uD83D\uDD25', label: 'Fire', cls: 'resist-fire' },
+      { key: 'cold', icon: '\u2744', label: 'Cold', cls: 'resist-cold' },
+      { key: 'poison', icon: '\uD83E\uDDEA', label: 'Poison', cls: 'resist-poison' },
+    ];
+
+    for (const r of resistTypes) {
+      const val = resistances[r.key] || 0;
+      const row = document.createElement('div');
+      row.className = 'resist-row';
+      row.innerHTML = `<span class="${r.cls}">${r.icon} ${r.label}</span><span class="${r.cls}">${val}%</span>`;
+      resistSection.appendChild(row);
+    }
+
+    statList.parentNode.appendChild(resistSection);
+  }
 }
 
 // ─── Item Tooltip ───────────────────────────────────────────────
@@ -795,8 +826,19 @@ function showTooltip(item, anchor, isEquipped, slotName) {
   if (item.damage) html += `<div class="tt-stat">Damage: ${item.damage}</div>`;
   if (item.armor) html += `<div class="tt-stat">Armor: ${item.armor}</div>`;
   if (item.bonuses) {
+    const resistMap = {
+      fire_resist:   { icon: '\uD83D\uDD25', label: 'Fire Resist',   cls: 'resist-fire' },
+      cold_resist:   { icon: '\u2744',       label: 'Cold Resist',   cls: 'resist-cold' },
+      poison_resist: { icon: '\uD83E\uDDEA', label: 'Poison Resist', cls: 'resist-poison' },
+      all_resist:    { icon: '\uD83D\uDEE1',  label: 'All Resist',    cls: 'resist-all' },
+    };
     for (const [stat, val] of Object.entries(item.bonuses)) {
-      html += `<div class="tt-stat">+${val} ${stat.toUpperCase()}</div>`;
+      const resist = resistMap[stat];
+      if (resist) {
+        html += `<div class="tt-stat ${resist.cls}">${resist.icon} +${val} ${resist.label}</div>`;
+      } else {
+        html += `<div class="tt-stat">+${val} ${stat.toUpperCase()}</div>`;
+      }
     }
   }
   if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;

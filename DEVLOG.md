@@ -1030,3 +1030,22 @@ Built the full project foundation from scratch. Every file is real, working code
 - 4 new files, 516/516 testů PASS
 **Stav:** 7.0-7.2 DONE. Sage next → resistance display UI + damage number colors.
 ---
+
+### Cycle #53 — Sage (stylist)
+**Čas:** 2026-03-13 ~04:15
+**Co jsem udělal/a:**
+- **TV colored damage numbers** (hud.js):
+  - DAMAGE_TYPE_COLORS + DAMAGE_TYPE_CRIT_STROKES maps
+  - Normal hits colored by type (physical=white, fire=orange, cold=blue, poison=green)
+  - Crits: same type color, larger font, matching darker stroke
+  - game.js forwards `damageType` from combat events
+- **Phone resistance display** (controller.js):
+  - Resistance section in renderStats() — 🔥 Fire, ❄ Cold, 🧪 Poison with % values
+  - Color-coded below main stat grid
+  - Item tooltip: resistance bonuses show colored icons/labels
+- **Phone CSS** (style.css):
+  - `.resist-section`, `.resist-row`, `.resist-title`
+  - `.resist-fire`, `.resist-cold`, `.resist-poison`, `.resist-all` color classes
+- 516/516 testů PASS
+**Stav:** Phase 7 (Damage Types) FEATURE-COMPLETE. Trace next for testing.
+---

@@ -3,6 +3,22 @@
 
 // ── Shared constants (used by both hud.js and game.js) ──
 const TILE_SIZE = 32;
+
+// ── Damage type color map ──
+const DAMAGE_TYPE_COLORS = {
+  physical: '#ffffff',
+  fire: '#ff8800',
+  cold: '#4488ff',
+  poison: '#44cc44',
+};
+
+// Crit stroke colors per damage type (darker variant for outline)
+const DAMAGE_TYPE_CRIT_STROKES = {
+  physical: '#cc6600',
+  fire: '#cc4400',
+  cold: '#224488',
+  poison: '#227722',
+};
 const FLOOR_THEMES = [
   { floor: 0x2a2a3a, wall: 0x444466, wallLight: 0x555577, corridor: 0x222233 },   // Dusty Catacombs
   { floor: 0x1a2a2a, wall: 0x335555, wallLight: 0x446666, corridor: 0x152525 },   // Sunken Crypts
@@ -283,7 +299,7 @@ window.HUD = {
   },
 
   // ── Floating damage text ──
-  spawnDamageText(scene, x, y, text, isCrit, isDodge, color) {
+  spawnDamageText(scene, x, y, text, isCrit, isDodge, color, damageType) {
     const offset = (Math.random() - 0.5) * 30;
 
     if (isDodge) {
@@ -300,12 +316,14 @@ window.HUD = {
     }
 
     if (isCrit) {
+      const critFill = DAMAGE_TYPE_COLORS[damageType] || '#ffdd00';
+      const critStroke = DAMAGE_TYPE_CRIT_STROKES[damageType] || '#cc6600';
       const t = scene.add.text(x + offset, y, String(text), {
         fontSize: '22px',
-        fill: '#ffdd00',
+        fill: critFill,
         fontFamily: 'Courier New',
         fontStyle: 'bold',
-        stroke: '#cc6600',
+        stroke: critStroke,
         strokeThickness: 3,
       }).setOrigin(0.5).setDepth(100).setScale(1.5);
       this.damageTexts.push({ text: t, life: 1000, maxLife: 1000, isCrit: true, isHeal: false });
@@ -313,9 +331,10 @@ window.HUD = {
     }
 
     // Normal damage or special text
-    const col = color || '#ff6655';
-    const size = color ? '16px' : '14px';
-    const style = color ? 'bold' : 'normal';
+    const typeColor = DAMAGE_TYPE_COLORS[damageType];
+    const col = color || typeColor || '#ff6655';
+    const size = (color || typeColor) ? '16px' : '14px';
+    const style = (color || typeColor) ? 'bold' : 'normal';
 
     const t = scene.add.text(x + offset, y, String(text), {
       fontSize: size,
@@ -326,8 +345,8 @@ window.HUD = {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(100);
 
-    // Subtle pop for normal damage
-    if (!color) {
+    // Subtle pop for normal damage (only when no explicit color/type)
+    if (!color && !typeColor) {
       t.setScale(1.15);
       scene.tweens.add({
         targets: t,

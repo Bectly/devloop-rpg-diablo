@@ -787,6 +787,34 @@ html, body {
   font-size: 11px;
 }
 
+/* Resistances */
+.resist-section {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.resist-title {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.resist-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.resist-fire { color: #ff8800; }
+.resist-cold { color: #4488ff; }
+.resist-poison { color: #44cc44; }
+.resist-all { color: #dddddd; }
+
 /* ─── Item Tooltip ─────────────────────────────────────────── */
 #item-tooltip {
   position: fixed;

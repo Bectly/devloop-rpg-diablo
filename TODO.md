@@ -165,12 +165,13 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
 - [x] New bonus types: `fire_resist` (5-20), `cold_resist` (5-20), `poison_resist` (5-20), `all_resist` (3-10)
 - [x] Resistance suffixes: Flame Ward, Frost Ward, Venom Ward, Protection
 - [x] ~55% of armor drops roll at least one resist bonus
-- [ ] Display in item tooltips on phone (Sage)
+- [x] Display in item tooltips on phone (Sage, Cycle #53)
 
-### 7.3 UI — resistance display [Sage]
-- [ ] **Phone stats screen:** show fire/cold/poison resistance percentages
-- [ ] **TV HUD:** damage numbers colored by type (orange/blue/green/white)
-- [ ] **Phone:** resistance bonuses visible in equipment tooltips
+### 7.3 UI — resistance display [DONE — Sage, Cycle #53]
+- [x] **Phone stats screen:** fire/cold/poison resistance % with color-coded icons
+- [x] **TV HUD:** damage numbers colored by type (physical=white, fire=orange, cold=blue, poison=green)
+- [x] **Phone:** resistance bonuses in equipment tooltips (colored labels)
+- [x] **TV crits:** type-colored with matching stroke
 
 ### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)

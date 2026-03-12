@@ -488,7 +488,7 @@ class GameScene extends Phaser.Scene {
           const target = state.world.monsters?.find(m => m.id === ev.targetId)
             || state.players?.find(p => p.id === ev.targetId);
           if (target) {
-            HUD.spawnDamageText(this, target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged);
+            HUD.spawnDamageText(this, target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged, null, ev.damageType);
             // Camera shake on crit
             if (ev.isCrit) {
               this.cameras.main.shake(200, 0.003);
