@@ -135,6 +135,17 @@ controllerNs.on('connection', (socket) => {
     world.generateFloor(0);
     story.placeNpcs(world.storyNpcs || []);
 
+    // Force-reconnect all disconnected players on restart (Bug #4):
+    // Clear their grace timers, remove from disconnectedPlayers Map,
+    // and reset their disconnected flag so they don't silently vanish
+    // when a stale timer fires mid-game.
+    const { disconnectedPlayers } = handlers;
+    for (const [name, entry] of disconnectedPlayers) {
+      clearTimeout(entry.timer);
+      entry.player.disconnected = false;
+    }
+    disconnectedPlayers.clear();
+
     // Reposition all players, keep levels (NG+ lite)
     let idx = 0;
     for (const [sid, p] of players) {

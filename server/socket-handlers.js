@@ -61,6 +61,19 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
   const name = (data.name || 'Hero').substring(0, 20);
 
   // ── Reconnect: check grace period map first ──
+  // NOTE (Bug #3): The grace period Map is keyed by player name with no auth
+  // token. Since this game has no authentication system, any player typing the
+  // same name during the 30s grace window will inherit the disconnected player's
+  // full character state (gold, level, equipment, inventory). This is a known
+  // design limitation. A session token (e.g. socket.id-based UUID stored in
+  // localStorage) would prevent accidental hijacking but is not implemented yet.
+  //
+  // NOTE (Bug #2): The reconnect path runs BEFORE the 2-player cap check. This
+  // is by-design: the grace period acts as a slot reservation for the disconnected
+  // player. If another player filled the slot while the original was disconnected,
+  // the reconnect may temporarily create 3 active players. This is acceptable
+  // because the reconnecting player had a prior claim to their slot, and the
+  // alternative (blocking reconnect) would feel unfair to the original player.
   if (disconnectedPlayers.has(name)) {
     const entry = disconnectedPlayers.get(name);
     clearTimeout(entry.timer);
@@ -827,7 +840,11 @@ exports.handleDisconnect = (socket, data, { players, inventories, controllerSock
     player.inputDx = 0;
     player.inputDy = 0;
 
-    // Move to grace period map
+    // Move to grace period map — clear any existing timer first (Bug #1: double disconnect)
+    if (disconnectedPlayers.has(player.name)) {
+      clearTimeout(disconnectedPlayers.get(player.name).timer);
+    }
+
     const inv = inventories.get(player.id);
     const timer = setTimeout(() => {
       // Grace period expired — actually remove the player
