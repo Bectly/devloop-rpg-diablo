@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DevLoop RPG — Inventory</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Standalone inventory page — redirects back to controller */
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d0d18;
+    }
+    .redirect-msg {
+      text-align: center;
+      padding: 40px;
+    }
+    .redirect-msg h2 {
+      color: #ff8800;
+      margin-bottom: 16px;
+    }
+    .redirect-msg p {
+      color: #888;
+      margin-bottom: 24px;
+    }
+    .redirect-msg a {
+      display: inline-block;
+      padding: 12px 32px;
+      background: #ff8800;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="redirect-msg">
+    <h2>Inventory</h2>
+    <p>Inventory is managed from the controller screen.<br>Use the INV button during gameplay.</p>
+    <a href="/phone">Back to Controller</a>
+  </div>
+</body>
+</html>

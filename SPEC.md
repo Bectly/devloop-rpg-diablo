@@ -1,0 +1,234 @@
+# DevLoop RPG — Technical Specification
+
+## 1. Architecture Overview
+
+```
+                    Local Network (Wi-Fi)
+                           |
+        +------------------+------------------+
+        |                  |                  |
+   [Phone 1]          [Phone 2]         [TV Display]
+   Controller          Controller        Phaser 3 Client
+   (nipplejs)          (nipplejs)        (renders world)
+        |                  |                  |
+        +--- Socket.io ----+--- Socket.io ----+
+                           |
+                    [Game Server]
+                    Node.js + Express
+                    Socket.io + SQLite
+                    (authoritative state)
+```
+
+### Components
+
+1. **Game Server** (Node.js + Express + Socket.io)
+   - Authoritative game state (anti-cheat by design)
+   - 20 tick/sec game loop
+   - SQLite for persistence (characters, world state, loot tables)
+   - Two Socket.io namespaces: `/game` (TV) and `/controller` (phones)
+
+2. **TV Client** (Phaser 3)
+   - Renders the full game world: dungeon tiles, players, monsters, items, UI overlays
+   - Receives state snapshots from server at 20 Hz
+   - Client-side interpolation for smooth rendering
+   - Displays shared UI: minimap, party health bars, loot drops, dialogue boxes
+
+3. **Phone Controllers** (HTML + nipplejs + Socket.io)
+   - Lightweight mobile-optimized pages
+   - Virtual joystick (nipplejs) for movement
+   - Action buttons: Attack, Skill 1-3, Use Potion, Inventory, Interact
+   - Inventory management screen (drag-and-drop grid)
+   - Player stats/equipment view
+
+## 2. Network Protocol
+
+### Server → TV (namespace: `/game`)
+
+| Event | Payload | Frequency |
+|-------|---------|-----------|
+| `state` | Full game state snapshot | 20/sec |
+| `player:joined` | `{ id, name, class }` | On event |
+| `player:left` | `{ id }` | On event |
+| `combat:hit` | `{ attackerId, targetId, damage, type }` | On event |
+| `combat:death` | `{ entityId, killedBy, loot[] }` | On event |
+| `loot:drop` | `{ items[], position }` | On event |
+| `dialogue:start` | `{ npcId, text, choices[] }` | On event |
+| `dialogue:end` | `{ npcId }` | On event |
+| `dungeon:enter` | `{ roomId, layout, monsters[], items[] }` | On event |
+| `effect:spawn` | `{ type, position, duration }` | On event |
+
+### Phone → Server (namespace: `/controller`)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `join` | `{ name, characterClass }` | Player joins game |
+| `move` | `{ dx, dy }` | Joystick vector (-1 to 1) |
+| `move:stop` | `{}` | Joystick released |
+| `attack` | `{}` | Basic attack |
+| `skill` | `{ skillIndex }` | Use skill (0-2) |
+| `use:potion` | `{ type }` | Use health/mana potion |
+| `interact` | `{}` | Interact with nearby NPC/object |
+| `loot:pickup` | `{ itemId }` | Pick up item |
+| `inventory:move` | `{ from, to }` | Move item in grid |
+| `inventory:equip` | `{ itemId, slot }` | Equip item |
+| `inventory:unequip` | `{ slot }` | Unequip item |
+| `inventory:drop` | `{ itemId }` | Drop item |
+| `dialogue:choose` | `{ choiceIndex }` | Pick dialogue option |
+| `levelup:stat` | `{ stat }` | Allocate stat point |
+
+### Server → Phone (namespace: `/controller`)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `joined` | `{ playerId, stats, inventory }` | Confirm join |
+| `stats:update` | `{ hp, mp, xp, level, stats }` | Player stats changed |
+| `inventory:update` | `{ grid[][], equipment{} }` | Inventory changed |
+| `notification` | `{ text, type }` | Feedback message |
+| `dialogue:prompt` | `{ npcName, text, choices[] }` | Show dialogue |
+
+## 3. Game Systems
+
+### 3.1 Player Stats & Leveling
+
+**Base Stats** (each starts at 10, +5 free points per level):
+- **STR** (Strength): +2 melee damage per point, +5 carry weight
+- **DEX** (Dexterity): +1% crit chance, +1% dodge, +1 ranged damage
+- **INT** (Intelligence): +3 spell damage, +2 max MP
+- **VIT** (Vitality): +10 max HP, +1 HP regen/sec
+
+**Derived Stats:**
+- HP = 100 + (VIT * 10) + (level * 15)
+- MP = 50 + (INT * 5) + (level * 8)
+- Attack Power = base_weapon_damage + (STR * 2) [melee] or (DEX * 1.5) [ranged]
+- Spell Power = base_spell_damage + (INT * 3)
+- Armor = sum(equipment_armor) + (VIT * 0.5)
+- Crit Chance = 5% + (DEX * 1%)
+- Dodge = (DEX * 0.5%)
+
+**XP Formula:** `xp_needed = floor(100 * (1.15 ^ level))`
+
+**Classes:**
+- **Warrior**: +3 STR, +2 VIT base. Skills: Cleave (AoE), Shield Bash (stun), War Cry (buff)
+- **Ranger**: +3 DEX, +2 STR base. Skills: Multi-Shot, Poison Arrow, Evasion
+- **Mage**: +3 INT, +2 DEX base. Skills: Fireball (AoE), Frost Nova (slow), Teleport
+
+### 3.2 Combat System
+
+- **Real-time** with attack cooldowns (no turns)
+- Attack range depends on weapon type (melee: 48px, ranged: 200px)
+- Basic attack: weapon damage + stat bonus, reduced by target armor
+- Damage formula: `max(1, (attack_power * weapon_multiplier) - target_armor * 0.4)`
+- Critical hits: `damage * 2.0`
+- Skills cost MP, have individual cooldowns (1-10 sec)
+- Monster aggro radius: 150px, leash distance: 400px
+- Monsters target closest player, switch on threat
+
+### 3.3 Inventory System (Diablo-style Grid)
+
+- **10 columns x 6 rows** grid (60 slots)
+- Items occupy 1x1, 1x2, 2x1, 2x2, or 2x3 cells
+- Stackable items: potions, gold, materials (max stack: 20)
+- Equipment slots: Helmet, Chest, Gloves, Boots, Weapon (main), Shield (off-hand), Ring x2, Amulet
+
+### 3.4 Item & Loot System
+
+**Rarities:**
+| Rarity | Color | Stat Bonus Range | Drop Weight |
+|--------|-------|-----------------|-------------|
+| Common | White | 0-1 bonus | 60% |
+| Uncommon | Green | 1-2 bonuses | 25% |
+| Rare | Blue | 2-3 bonuses | 10% |
+| Epic | Purple | 3-4 bonuses | 4% |
+| Legendary | Orange | 4-5 bonuses + unique effect | 1% |
+
+**Weapon Types:**
+- Sword (1H): balanced damage, fast
+- Axe (2H): high damage, slow
+- Bow: ranged, medium speed
+- Staff: spell damage boost, ranged
+- Dagger: low damage, very fast, high crit
+
+**Armor Types:** Plate (high armor, warrior), Leather (medium, ranger), Cloth (low armor, mage bonus)
+
+**Loot Drops:** Monsters have loot tables. Boss monsters always drop 1 Rare+ item.
+
+### 3.5 Monster AI
+
+**Behaviors:**
+- **Idle**: Wander randomly within patrol area
+- **Alert**: Player entered aggro radius, move toward player
+- **Attack**: In attack range, execute attack pattern
+- **Flee**: HP < 20%, move away (only certain types)
+- **Leash**: Too far from spawn, return and heal
+
+**Monster Types:**
+- **Skeleton**: Melee, medium speed, 80 HP. Drops: bones, common weapons
+- **Zombie**: Slow, high HP (150), poison attack. Drops: rotten flesh, uncommon items
+- **Demon**: Fast, ranged fire attack, 120 HP. Drops: demon core, rare items
+- **Boss Knight**: All phases (melee + charge + AoE), 500 HP. Drops: guaranteed epic+
+
+### 3.6 Procedural Dungeons
+
+- Rooms connected by corridors
+- Room types: Combat, Treasure, NPC/Shop, Boss, Rest (heal)
+- Each floor: 5-8 rooms, difficulty scales per floor
+- BSP (Binary Space Partitioning) for room generation
+- Tilemap: walls, floors, doors, traps, decorations
+
+### 3.7 Story & Dialogue
+
+- NPCs have dialogue trees (JSON-defined)
+- Choices affect reputation and unlock paths
+- Quest types: Kill X monsters, Fetch item, Escort NPC, Boss fight
+- Two-player decisions: both must agree (majority vote with 2 = both)
+
+### 3.8 AI Asset Generation (ComfyUI)
+
+- Monster sprites: txt2img with pixel-art LoRA
+- Equipment icons: txt2img with item-icon LoRA
+- Dungeon tiles: txt2img with tileset LoRA
+- NPC portraits: txt2img with portrait LoRA
+- Pipeline: server calls ComfyUI API → saves to `assets/generated/`
+
+## 4. Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Server | Node.js 22 + Express |
+| Real-time | Socket.io 4.x |
+| Database | better-sqlite3 |
+| Game Engine | Phaser 3.80 (CDN) |
+| Phone Input | nipplejs (CDN) |
+| Phone UI | Vanilla HTML/CSS/JS |
+| Asset Gen | ComfyUI (GPU, optional) |
+| IDs | uuid v4 |
+
+## 5. File Structure
+
+```
+devloop-rpg-diablo/
+  SPEC.md
+  README.md
+  TODO.md
+  DEVLOG.md
+  server/
+    index.js          — Express + Socket.io + game loop
+    package.json
+    game/
+      player.js       — Player class, stats, leveling
+      world.js        — World/dungeon state manager
+      combat.js       — Combat resolution, damage calc
+      monsters.js     — Monster definitions + AI
+      items.js        — Item/loot generation
+      inventory.js    — Grid inventory management
+      story.js        — Dialogue/quest system
+  client/
+    tv/
+      index.html      — Phaser 3 game page
+      game.js         — Phaser scenes, rendering, socket
+    phone/
+      index.html      — Phone controller page
+      controller.js   — Joystick + buttons + socket
+      style.css       — Mobile-optimized dark theme
+      inventory.html  — Inventory management screen
+```

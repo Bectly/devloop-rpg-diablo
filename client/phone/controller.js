@@ -1,0 +1,477 @@
+// ─── DevLoop RPG — Phone Controller ──────────────────────────────
+
+const socket = io('/controller', {
+  transports: ['websocket', 'polling'],
+});
+
+let playerId = null;
+let playerStats = null;
+let inventoryData = null;
+let selectedClass = 'warrior';
+let currentDialogue = null;
+let joystick = null;
+let skillCooldownTimers = [0, 0, 0];
+
+// ─── DOM Elements ───────────────────────────────────────────────
+const joinScreen = document.getElementById('join-screen');
+const controller = document.getElementById('controller');
+const inventoryScreen = document.getElementById('inventory-screen');
+const dialogueScreen = document.getElementById('dialogue-screen');
+const notifications = document.getElementById('notifications');
+
+// ─── Join Screen ────────────────────────────────────────────────
+document.querySelectorAll('.class-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedClass = btn.dataset.class;
+  });
+});
+
+document.getElementById('join-btn').addEventListener('click', () => {
+  const name = document.getElementById('player-name').value.trim() || 'Hero';
+  socket.emit('join', { name, characterClass: selectedClass });
+});
+
+// ─── Socket Events ──────────────────────────────────────────────
+socket.on('connect', () => {
+  console.log('[Phone] Connected');
+});
+
+socket.on('joined', (data) => {
+  playerId = data.playerId;
+  playerStats = data.stats;
+  inventoryData = data.inventory;
+
+  joinScreen.classList.add('hidden');
+  controller.classList.remove('hidden');
+
+  updateHUD(data.stats);
+  initJoystick();
+  initButtons();
+});
+
+socket.on('stats:update', (data) => {
+  playerStats = data;
+  updateHUD(data);
+});
+
+socket.on('inventory:update', (data) => {
+  inventoryData = data;
+  if (!inventoryScreen.classList.contains('hidden')) {
+    renderInventory();
+  }
+});
+
+socket.on('notification', (data) => {
+  showNotification(data.text, data.type);
+});
+
+socket.on('dialogue:prompt', (data) => {
+  showDialogue(data);
+});
+
+socket.on('disconnect', () => {
+  console.log('[Phone] Disconnected');
+  showNotification('Disconnected from server', 'error');
+});
+
+// ─── HUD Update ─────────────────────────────────────────────────
+function updateHUD(stats) {
+  if (!stats) return;
+
+  document.getElementById('hud-name').textContent = stats.name;
+  document.getElementById('hud-level').textContent = `Lv.${stats.level}`;
+
+  const hpPct = (stats.hp / stats.maxHp * 100).toFixed(0);
+  document.getElementById('hp-bar').style.width = `${hpPct}%`;
+  document.getElementById('hp-text').textContent = `${stats.hp}/${stats.maxHp}`;
+
+  const mpPct = (stats.mp / stats.maxMp * 100).toFixed(0);
+  document.getElementById('mp-bar').style.width = `${mpPct}%`;
+  document.getElementById('mp-text').textContent = `${stats.mp}/${stats.maxMp}`;
+
+  const xpPct = stats.xpToNext > 0 ? (stats.xp / stats.xpToNext * 100).toFixed(0) : 0;
+  document.getElementById('xp-bar').style.width = `${xpPct}%`;
+  document.getElementById('xp-text').textContent = `${xpPct}%`;
+
+  // HP bar color
+  const hpBar = document.getElementById('hp-bar');
+  const hpRatio = stats.hp / stats.maxHp;
+  if (hpRatio > 0.5) {
+    hpBar.style.background = 'linear-gradient(90deg, #228822, #44cc44)';
+  } else if (hpRatio > 0.25) {
+    hpBar.style.background = 'linear-gradient(90deg, #ccaa00, #cccc44)';
+  } else {
+    hpBar.style.background = 'linear-gradient(90deg, #cc2222, #ff4444)';
+  }
+
+  // Update skill button labels
+  if (stats.skills) {
+    for (let i = 0; i < 3; i++) {
+      const btn = document.getElementById(`btn-skill-${i}`);
+      if (btn && stats.skills[i]) {
+        btn.textContent = stats.skills[i].name.substring(0, 3);
+        btn.title = stats.skills[i].description;
+      }
+    }
+  }
+
+  // Skill cooldowns
+  if (stats.skillCooldowns) {
+    for (let i = 0; i < 3; i++) {
+      const btn = document.getElementById(`btn-skill-${i}`);
+      if (!btn) continue;
+      const cd = stats.skillCooldowns[i];
+      if (cd > 0) {
+        btn.classList.add('on-cooldown');
+        let overlay = btn.querySelector('.cooldown-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.classList.add('cooldown-overlay');
+          btn.appendChild(overlay);
+        }
+        overlay.textContent = (cd / 1000).toFixed(1);
+      } else {
+        btn.classList.remove('on-cooldown');
+        const overlay = btn.querySelector('.cooldown-overlay');
+        if (overlay) overlay.remove();
+      }
+    }
+  }
+}
+
+// ─── Joystick ───────────────────────────────────────────────────
+function initJoystick() {
+  if (joystick) return;
+
+  joystick = nipplejs.create({
+    zone: document.getElementById('joystick-zone'),
+    mode: 'dynamic',
+    position: { left: '50%', top: '50%' },
+    color: '#ff880066',
+    size: 120,
+    restOpacity: 0.5,
+    fadeTime: 100,
+  });
+
+  joystick.on('move', (evt, data) => {
+    if (!data || !data.vector) return;
+    socket.emit('move', {
+      dx: data.vector.x,
+      dy: -data.vector.y, // nipplejs Y is inverted
+    });
+  });
+
+  joystick.on('end', () => {
+    socket.emit('move:stop');
+  });
+}
+
+// ─── Action Buttons ─────────────────────────────────────────────
+function initButtons() {
+  // Attack
+  document.getElementById('btn-attack').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    socket.emit('attack');
+    hapticFeedback();
+  });
+
+  // Skills
+  for (let i = 0; i < 3; i++) {
+    document.getElementById(`btn-skill-${i}`).addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      socket.emit('skill', { skillIndex: i });
+      hapticFeedback();
+    });
+  }
+
+  // Health Potion
+  document.getElementById('btn-potion').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    socket.emit('use:potion', { type: 'health' });
+  });
+
+  // Interact
+  document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    socket.emit('interact');
+  });
+
+  // Pickup
+  document.getElementById('btn-pickup').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    socket.emit('loot:pickup_nearest');
+  });
+
+  // Inventory
+  document.getElementById('btn-inventory').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    openInventory();
+  });
+}
+
+// ─── Haptic Feedback ────────────────────────────────────────────
+function hapticFeedback() {
+  if (navigator.vibrate) {
+    navigator.vibrate(30);
+  }
+}
+
+// ─── Notifications ──────────────────────────────────────────────
+function showNotification(text, type = 'info') {
+  const el = document.createElement('div');
+  el.classList.add('notification', type);
+  el.textContent = text;
+  notifications.appendChild(el);
+
+  // Haptic for important notifications
+  if (['legendary', 'epic', 'levelup', 'error'].includes(type)) {
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+  }
+
+  setTimeout(() => {
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }, 2200);
+}
+
+// ─── Inventory ──────────────────────────────────────────────────
+function openInventory() {
+  socket.emit('inventory:request');
+  inventoryScreen.classList.remove('hidden');
+  renderInventory();
+}
+
+document.getElementById('inv-close').addEventListener('click', () => {
+  inventoryScreen.classList.add('hidden');
+  hideTooltip();
+});
+
+function renderInventory() {
+  if (!inventoryData || !playerStats) return;
+
+  // Gold
+  document.getElementById('inv-gold').textContent = `${playerStats.gold || 0}g`;
+
+  // Equipment slots
+  const slots = document.querySelectorAll('.equip-slot');
+  slots.forEach(slotEl => {
+    const slotName = slotEl.dataset.slot;
+    const item = playerStats.equipment[slotName];
+    if (item) {
+      slotEl.textContent = item.name;
+      slotEl.style.color = item.rarityColor || '#aaa';
+      slotEl.style.borderColor = item.rarityColor || '#555';
+      slotEl.classList.add('filled');
+      slotEl.onclick = () => {
+        showTooltip(item, slotEl, true, slotName);
+      };
+    } else {
+      slotEl.textContent = slotName.charAt(0).toUpperCase() + slotName.slice(1);
+      slotEl.style.color = '#666';
+      slotEl.style.borderColor = '#333';
+      slotEl.classList.remove('filled');
+      slotEl.onclick = null;
+    }
+  });
+
+  // Grid
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
+
+  const rows = inventoryData.rows || 6;
+  const cols = inventoryData.cols || 10;
+  const rendered = new Set();
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('div');
+      cell.classList.add('inv-cell');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      const itemId = inventoryData.grid[r]?.[c];
+      if (itemId && !rendered.has(itemId)) {
+        const item = inventoryData.items.find(i => i.id === itemId);
+        if (item) {
+          cell.classList.add('occupied', 'item-origin');
+          cell.style.borderColor = item.rarityColor || '#444';
+          cell.textContent = item.stackable ? `${item.name} x${item.quantity}` : item.name.substring(0, 6);
+          cell.style.color = item.rarityColor || '#ddd';
+          cell.onclick = () => showTooltip(item, cell, false);
+          rendered.add(itemId);
+        }
+      } else if (itemId) {
+        cell.classList.add('occupied');
+        cell.style.borderColor = '#333';
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  // Stats panel
+  renderStats();
+}
+
+function renderStats() {
+  if (!playerStats) return;
+
+  const statList = document.getElementById('stat-list');
+  statList.innerHTML = '';
+
+  const hasFreePoints = playerStats.freeStatPoints > 0;
+  document.getElementById('stat-points-display').textContent =
+    hasFreePoints ? `(${playerStats.freeStatPoints} points)` : '';
+
+  const stats = [
+    { key: 'str', label: 'STR', val: playerStats.stats.str },
+    { key: 'dex', label: 'DEX', val: playerStats.stats.dex },
+    { key: 'int', label: 'INT', val: playerStats.stats.int },
+    { key: 'vit', label: 'VIT', val: playerStats.stats.vit },
+    { key: null, label: 'ATK', val: playerStats.attackPower },
+    { key: null, label: 'SPL', val: playerStats.spellPower },
+    { key: null, label: 'ARM', val: playerStats.armor },
+    { key: null, label: 'CRT', val: `${playerStats.critChance}%` },
+  ];
+
+  for (const s of stats) {
+    const row = document.createElement('div');
+    row.classList.add('stat-row');
+
+    let html = `<span class="stat-name">${s.label}</span><span class="stat-val">${s.val}</span>`;
+    if (s.key && hasFreePoints) {
+      html += `<button class="stat-btn" data-stat="${s.key}">+</button>`;
+    }
+    row.innerHTML = html;
+
+    const btn = row.querySelector('.stat-btn');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        socket.emit('levelup:stat', { stat: s.key });
+      });
+    }
+
+    statList.appendChild(row);
+  }
+}
+
+// ─── Item Tooltip ───────────────────────────────────────────────
+function showTooltip(item, anchor, isEquipped, slotName) {
+  const tt = document.getElementById('item-tooltip');
+  tt.classList.remove('hidden');
+
+  let html = `<div class="tt-name" style="color:${item.rarityColor || '#aaa'}">${item.name}</div>`;
+  html += `<div class="tt-type">${(item.rarity || '').toUpperCase()} ${item.type || ''} ${item.subType ? '(' + item.subType + ')' : ''}</div>`;
+
+  if (item.damage) html += `<div class="tt-stat">Damage: ${item.damage}</div>`;
+  if (item.armor) html += `<div class="tt-stat">Armor: ${item.armor}</div>`;
+  if (item.bonuses) {
+    for (const [stat, val] of Object.entries(item.bonuses)) {
+      html += `<div class="tt-stat">+${val} ${stat.toUpperCase()}</div>`;
+    }
+  }
+  if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;
+
+  html += '<div class="tt-actions">';
+  if (isEquipped) {
+    html += `<button onclick="unequipItem('${slotName}')">Unequip</button>`;
+  } else if (item.slot) {
+    html += `<button onclick="equipItem('${item.id}')">Equip</button>`;
+  }
+  html += `<button onclick="dropItem('${item.id}')">Drop</button>`;
+  html += `<button onclick="hideTooltip()">Close</button>`;
+  html += '</div>';
+
+  tt.innerHTML = html;
+
+  // Position near the anchor
+  const rect = anchor.getBoundingClientRect();
+  tt.style.top = Math.min(rect.bottom + 5, window.innerHeight - 200) + 'px';
+  tt.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 260)) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('item-tooltip').classList.add('hidden');
+}
+
+window.equipItem = function(itemId) {
+  socket.emit('inventory:equip', { itemId });
+  hideTooltip();
+};
+
+window.unequipItem = function(slot) {
+  socket.emit('inventory:unequip', { slot });
+  hideTooltip();
+};
+
+window.dropItem = function(itemId) {
+  socket.emit('inventory:drop', { itemId });
+  hideTooltip();
+};
+
+// ─── Dialogue ───────────────────────────────────────────────────
+function showDialogue(data) {
+  currentDialogue = data;
+  dialogueScreen.classList.remove('hidden');
+
+  document.getElementById('dialogue-npc-name').textContent = data.npcName;
+  document.getElementById('dialogue-text').textContent = data.text;
+
+  const choicesEl = document.getElementById('dialogue-choices');
+  choicesEl.innerHTML = '';
+
+  for (const choice of data.choices) {
+    const btn = document.createElement('button');
+    btn.classList.add('dialogue-choice');
+    btn.textContent = choice.text;
+    btn.addEventListener('click', () => {
+      socket.emit('dialogue:choose', {
+        npcId: data.npcId,
+        dialogueKey: data.dialogueKey || 'intro',
+        choiceIndex: choice.index,
+      });
+      dialogueScreen.classList.add('hidden');
+    });
+    choicesEl.appendChild(btn);
+  }
+}
+
+// ─── Prevent zoom/scroll on mobile ──────────────────────────────
+document.addEventListener('touchmove', (e) => {
+  if (e.target.closest('#inv-content')) return; // allow inventory scroll
+  e.preventDefault();
+}, { passive: false });
+
+// Prevent double-tap zoom
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) {
+    e.preventDefault();
+  }
+  lastTouchEnd = now;
+}, false);
+
+// ─── Cooldown ticker ────────────────────────────────────────────
+// Visual cooldown updates (faster than server ticks for smooth display)
+setInterval(() => {
+  if (!playerStats || !playerStats.skillCooldowns) return;
+  for (let i = 0; i < 3; i++) {
+    const btn = document.getElementById(`btn-skill-${i}`);
+    if (!btn) continue;
+    const cd = playerStats.skillCooldowns[i];
+    if (cd > 0) {
+      btn.classList.add('on-cooldown');
+    } else {
+      btn.classList.remove('on-cooldown');
+      const overlay = btn.querySelector('.cooldown-overlay');
+      if (overlay) overlay.remove();
+    }
+  }
+}, 100);
+
+// ─── Keep screen awake ──────────────────────────────────────────
+if ('wakeLock' in navigator) {
+  navigator.wakeLock.request('screen').catch(() => {});
+}

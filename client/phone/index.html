@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>DevLoop RPG — Controller</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Join Screen -->
+  <div id="join-screen">
+    <h1>DevLoop RPG</h1>
+    <div class="join-form">
+      <input type="text" id="player-name" placeholder="Your name" maxlength="20" autocomplete="off">
+      <div class="class-select">
+        <button class="class-btn selected" data-class="warrior">
+          <span class="class-icon">&#9876;</span>
+          <span class="class-name">Warrior</span>
+          <span class="class-desc">STR + VIT</span>
+        </button>
+        <button class="class-btn" data-class="ranger">
+          <span class="class-icon">&#127993;</span>
+          <span class="class-name">Ranger</span>
+          <span class="class-desc">DEX + STR</span>
+        </button>
+        <button class="class-btn" data-class="mage">
+          <span class="class-icon">&#9733;</span>
+          <span class="class-name">Mage</span>
+          <span class="class-desc">INT + DEX</span>
+        </button>
+      </div>
+      <button id="join-btn">Enter Dungeon</button>
+    </div>
+  </div>
+
+  <!-- Game Controller -->
+  <div id="controller" class="hidden">
+    <!-- Status Bar -->
+    <div id="status-bar">
+      <div id="player-info">
+        <span id="hud-name">Hero</span>
+        <span id="hud-level">Lv.1</span>
+      </div>
+      <div id="bars">
+        <div class="bar-container">
+          <div id="hp-bar" class="bar hp"></div>
+          <span id="hp-text" class="bar-text">100/100</span>
+        </div>
+        <div class="bar-container">
+          <div id="mp-bar" class="bar mp"></div>
+          <span id="mp-text" class="bar-text">50/50</span>
+        </div>
+        <div class="bar-container xp-bar-container">
+          <div id="xp-bar" class="bar xp"></div>
+          <span id="xp-text" class="bar-text">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Joystick Zone (left half) -->
+    <div id="joystick-zone"></div>
+
+    <!-- Action Buttons (right side) -->
+    <div id="action-buttons">
+      <button id="btn-attack" class="action-btn attack">ATK</button>
+      <div class="skill-row">
+        <button id="btn-skill-0" class="action-btn skill">S1</button>
+        <button id="btn-skill-1" class="action-btn skill">S2</button>
+        <button id="btn-skill-2" class="action-btn skill">S3</button>
+      </div>
+      <div class="util-row">
+        <button id="btn-potion" class="action-btn potion">HP</button>
+        <button id="btn-interact" class="action-btn interact">NPC</button>
+        <button id="btn-pickup" class="action-btn pickup">LOOT</button>
+        <button id="btn-inventory" class="action-btn inventory">INV</button>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications"></div>
+  </div>
+
+  <!-- Inventory Screen -->
+  <div id="inventory-screen" class="hidden">
+    <div id="inv-header">
+      <h2>Inventory</h2>
+      <button id="inv-close">&times;</button>
+    </div>
+    <div id="inv-content">
+      <div id="equipment-panel">
+        <h3>Equipment</h3>
+        <div id="equip-slots">
+          <div class="equip-slot" data-slot="helmet">Helmet</div>
+          <div class="equip-slot" data-slot="chest">Chest</div>
+          <div class="equip-slot" data-slot="gloves">Gloves</div>
+          <div class="equip-slot" data-slot="boots">Boots</div>
+          <div class="equip-slot" data-slot="weapon">Weapon</div>
+          <div class="equip-slot" data-slot="shield">Shield</div>
+          <div class="equip-slot" data-slot="ring1">Ring 1</div>
+          <div class="equip-slot" data-slot="ring2">Ring 2</div>
+          <div class="equip-slot" data-slot="amulet">Amulet</div>
+        </div>
+      </div>
+      <div id="grid-panel">
+        <h3>Bag <span id="inv-gold">0g</span></h3>
+        <div id="inv-grid"></div>
+      </div>
+      <div id="stats-panel">
+        <h3>Stats <span id="stat-points-display"></span></h3>
+        <div id="stat-list"></div>
+      </div>
+    </div>
+    <div id="item-tooltip" class="hidden"></div>
+  </div>
+
+  <!-- Dialogue Screen -->
+  <div id="dialogue-screen" class="hidden">
+    <div id="dialogue-box">
+      <div id="dialogue-npc-name"></div>
+      <div id="dialogue-text"></div>
+      <div id="dialogue-choices"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://unpkg.com/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
+  <script src="controller.js"></script>
+</body>
+</html>
