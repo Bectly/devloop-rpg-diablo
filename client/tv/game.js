@@ -676,45 +676,140 @@ class GameScene extends Phaser.Scene {
         seenStoryNpcs.add(key);
 
         if (!this.storyNpcSprites[key]) {
-          // Color: purple for sage, green for shrine guardian, gray for herald
-          let color;
-          if (npc.id === 'old_sage') color = 0x8888ff;
-          else if (npc.id === 'shrine_guardian') color = 0x44cc44;
-          else color = 0x888888;
+          // NPC type config: color, label color, bob speed
+          let color, labelColor, bobSpeed;
+          if (npc.id === 'old_sage') {
+            color = 0x8888ff; labelColor = '#aaaaff'; bobSpeed = 800;
+          } else if (npc.id === 'shrine_guardian') {
+            color = 0x44cc44; labelColor = '#66ee66'; bobSpeed = 600;
+          } else {
+            color = 0xaa6666; labelColor = '#cc8888'; bobSpeed = 1000;
+          }
 
-          const body = this.add.circle(npc.x, npc.y, 10, color, 0.9);
-          body.setDepth(30);
-          const head = this.add.circle(npc.x, npc.y - 14, 6, color, 0.9);
-          head.setDepth(30);
+          // Glow ring — soft pulsing aura behind the NPC
+          const glow = this.add.circle(npc.x, npc.y - 4, 22, color, 0.15);
+          glow.setDepth(29);
+          this.tweens.add({
+            targets: glow,
+            alpha: { from: 0.08, to: 0.22 },
+            scale: { from: 0.95, to: 1.1 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
 
-          // Name label
-          const label = this.add.text(npc.x, npc.y - 26, npc.name || npc.id, {
-            fontSize: '8px',
+          // Build distinct body shapes per NPC type using graphics
+          const bodyGfx = this.add.graphics().setDepth(30);
+          const headGfx = this.add.graphics().setDepth(30);
+          const accentGfx = this.add.graphics().setDepth(30);
+
+          if (npc.id === 'old_sage') {
+            // Robed figure: wide triangular robe body
+            bodyGfx.fillStyle(color, 0.9);
+            bodyGfx.fillTriangle(-10, 10, 10, 10, 0, -6);
+            bodyGfx.fillStyle(0x6666cc, 0.5);
+            bodyGfx.fillTriangle(-7, 10, 7, 10, 0, -2); // inner robe fold
+            // Round head
+            headGfx.fillStyle(0xddccaa, 0.9);
+            headGfx.fillCircle(0, 0, 5);
+            // Pointed hood/hat
+            accentGfx.fillStyle(0x6655cc, 0.9);
+            accentGfx.fillTriangle(-5, -12, 5, -12, 0, -20);
+          } else if (npc.id === 'shrine_guardian') {
+            // Armored: rectangular body
+            bodyGfx.fillStyle(color, 0.9);
+            bodyGfx.fillRect(-8, -6, 16, 16);
+            bodyGfx.fillStyle(0x338833, 0.6);
+            bodyGfx.fillRect(-6, -4, 12, 12); // inner armor plate
+            // Round head
+            headGfx.fillStyle(0xddccaa, 0.9);
+            headGfx.fillCircle(0, 0, 5);
+            // Helmet triangle on top
+            accentGfx.fillStyle(0x228822, 0.9);
+            accentGfx.fillTriangle(-6, -12, 6, -12, 0, -19);
+            // Small shoulder pads
+            accentGfx.fillStyle(color, 0.7);
+            accentGfx.fillRect(-12, -6, 5, 6);
+            accentGfx.fillRect(7, -6, 5, 6);
+          } else {
+            // Dying adventurer / herald: small hunched figure
+            bodyGfx.fillStyle(color, 0.85);
+            bodyGfx.fillCircle(0, 2, 7); // smaller crouched body
+            bodyGfx.fillStyle(0x884444, 0.4);
+            bodyGfx.fillCircle(2, 4, 4); // wound/shadow
+            // Head tilted to the side
+            headGfx.fillStyle(0xccbbaa, 0.8);
+            headGfx.fillCircle(3, 0, 4); // offset = tilted
+            // No accent piece, but add a small arm reaching out
+            accentGfx.fillStyle(color, 0.6);
+            accentGfx.fillRect(5, 2, 8, 2); // outstretched arm
+          }
+
+          // Position graphics objects at NPC location
+          bodyGfx.setPosition(npc.x, npc.y);
+          headGfx.setPosition(npc.x, npc.y - 14);
+          accentGfx.setPosition(npc.x, npc.y - 14);
+
+          // Interaction "!" marker — floating above, alpha pulse
+          const marker = this.add.text(npc.x, npc.y - 36, '!', {
+            fontSize: '12px',
             fontFamily: 'Courier New, monospace',
-            color: '#ffffff',
+            fontStyle: 'bold',
+            color: '#ffff44',
             stroke: '#000000',
-            strokeThickness: 2,
+            strokeThickness: 3,
+          });
+          marker.setOrigin(0.5);
+          marker.setDepth(32);
+          this.tweens.add({
+            targets: marker,
+            alpha: { from: 0.4, to: 1.0 },
+            y: npc.y - 39,
+            duration: 900,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+
+          // Name label — larger, colored per NPC type
+          const label = this.add.text(npc.x, npc.y + 16, npc.name || npc.id, {
+            fontSize: '10px',
+            fontFamily: 'Courier New, monospace',
+            color: labelColor,
+            stroke: '#000000',
+            strokeThickness: 3,
           });
           label.setOrigin(0.5);
           label.setDepth(31);
 
-          this.storyNpcSprites[key] = { body, head, label };
+          this.storyNpcSprites[key] = {
+            bodyGfx, headGfx, accentGfx, glow, marker, label,
+            _bobSpeed: bobSpeed,
+          };
         }
 
-        // Update position and idle bob
+        // Update position and idle bob (varied speed per NPC type)
         const sprite = this.storyNpcSprites[key];
-        const bob = Math.sin(Date.now() / 700 + npc.x) * 1.5;
-        sprite.body.setPosition(npc.x, npc.y + bob);
-        sprite.head.setPosition(npc.x, npc.y - 14 + bob);
-        sprite.label.setPosition(npc.x, npc.y - 26 + bob);
+        const bob = Math.sin(Date.now() / sprite._bobSpeed + npc.x) * 2;
+        sprite.bodyGfx.setPosition(npc.x, npc.y + bob);
+        sprite.headGfx.setPosition(npc.x, npc.y - 14 + bob);
+        sprite.accentGfx.setPosition(npc.x, npc.y - 14 + bob);
+        sprite.glow.setPosition(npc.x, npc.y - 4 + bob);
+        sprite.label.setPosition(npc.x, npc.y + 16 + bob);
+        // Marker bobs but tween handles its own alpha/y offset
+        sprite.marker.x = npc.x;
       }
 
       // Clean up story NPC sprites that are no longer present
       for (const key in this.storyNpcSprites) {
         if (!seenStoryNpcs.has(key)) {
           const sprite = this.storyNpcSprites[key];
-          sprite.body.destroy();
-          sprite.head.destroy();
+          sprite.bodyGfx.destroy();
+          sprite.headGfx.destroy();
+          sprite.accentGfx.destroy();
+          sprite.glow.destroy();
+          sprite.marker.destroy();
           sprite.label.destroy();
           delete this.storyNpcSprites[key];
         }
@@ -1190,6 +1285,20 @@ socket.on('dungeon:enter', (data) => {
       if (scene.shopNpcLabel) {
         scene.shopNpcLabel.destroy();
         scene.shopNpcLabel = null;
+      }
+
+      // Clean up story NPC sprites
+      if (scene.storyNpcSprites) {
+        for (const key in scene.storyNpcSprites) {
+          const sprite = scene.storyNpcSprites[key];
+          sprite.bodyGfx.destroy();
+          sprite.headGfx.destroy();
+          sprite.accentGfx.destroy();
+          sprite.glow.destroy();
+          sprite.marker.destroy();
+          sprite.label.destroy();
+        }
+        scene.storyNpcSprites = {};
       }
 
       // Clean up shrine sprites (including orbit dots and crack graphics)

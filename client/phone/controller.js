@@ -9,6 +9,7 @@ let playerStats = null;
 let inventoryData = null;
 let selectedClass = 'warrior';
 let currentDialogue = null;
+let typewriterInterval = null;
 let joystick = null;
 let skillCooldownTimers = [0, 0, 0];
 let currentFloor = 0;
@@ -104,6 +105,10 @@ socket.on('dialogue:prompt', (data) => {
 
 socket.on('dialogue:end', () => {
   currentDialogue = null;
+  if (typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+  }
   dialogueScreen.classList.add('hidden');
 });
 
@@ -639,8 +644,13 @@ function showDialogue(data) {
   currentDialogue = data;
   dialogueScreen.classList.remove('hidden');
 
+  // Clear any running typewriter from a previous prompt
+  if (typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+  }
+
   document.getElementById('dialogue-npc-name').textContent = data.npcName;
-  document.getElementById('dialogue-text').textContent = data.text;
 
   // Set NPC type for color styling
   const box = document.getElementById('dialogue-box');
@@ -656,14 +666,24 @@ function showDialogue(data) {
     }
   }
 
+  // ── Typewriter text reveal ──
+  const textEl = document.getElementById('dialogue-text');
+  const fullText = data.text;
+  let charIndex = 0;
+  textEl.textContent = '';
+  textEl.classList.add('typing');
+
+  // Build choices (hidden) while typewriter runs
   const choicesEl = document.getElementById('dialogue-choices');
   choicesEl.innerHTML = '';
+  const buttons = [];
 
   for (const choice of data.choices) {
     const btn = document.createElement('button');
-    btn.classList.add('dialogue-choice');
+    btn.classList.add('dialogue-choice', 'dialogue-choice-hidden');
     btn.textContent = choice.text;
     const dialogueHandler = () => {
+      if (navigator.vibrate) navigator.vibrate(15);
       socket.emit('dialogue:choose', {
         npcId: data.npcId,
         dialogueKey: data.dialogueKey || 'intro',
@@ -672,7 +692,11 @@ function showDialogue(data) {
       // Don't hide here — server will send dialogue:prompt (follow-up)
       // or dialogue:end (conversation over). Disable buttons to prevent
       // double-taps while waiting for server response.
-      choicesEl.querySelectorAll('button').forEach(b => b.disabled = true);
+      btn.classList.add('chosen');
+      choicesEl.querySelectorAll('button').forEach(b => {
+        b.disabled = true;
+        if (b !== btn) b.classList.add('dialogue-choice-disabled');
+      });
     };
     btn.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -681,7 +705,25 @@ function showDialogue(data) {
     // Fallback for desktop
     btn.addEventListener('click', dialogueHandler);
     choicesEl.appendChild(btn);
+    buttons.push(btn);
   }
+
+  // Reveal ~3 chars per tick at 30ms
+  typewriterInterval = setInterval(() => {
+    charIndex = Math.min(charIndex + 3, fullText.length);
+    textEl.textContent = fullText.slice(0, charIndex);
+
+    if (charIndex >= fullText.length) {
+      clearInterval(typewriterInterval);
+      typewriterInterval = null;
+      textEl.classList.remove('typing');
+
+      // Staggered choice fade-in
+      buttons.forEach((btn, i) => {
+        setTimeout(() => btn.classList.remove('dialogue-choice-hidden'), i * 50);
+      });
+    }
+  }, 30);
 }
 
 

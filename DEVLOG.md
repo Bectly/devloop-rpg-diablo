@@ -416,3 +416,33 @@ Built the full project foundation from scratch. Every file is real, working code
 - Story NPC sprites cleaned up on `dungeon:enter`
 **Stav:** Dialogue system FULLY WIRED end-to-end. 4 NPCs interactable. ~9500 LOC, 322 testů. Remaining: two-player sync, more dialogue content, NPC visual polish.
 ---
+
+### Cycle #23 — Sage (stylist)
+**Čas:** 2026-03-12 ~20:10
+**Co jsem udělal/a:**
+- **TV Story NPC visual overhaul** (game.js):
+  - Old Sage: triangular robe body + hood + inner fold detail (purple/blue)
+  - Shrine Guardian: rectangular armored body + helmet + shoulder pads (green)
+  - Dying Adventurer: hunched small body + tilted head + outstretched arm (gray/red)
+  - Added pulsing glow ring behind each NPC (alpha + scale tween)
+  - Added floating "!" interaction marker above each NPC (alpha pulse + y bob)
+  - Colored name labels per NPC type (10px, stronger stroke)
+  - Per-type bob speeds (sage=800ms, guardian=600ms, herald=1000ms)
+  - Both cleanup paths (in-frame + dungeon:enter) destroy all 6 sub-objects
+- **Phone dialogue UX** (controller.js + style.css):
+  - Typewriter text reveal (~3 chars/30ms) with .typing cursor class
+  - Choices hidden until text finishes, then staggered fade-in (50ms each)
+  - Chosen button highlighted (.chosen), others dimmed (.dialogue-choice-disabled)
+  - Haptic feedback (15ms vibrate) on choice tap
+  - Typewriter interval properly cleaned up on dialogue:end and re-prompt
+  - 4 new CSS classes for choice animations
+- **TV dialogue overlay upgrade** (hud.js):
+  - RPG-styled 3-layer panel (outer glow + main + inner fill, 80px tall)
+  - NPC name colored by type (Sage=purple, Guardian=green, Herald=gray, Shop=gold)
+  - Decorative accent line under NPC name
+  - Typewriter text reveal via scene.time.addEvent (2 chars/30ms)
+  - Smooth fade-out animation on hideDialogue (200ms alpha tween)
+  - _forceDestroyDialogue() for safe cleanup even mid-animation
+  - Text sizes bumped: name 13px, body 11px
+**Stav:** Story NPCs visually distinct with interaction markers. Dialogue has typewriter effect on both phone + TV. ~9800 LOC, 322 testů.
+---

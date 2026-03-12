@@ -846,6 +846,28 @@ html, body {
 #dialogue-box[data-npc-type="boss"] #dialogue-npc-name { color: #ff4444; }
 #dialogue-box[data-npc-type="lore"] #dialogue-npc-name { color: #aa88ff; }
 
+/* Dialogue choice animations */
+.dialogue-choice-hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dialogue-choice.chosen {
+  background: rgba(255, 136, 0, 0.2);
+  border-color: var(--accent);
+}
+
+.dialogue-choice.chosen::before {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.dialogue-choice-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 /* ─── Damage Flash Overlay ────────────────────────────────────── */
 #damage-overlay {
   position: fixed;
