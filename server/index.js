@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const { Player, DEATH_GOLD_DROP_PERCENT } = require('./game/player');
-const { World, TILE } = require('./game/world');
+const { World, TILE, TILE_SIZE } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
@@ -390,7 +390,11 @@ controllerNs.on('connection', (socket) => {
       player.mp = player.maxMp;
       socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
       socket.emit('stats:update', player.serializeForPhone());
-      gameNs.emit('shrine:used', { roomId: room.id });
+      gameNs.emit('shrine:used', {
+        roomId: room.id,
+        x: (room.x + room.w / 2) * TILE_SIZE,
+        y: (room.y + room.h / 2) * TILE_SIZE,
+      });
       return;
     }
 
@@ -571,7 +575,11 @@ controllerNs.on('connection', (socket) => {
     player.mp = player.maxMp;
     socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
     socket.emit('stats:update', player.serializeForPhone());
-    gameNs.emit('shrine:used', { roomId: room.id });
+    gameNs.emit('shrine:used', {
+      roomId: room.id,
+      x: (room.x + room.w / 2) * TILE_SIZE,
+      y: (room.y + room.h / 2) * TILE_SIZE,
+    });
   });
 
   // ── Disconnect ──

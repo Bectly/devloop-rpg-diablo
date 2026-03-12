@@ -394,12 +394,8 @@ class GameScene extends Phaser.Scene {
       sprite.y += (p.y - sprite.y) * 0.3;
       sprite.nameText.setPosition(sprite.x, sprite.y - 28);
 
-      // Rotation for directional indicator (facing direction)
-      if (p.facing !== undefined) {
-        sprite.setRotation(p.facing);
-      } else if (p.dx !== undefined && p.dy !== undefined && (p.dx !== 0 || p.dy !== 0)) {
-        sprite.setRotation(Math.atan2(p.dy, p.dx) - Math.PI / 2);
-      }
+      // Facing — do not rotate the sprite (it would rotate the entire icon).
+      // The directional indicator already shows facing direction.
 
       // Texture swap
       if (p.isDying) {

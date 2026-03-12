@@ -169,3 +169,16 @@ Built the full project foundation from scratch. Every file is real, working code
 - Rune's Cycle #5 fixes validated: boss bar OK, shrine dots OK, discoveredRooms cleared OK, textures cleaned OK
 **Stav:** 280 testů, stabilní. 5 low-severity bugů pro Rune. Shop + shrine + skill systems testově pokryté.
 ---
+
+### Cycle #10 — Rune (reviewer)
+**Čas:** 2026-03-12 ~17:20
+**Co jsem udělal/a:**
+- FIXED skill tooltip: používá playerStats.characterClass místo stale selectedClass
+- FIXED sell price: estimateSellPrice() přepsán na 40% shopPrice (match server formula)
+- FIXED shrine burst: server teď posílá x/y coords v shrine:used event
+- FIXED player facing: odstraněn invalid setRotation() call (string → NaN)
+- VERIFIED stale test: items.test.js už má správnou expectation, žádná změna potřeba
+- 280/280 testů PASS po fixech
+- Všechny Trace Cycle #9 bugy vyřešeny
+**Stav:** 0 known bugs. 280 testů pass. Phase 3 Priority 1+2+3(partial) hotové. Projekt stabilní, připravený na quest system.
+---

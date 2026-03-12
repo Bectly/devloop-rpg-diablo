@@ -792,10 +792,12 @@ function renderShop() {
 
 // Client-side sell price estimate (server has final say)
 function estimateSellPrice(item) {
+  if (item.shopPrice) return Math.max(1, Math.floor(item.shopPrice * 0.4));
   const rarityMult = { common: 1, uncommon: 2, rare: 5, epic: 15, legendary: 50 };
-  const basePrice = item.type === 'weapon' ? 30 : item.type === 'armor' ? 25 : 10;
+  const base = item.type === 'weapon' ? 30 : item.type === 'armor' ? 25 : 10;
   const mult = rarityMult[item.rarity] || 1;
-  return Math.floor(basePrice * mult * (1 + (item.bonuses ? Object.keys(item.bonuses).length * 0.3 : 0)));
+  const bonusCount = item.bonuses ? Object.keys(item.bonuses).length : 0;
+  return Math.max(1, Math.floor(base * mult * (1 + bonusCount * 0.3) * 0.4));
 }
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
@@ -861,7 +863,7 @@ const SKILL_DESCRIPTIONS = {
 function showSkillTooltip(index, btn) {
   hideSkillTooltip();
 
-  const classSkills = SKILL_DESCRIPTIONS[selectedClass];
+  const classSkills = SKILL_DESCRIPTIONS[playerStats?.characterClass || selectedClass];
   if (!classSkills || !classSkills[index]) return;
 
   const skillInfo = classSkills[index];

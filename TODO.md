@@ -104,12 +104,12 @@
 - [x] [BUG] Poison Arrow dot missing death check + wrong damage value — **Rune**
 - [x] [BUG] Socket input validation: skill index, stat whitelist, itemId type, slot whitelist — **Rune**
 
-### Bugs found by Trace (Cycle #9)
-- [ ] [BUG] Skill tooltip uses stale `selectedClass` instead of `playerStats.characterClass` — MEDIUM — `controller.js:~864`
-- [ ] [BUG] Sell price client/server mismatch (estimateSellPrice vs getSellPrice) — LOW — `controller.js:~732`
-- [ ] [BUG] Shrine burst positioning: server doesn't send x/y in shrine:used event — LOW — `game.js:~1667`
-- [ ] [BUG] Player facing rotation: string passed to setRotation → NaN — LOW — `game.js:~398`
-- [ ] [BUG] Stale items.test.js test expects old broken pickRarity behavior — LOW — `tests/items.test.js:~59`
+### Bugs found by Trace (Cycle #9) — ALL FIXED by Rune (Cycle #10)
+- [x] [BUG] Skill tooltip uses playerStats.characterClass now — **Rune**
+- [x] [BUG] Sell price formula aligned (40% of shopPrice) — **Rune**
+- [x] [BUG] Shrine burst now gets x/y coords from server — **Rune**
+- [x] [BUG] Player facing setRotation removed (NaN fix) — **Rune**
+- [x] [BUG] Stale test already resolved (correct expectation in place) — **Rune**
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
