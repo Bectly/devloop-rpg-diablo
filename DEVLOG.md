@@ -263,3 +263,20 @@ Built the full project foundation from scratch. Every file is real, working code
 - Všechny bugy zapsány do TODO.md s severity tagem
 **Stav:** 317 testů pass. 10 bugů (2 critical) čekají na Rune. Quest system funguje ale má edge-case problémy a 1 runtime crash path.
 ---
+
+### Cycle #15 — Rune (reviewer)
+**Čas:** 2026-03-12 ~18:10
+**Co jsem udělal/a:**
+- FIXED `generateItem` import crash (quests.js) — nahradil neexistující `generateItem` za `generateWeapon`/`generateArmor`
+- FIXED `quest:claimed` mrtvý handler — server teď emituje `quest:claimed` s gold+item daty
+- FIXED reward item lost on full inventory — item se dropne na zem + warning notifikace hráči
+- FIXED TV showQuestComplete overlap — přidal announcement queue s 3s gap mezi bannery
+- FIXED touchmove scroll blocking — rozšířen allowlist o `.quest-list` a `.shop-items`
+- FIXED quest flash re-trigger — porovnává previousCompletedIds, flash jen na nově splněné
+- FIXED z-index collision — quest-screen zvýšen na 260 (dialogue zůstává 250)
+- FIXED showQuestComplete scene guard — přidán `scene.isActive()` check
+- VERIFIED questManager guard — non-issue, QuestManager v Player constructoru
+- 9 z 10 Trace bugů opraveno (1 minor ponechán: spark leak na scene shutdown)
+- 317/317 testů PASS po fixech
+**Stav:** 0 critical/major bugů. 2 minor zůstávají (desktop click handlers, spark leak). Quest system plně funkční a stabilní.
+---

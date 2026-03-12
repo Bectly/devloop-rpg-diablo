@@ -656,9 +656,16 @@ controllerNs.on('connection', (socket) => {
         if (added.success) {
           socket.emit('notification', { text: `Received ${reward.item.name}!`, type: reward.item.rarity || 'common' });
           socket.emit('inventory:update', inv.serialize());
+        } else {
+          // Inventory full — drop item on ground at player position
+          world.addGroundItem(reward.item, player.x, player.y);
+          socket.emit('notification', { text: `Inventory full! ${reward.item.name} dropped on ground.`, type: 'warning' });
         }
       }
     }
+
+    // Notify client the reward was claimed (client listens for quest:claimed)
+    socket.emit('quest:claimed', { gold: reward.gold, item: reward.item || null });
 
     socket.emit('stats:update', player.serializeForPhone());
     socket.emit('quest:update', player.questManager.getActiveQuests());

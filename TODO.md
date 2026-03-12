@@ -119,17 +119,18 @@
 - [x] [BUG] Player facing setRotation removed (NaN fix) — **Rune**
 - [x] [BUG] Stale test already resolved (correct expectation in place) — **Rune**
 
-### Bugs found by Trace (Cycle #14) — quest system audit
-- [ ] [BUG][CRITICAL] Server never emits `quest:claimed` — client handler at controller.js:148 is dead code — `server/index.js:~665`
-- [ ] [BUG][CRITICAL] `generateItem` import in quests.js is wrong — `items.js` exports `generateWeapon`/`generateArmor`, not `generateItem` — runtime crash on 30% item reward path — `server/game/quests.js:23`
-- [ ] [BUG][MAJOR] Reward item silently lost when inventory full — quest marked claimed, gold granted, item dropped — `server/index.js:652-660`
-- [ ] [BUG][MAJOR] TV showQuestComplete overlaps on rapid calls — no queue/offset for multiple simultaneous quest completions — `client/tv/game.js:1535`
-- [ ] [BUG][MAJOR] Desktop action buttons missing click handlers — only QST has click fallback, ATK/skills/HP/NPC/LOOT/INV are touchstart only — `client/phone/controller.js:383`
-- [ ] [BUG][MEDIUM] touchmove prevention blocks quest-list and shop-items scrolling on mobile — `client/phone/controller.js:958-961`
-- [ ] [BUG][MEDIUM] Quest flash re-triggers on every quest:update, not just on newly-completed transitions — `client/phone/controller.js:131`
-- [ ] [BUG][MEDIUM] quest-screen and dialogue-screen share z-index 250 — stacking conflict — `client/phone/style.css:715,1015`
-- [ ] [BUG][MEDIUM] No questManager existence guard — possible race between join and game loop — `server/index.js:110`
-- [ ] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — potential Phaser object leak — `client/tv/game.js:1596`
+### Bugs found by Trace (Cycle #14) — FIXED by Rune (Cycle #15)
+- [x] [BUG][CRITICAL] Server never emits `quest:claimed` — added emit in quest:claim handler — **Rune**
+- [x] [BUG][CRITICAL] `generateItem` import wrong — fixed to `generateWeapon`/`generateArmor` — **Rune**
+- [x] [BUG][MAJOR] Reward item lost on full inventory — now drops on ground + warning notification — **Rune**
+- [x] [BUG][MAJOR] TV showQuestComplete overlap — added announcement queue with 3s gap — **Rune**
+- [ ] [BUG][MAJOR] Desktop action buttons missing click handlers — only QST has click fallback — `controller.js`
+- [x] [BUG][MEDIUM] touchmove blocks quest-list/shop scrolling — extended allowlist — **Rune**
+- [x] [BUG][MEDIUM] Quest flash re-triggers on every update — now compares prev completedIds — **Rune**
+- [x] [BUG][MEDIUM] z-index collision quest/dialogue screen — quest z-index bumped to 260 — **Rune**
+- [x] [BUG][MEDIUM] questManager guard — confirmed non-issue (init in Player constructor) — **Rune**
+- [x] [BUG][MEDIUM] showQuestComplete no scene active guard — added isActive() check — **Rune**
+- [ ] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — `game.js`
 
 ## Notes
 - Server is authoritative: all game logic runs server-side

@@ -248,6 +248,10 @@ class GameScene extends Phaser.Scene {
     this.lastBossId = null;
     this.discoveredRooms = new Set();
 
+    // Quest announcement queue (prevents overlapping banners)
+    this.questAnnouncementQueue = [];
+    this.questAnnouncementActive = false;
+
     // Smooth camera tracking position
     this.camTargetX = GAME_W / 2;
     this.camTargetY = GAME_H / 2;
@@ -1531,8 +1535,27 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  // ── Quest Complete Announcement ──
+  // ── Quest Complete Announcement (queued) ──
   showQuestComplete(title) {
+    this.questAnnouncementQueue.push(title);
+    if (!this.questAnnouncementActive) {
+      this._processQuestQueue();
+    }
+  }
+
+  _processQuestQueue() {
+    if (this.questAnnouncementQueue.length === 0) {
+      this.questAnnouncementActive = false;
+      return;
+    }
+    this.questAnnouncementActive = true;
+    const title = this.questAnnouncementQueue.shift();
+    this._showQuestBanner(title);
+    // Process next after 3s (2.5s display + 0.5s gap)
+    this.time.delayedCall(3000, () => this._processQuestQueue());
+  }
+
+  _showQuestBanner(title) {
     const cam = this.cameras.main;
     const cx = cam.scrollX + cam.width / 2;
     const cy = cam.scrollY + cam.height * 0.25;
@@ -1769,7 +1792,7 @@ socket.on('shrine:used', (data) => {
 socket.on('quest:complete', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
-    if (scene) {
+    if (scene && scene.scene.isActive()) {
       scene.showQuestComplete(data.title);
     }
   }

@@ -20,7 +20,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const { generateItem } = require('./items');
+const { generateWeapon, generateArmor } = require('./items');
 
 // Quest templates — scaled by floor
 const QUEST_TEMPLATES = [
@@ -189,7 +189,7 @@ class QuestManager {
 
     // 30% chance for item reward on harder quests
     if (Math.random() < 0.3 && ['kill_type', 'clear_rooms', 'reach_floor'].includes(questType)) {
-      reward.item = generateItem(floor, Math.random() < 0.5 ? 'weapon' : 'armor');
+      reward.item = Math.random() < 0.5 ? generateWeapon(floor) : generateArmor(floor);
     }
 
     return reward;

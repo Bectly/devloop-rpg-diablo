@@ -126,11 +126,14 @@ socket.on('shop:inventory', (data) => {
 });
 
 socket.on('quest:update', (quests) => {
+  // Detect newly completed quests by comparing against previous state
+  const prevCompletedIds = new Set(questData.filter(q => q.completed).map(q => q.id));
+  const newlyCompleted = quests.filter(q => q.completed && !q.claimed && !prevCompletedIds.has(q.id));
+
   questData = quests;
-  // Check for newly completed quests
-  const newlyCompleted = quests.filter(q => q.completed && !q.claimed);
+
   if (newlyCompleted.length > 0) {
-    // Flash the QST button
+    // Flash the QST button only for genuinely new completions
     const qstBtn = document.getElementById('btn-quests');
     if (qstBtn) {
       qstBtn.classList.add('quest-flash');
@@ -956,7 +959,7 @@ function updateQuestBadge() {
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
 document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('#inv-content')) return;
+  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items')) return;
   e.preventDefault();
 }, { passive: false });
 
