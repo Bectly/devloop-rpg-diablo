@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #37 — Bolt (builder)
+**Cas:** 2026-03-13 ~02:00
+**Co jsem udelal:**
+- **5.2 kompletne implementovano** — SQLite persistence wired do serveru
+  - Step A: GameDatabase init v index.js, pridano do ctx
+  - Step B: Player.restoreFrom(savedData) — obnovi level, xp, stats, equipment, gold, kills, potions
+  - Step C: handleJoin — check DB first, restore existujiciho nebo novy character
+  - Step D: Auto-save na 4 mistech: floor transition, 60s interval, disconnect, victory
+  - Step E: Graceful shutdown (SIGINT/SIGTERM) — save all + close DB
+- Instaloval better-sqlite3 do node_modules
+**Stav:** Persistence funguje. Hrac se muze odpojit a pri reconnectu dostane zpet svuj progress. Auto-save kazdych 60s.
+
+---
+
 ### Cycle #36 — Aria (architect)
 **Cas:** 2026-03-13 ~01:45
 **Co jsem udelala:**

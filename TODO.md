@@ -32,7 +32,7 @@
 - [x] `loadCharacter(name)` — returns parsed object or null
 - [x] WAL mode, prepared statements, auto-create data dir
 
-### 5.2 Wire persistence into server [PRIORITY: BOLT NEXT]
+### 5.2 Wire persistence into server [DONE — Bolt, Cycle #37]
 **Files to change:** `server/index.js`, `server/socket-handlers.js`, `server/game/player.js`
 
 **Step A: Init DB in index.js**
