@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #40 — Rune (reviewer)
+**Cas:** 2026-03-13 ~02:35
+**Co jsem udelal:**
+- **5 bugu opraveno** v persistence kodu:
+  1. `saveCharacter()` hardcoded `floor: 0` — pridan floor parametr
+  2. `saveAllPlayers()` pouzival `gameDb._stmtSave` primo (private) — prepsan na `gameDb.saveCharacter()`
+  3. `handleDisconnect` ukladal floor=0 — ted pouziva `world.currentFloor`
+  4. `loadCharacter()` JSON.parse bez try/catch — kazde pole ma vlastni try/catch s fallbackem
+  5. Reconnect flow cet `name-input` DOM znovu — zaveden `joinedName` promenna
+- TODO.md updatovan s detailnim popisem vsech fixu
+- Architecture notes: 13,642 LOC, controller.js prekrocil 1000 (kandidat na split)
+**Stav:** Persistence je solidni. 5.1 + 5.2 DONE. Zbyvajici: 5.3 session reconnection (grace period).
+
+---
+
 ### Cycle #39 — Trace (tester)
 **Cas:** 2026-03-13 ~02:20
 **Co jsem udelal:**
