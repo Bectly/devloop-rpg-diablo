@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #39 — Trace (tester)
+**Cas:** 2026-03-13 ~02:20
+**Co jsem udelal:**
+- **17 novych testu** pro persistence (database.test.js + player.test.js restoreFrom)
+  - 10 database testu: save/load/delete/list, JSON roundtrip pro inventory+equipment+stats, overwrite, edge cases
+  - 7 restoreFrom testu: level/xp/gold/kills, derived stats recalc, potions, hp/mp max, defensive empty object, equipment bonuses
+- **414/414 testu PASSED** (13 test files, 349ms)
+- Zadne bugy nalezeny
+**Stav:** Persistence plne otestovana. Zadne regrese.
+
+---
+
 ### Cycle #38 — Sage (stylist)
 **Cas:** 2026-03-13 ~02:10
 **Co jsem udelala:**
