@@ -16,6 +16,8 @@ let currentFloorName = '';
 let isDead = false;
 let deathCountdown = 0;
 let deathInterval = null;
+let buttonsInitialized = false;
+let notificationCount = 0;
 
 // ─── DOM Elements ───────────────────────────────────────────────
 const joinScreen = document.getElementById('join-screen');
@@ -25,6 +27,13 @@ const dialogueScreen = document.getElementById('dialogue-screen');
 
 // ─── Join Screen — Class Card Selection ─────────────────────────
 document.querySelectorAll('.class-card').forEach(card => {
+  card.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.class;
+  });
+  // Fallback for desktop testing
   card.addEventListener('click', () => {
     document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
@@ -32,6 +41,12 @@ document.querySelectorAll('.class-card').forEach(card => {
   });
 });
 
+document.getElementById('btn-join').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('name-input').value.trim() || 'Hero';
+  socket.emit('join', { name, characterClass: selectedClass });
+});
+// Fallback for desktop testing
 document.getElementById('btn-join').addEventListener('click', () => {
   const name = document.getElementById('name-input').value.trim() || 'Hero';
   socket.emit('join', { name, characterClass: selectedClass });
@@ -56,6 +71,11 @@ socket.on('joined', (data) => {
   updateFloorDisplay();
   initJoystick();
   initButtons();
+
+  // Request wake lock after user gesture (join) to keep screen on during play
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').catch(() => {});
+  }
 });
 
 socket.on('stats:update', (data) => {
@@ -260,6 +280,9 @@ function initJoystick() {
 
 // ─── Action Buttons ─────────────────────────────────────────────
 function initButtons() {
+  if (buttonsInitialized) return;
+  buttonsInitialized = true;
+
   // Attack
   document.getElementById('btn-attack').addEventListener('touchstart', (e) => {
     e.preventDefault();
@@ -318,6 +341,12 @@ function showNotification(text, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `notification-toast ${type}`;
   toast.textContent = text;
+
+  // Stack notifications vertically: offset by number of active toasts
+  const activeToasts = document.querySelectorAll('.notification-toast');
+  const stackOffset = activeToasts.length * 46; // ~46px per toast (height + gap)
+  toast.style.top = (60 + stackOffset) + 'px';
+
   document.body.appendChild(toast);
 
   if (type === 'legendary' || type === 'epic' || type === 'levelup') {
@@ -334,6 +363,12 @@ function openInventory() {
   renderInventory();
 }
 
+document.getElementById('inv-close').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  inventoryScreen.classList.add('hidden');
+  hideTooltip();
+});
+// Fallback for desktop
 document.getElementById('inv-close').addEventListener('click', () => {
   inventoryScreen.classList.add('hidden');
   hideTooltip();
@@ -437,6 +472,11 @@ function renderStats() {
 
     const btn = row.querySelector('.stat-btn');
     if (btn) {
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        socket.emit('levelup:stat', { stat: s.key });
+      });
+      // Fallback for desktop
       btn.addEventListener('click', () => {
         socket.emit('levelup:stat', { stat: s.key });
       });
@@ -483,6 +523,7 @@ function showTooltip(item, anchor, isEquipped, slotName) {
 function hideTooltip() {
   document.getElementById('item-tooltip').classList.add('hidden');
 }
+window.hideTooltip = hideTooltip;
 
 window.equipItem = function(itemId) {
   socket.emit('inventory:equip', { itemId });
@@ -514,14 +555,20 @@ function showDialogue(data) {
     const btn = document.createElement('button');
     btn.classList.add('dialogue-choice');
     btn.textContent = choice.text;
-    btn.addEventListener('click', () => {
+    const dialogueHandler = () => {
       socket.emit('dialogue:choose', {
         npcId: data.npcId,
         dialogueKey: data.dialogueKey || 'intro',
         choiceIndex: choice.index,
       });
       dialogueScreen.classList.add('hidden');
+    };
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      dialogueHandler();
     });
+    // Fallback for desktop
+    btn.addEventListener('click', dialogueHandler);
     choicesEl.appendChild(btn);
   }
 }
@@ -559,6 +606,5 @@ setInterval(() => {
 }, 100);
 
 // ─── Keep screen awake ──────────────────────────────────────────
-if ('wakeLock' in navigator) {
-  navigator.wakeLock.request('screen').catch(() => {});
-}
+// Wake lock is requested inside the 'joined' handler to avoid
+// requesting it before user gesture (which fails on many browsers).

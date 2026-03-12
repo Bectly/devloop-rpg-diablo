@@ -223,7 +223,10 @@ class CombatSystem {
               })),
               xpReward: nearest.xpReward,
             });
-            player.gainXp(nearest.xpReward);
+            const levelResult = player.gainXp(nearest.xpReward);
+            if (levelResult) {
+              results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
+            }
           }
         }
         break;
@@ -268,7 +271,10 @@ class CombatSystem {
               })),
               xpReward: t.xpReward,
             });
-            player.gainXp(t.xpReward);
+            const levelResult = player.gainXp(t.xpReward);
+            if (levelResult) {
+              results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
+            }
           }
         }
         break;
@@ -288,7 +294,7 @@ class CombatSystem {
         }
         if (nearest) {
           const baseDmg = Math.floor(player.attackPower * skill.damage);
-          nearest.takeDamage(baseDmg);
+          const dealt = nearest.takeDamage(baseDmg);
           // Set poison timer on monster
           nearest.poisonTick = skill.duration;
           nearest.poisonDamage = skill.tickDamage;
@@ -297,10 +303,32 @@ class CombatSystem {
             type: 'combat:hit',
             attackerId: player.id,
             targetId: nearest.id,
-            damage: baseDmg,
+            damage: dealt,
             skillName: skill.name,
             effect: 'poison',
+            targetHp: nearest.hp,
+            targetMaxHp: nearest.maxHp,
           });
+
+          if (!nearest.alive) {
+            const loot = generateLoot(nearest.lootTier, nearest.type);
+            results.push({
+              type: 'combat:death',
+              entityId: nearest.id,
+              killedBy: player.id,
+              isBoss: nearest.isBoss,
+              loot: loot.map(item => ({
+                ...item,
+                worldX: nearest.x + (Math.random() - 0.5) * 40,
+                worldY: nearest.y + (Math.random() - 0.5) * 40,
+              })),
+              xpReward: nearest.xpReward,
+            });
+            const levelResult = player.gainXp(nearest.xpReward);
+            if (levelResult) {
+              results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
+            }
+          }
         }
         break;
       }

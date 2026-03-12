@@ -1,62 +1,79 @@
-# DevLoop RPG — Diablo-style Browser Co-op
+# DevLoop RPG — Diablo-style Dungeon Crawler
 
-A 2-player cooperative action RPG played on a TV with phones as controllers. Built for local network play.
+## Overview
 
-## How It Works
+2-player real-time Diablo-style RPG in the browser. The TV displays the game (Phaser 3), phones are controllers (touch joystick). Local network only — TV and phones connect via Socket.io. Server-authoritative architecture: all game logic runs server-side.
 
-1. **TV** displays the game world (Phaser 3) — dungeons, monsters, loot, combat
-2. **Phones** act as controllers — virtual joystick for movement, buttons for attacks/skills/inventory
-3. **Server** runs the authoritative game state — combat resolution, monster AI, loot drops
+## Features
+
+- 3 character classes (Warrior, Ranger, Mage) with unique skills
+- BSP-generated procedural dungeons (7 floor themes)
+- 6+ monster types with AI state machine (idle/alert/attack/flee/leash)
+- Boss fights with 3-phase mechanics
+- 5-rarity loot system (Common → Legendary)
+- Grid inventory (10x6) with multi-cell items
+- Combat: damage formulas, crits, armor, skills, cooldowns
+- Death/respawn with gold penalty
+- Monster spawn waves per room
+- Minimap, damage numbers, loot glow effects
+- Phone: joystick, action buttons, inventory, death overlay, notifications
+
+## Tech Stack
+
+- **Server**: Node.js + Express + Socket.io (20 tick/sec game loop)
+- **TV Client**: Phaser 3 (HTML5 game engine)
+- **Phone Client**: vanilla JS + nipplejs (touch joystick)
+- **Tests**: Vitest (237 tests)
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 cd server
 npm install
-
-# Start the game server
 npm start
-
-# Or with auto-reload during development
-npm run dev
+# TV: open http://<local-ip>:3000 on TV browser
+# Phone: open http://<local-ip>:3000/phone on each phone
 ```
 
-Then open:
-- **TV**: `http://<your-ip>:3000/tv` in the TV's browser
-- **Phone 1**: `http://<your-ip>:3000/phone` on first phone
-- **Phone 2**: `http://<your-ip>:3000/phone` on second phone
+## Project Structure
 
-Find your local IP with: `hostname -I | awk '{print $1}'`
-
-## Controls (Phone)
-
-- **Left side**: Virtual joystick (move your character)
-- **Attack** (red): Basic attack toward nearest enemy
-- **Skill 1-3**: Class abilities (cooldown-based)
-- **Potion** (green): Use health potion
-- **Inventory** (brown): Open inventory grid
-
-## Game Features
-
-- 3 classes: Warrior, Ranger, Mage
-- Real-time combat with skills and cooldowns
-- Diablo-style grid inventory (10x6)
-- 5 item rarities: Common → Legendary
-- Monster AI with aggro, attack patterns, and leashing
-- Procedural dungeon rooms
-- NPC dialogue with story choices
-- Co-op: both players share the dungeon
-
-## Tech Stack
-
-- Node.js + Express + Socket.io (server)
-- Phaser 3 (TV rendering)
-- nipplejs (phone joystick)
-- better-sqlite3 (persistence)
+```
+server/
+  index.js          — Express + Socket.io server
+  game/
+    player.js       — Player class, stats, skills
+    combat.js       — Damage formulas, skill effects
+    monsters.js     — Monster definitions, AI
+    items.js        — Loot generation, rarity
+    inventory.js    — Grid inventory system
+    world.js        — BSP dungeon generation
+    dungeon.js      — Dungeon utilities
+    story.js        — NPC/dialogue system
+  tests/            — 237 unit tests (vitest)
+client/
+  tv/
+    index.html      — TV display entry
+    game.js         — Phaser 3 renderer
+  phone/
+    index.html      — Phone controller entry
+    controller.js   — Touch input, HUD, inventory
+    style.css       — Phone UI styling
+```
 
 ## Development
 
-See [SPEC.md](SPEC.md) for full technical specification.
-See [TODO.md](TODO.md) for task breakdown.
-See [DEVLOG.md](DEVLOG.md) for development log.
+- Developed by 5 AI agents via DevLoop system
+- Test: `cd server && npm test`
+- Dev mode: `cd server && npm run dev` (auto-reload)
+
+## Roadmap
+
+- [ ] Equipment stat application
+- [ ] XP/leveling with stat allocation
+- [ ] Story/dialogue system
+- [ ] Quest tracking
+- [ ] Boss fight content
+- [ ] Shop NPC
+- [ ] Class skills (9 total)
+- [ ] SQLite save/load
+- [ ] ComfyUI sprite generation

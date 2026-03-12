@@ -92,15 +92,20 @@ function randomInt(min, max) {
 }
 
 function pickRarity(tierBoost = 0) {
-  const totalWeight = Object.values(RARITIES).reduce((sum, r) => sum + r.weight, 0);
+  // Shift weights: reduce common, boost higher rarities based on tierBoost
+  const adjustedWeights = {
+    common:    Math.max(10, 60 - tierBoost * 8),
+    uncommon:  25 + tierBoost * 2,
+    rare:      10 + tierBoost * 3,
+    epic:      4 + tierBoost * 2,
+    legendary: 1 + tierBoost * 1,
+  };
+
+  const totalWeight = Object.values(adjustedWeights).reduce((sum, w) => sum + w, 0);
   let roll = Math.random() * totalWeight;
 
-  // Tier boost increases chance of higher rarities
-  roll -= tierBoost * 10;
-  roll = Math.max(0, roll);
-
-  for (const [key, rarity] of Object.entries(RARITIES)) {
-    roll -= rarity.weight;
+  for (const [key, weight] of Object.entries(adjustedWeights)) {
+    roll -= weight;
     if (roll <= 0) return key;
   }
   return 'common';

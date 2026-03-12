@@ -152,8 +152,10 @@ controllerNs.on('connection', (socket) => {
   socket.on('skill', (data) => {
     const player = players.get(socket.id);
     if (!player || !player.alive || player.isDying) return;
+    const idx = parseInt(data.skillIndex, 10);
+    if (isNaN(idx) || idx < 0 || idx >= player.skills.length) return;
     const allPlayers = Array.from(players.values());
-    combat.playerSkill(player, data.skillIndex, world.monsters, allPlayers);
+    combat.playerSkill(player, idx, world.monsters, allPlayers);
   });
 
   // ── Potions ──
@@ -294,6 +296,7 @@ controllerNs.on('connection', (socket) => {
     if (!player) return;
     const inv = inventories.get(player.id);
     if (!inv) return;
+    if (!data.itemId || typeof data.itemId !== 'string') return;
 
     const item = inv.getItem(data.itemId);
     if (!item || !item.slot) return;
@@ -326,6 +329,9 @@ controllerNs.on('connection', (socket) => {
     if (!player) return;
     const inv = inventories.get(player.id);
     if (!inv) return;
+
+    const validSlots = ['helmet', 'chest', 'gloves', 'boots', 'weapon', 'shield', 'ring1', 'ring2', 'amulet'];
+    if (!validSlots.includes(data.slot)) return;
 
     const item = player.equipment[data.slot];
     if (!item) return;
@@ -411,6 +417,9 @@ controllerNs.on('connection', (socket) => {
   socket.on('levelup:stat', (data) => {
     const player = players.get(socket.id);
     if (!player) return;
+
+    const validStats = ['str', 'dex', 'int', 'vit'];
+    if (!validStats.includes(data.stat)) return;
 
     if (player.allocateStat(data.stat)) {
       socket.emit('stats:update', player.serializeForPhone());

@@ -411,6 +411,9 @@ class GameScene extends Phaser.Scene {
             existing.hpBar.destroy();
             existing.destroy();
             this.monsterSprites.delete(m.id);
+            // Remove the generated texture to prevent memory leak
+            const texKey = 'monster_' + m.id;
+            if (this.textures.exists(texKey)) this.textures.remove(texKey);
           }
           continue;
         }
@@ -587,6 +590,9 @@ class GameScene extends Phaser.Scene {
         sprite.hpBar.destroy();
         sprite.destroy();
         this.monsterSprites.delete(id);
+        // Remove the generated texture to prevent memory leak
+        const texKey = 'monster_' + id;
+        if (this.textures.exists(texKey)) this.textures.remove(texKey);
       }
     }
 
@@ -631,13 +637,15 @@ class GameScene extends Phaser.Scene {
           }
         }
 
-        // Gentle bobbing (2px up/down)
-        const bobOffset = Math.sin(Date.now() / 400 + gi.id * 1.7) * 2;
+        // Gentle bobbing (2px up/down) — hash ID to number to avoid NaN with UUID strings
+        const now = Date.now();
+        const idHash = typeof gi.id === 'number' ? gi.id : [...String(gi.id)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
+        const bobOffset = Math.sin((now + idHash * 1.7) / 400) * 2;
         sprite.y = sprite._baseY + bobOffset;
         sprite.nameText.setPosition(sprite.x, sprite.y - 18);
 
         // Pulsing glow (0.5 to 0.9 alpha)
-        const glowAlpha = 0.5 + Math.sin(Date.now() / 300 + gi.id * 2.3) * 0.2;
+        const glowAlpha = 0.5 + Math.sin(now / 300 + idHash * 2.3) * 0.2;
         sprite.glow.clear();
         sprite.glow.fillStyle(sprite._glowColor, glowAlpha * 0.4);
         sprite.glow.fillCircle(sprite._glowX, sprite._baseY + bobOffset, 18);
@@ -768,6 +776,12 @@ class GameScene extends Phaser.Scene {
     const theme = FLOOR_THEMES[floor % FLOOR_THEMES.length];
 
     // Generate tile textures for this floor theme
+    // Remove existing tile textures first to avoid overwrite warnings
+    const tileTexKeys = ['t_floor', 't_wall', 't_door', 't_corridor', 't_spawn', 't_exit_open', 't_exit_locked', 't_chest'];
+    for (const key of tileTexKeys) {
+      if (this.textures.exists(key)) this.textures.remove(key);
+    }
+
     const g = this.make.graphics({ add: false });
 
     // Floor

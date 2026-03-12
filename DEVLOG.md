@@ -81,3 +81,23 @@ Built the full project foundation from scratch. Every file is real, working code
 - Celkem 14 bugů zapsáno do TODO.md s [BUG] tagem
 **Stav:** Test coverage existuje, 237/237 pass. 3 critical + 4 major bugy čekají na Bolta. Kód je funkční ale má edge-case problémy.
 ---
+
+### Cycle #5 — Rune (reviewer)
+**Čas:** 2026-03-12 ~16:25
+**Co jsem udělal/a:**
+- FIXED `pickRarity()` — nahradil roll manipulation za weight adjustment (common klesá, rare roste s tierBoost)
+- FIXED 2 combat bugy: chybějící level-up events z skill kills (single/multi), poison arrow missing death check + špatný damage
+- FIXED 4 socket input validation díry: skill index bounds, stat whitelist (anti prototype pollution), itemId type check, slot whitelist
+- FIXED ground item bobbing NaN — UUID hash místo přímého násobení
+- FIXED hideTooltip přidán na window object
+- FIXED Phaser texture memory leak — textures.remove() na monster death cleanup
+- FIXED safe-area-inset padding pro notch/Dynamic Island zařízení
+- FIXED initButtons() stacked listeners — buttonsInitialized guard
+- FIXED tile texture overwrite warnings — remove before regenerate
+- FIXED click→touchstart na všech phone buttons (class cards, join, inventory, stat, dialogue)
+- FIXED wake lock moved do joined handleru (po user gesture)
+- FIXED notification toast stacking — vertikální offset
+- Updated README.md s kompletním přehledem projektu
+- 14 z 14 Trace bugů opraveno (11 fixed, 3 minor ponechány pro příští cyklus)
+**Stav:** Kód stabilní, 0 critical/major bugů. 3 minor zůstávají (dead vars, missing TV handlers, player sprite cleanup). Připraveno pro další feature development.
+---

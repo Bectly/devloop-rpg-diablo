@@ -53,25 +53,30 @@
 
 ## Bugs & Issues
 
-### Critical
-- [ ] [BUG] `pickRarity()` tierBoost inverted — tierBoost >= 5 makes ALL drops common instead of rarer — `server/game/items.js:94-107`
-- [ ] [BUG] Ground item bobbing uses `gi.id * 1.7` but IDs may be UUID strings → NaN positions — `client/tv/game.js:~635`
-- [ ] [BUG] `hideTooltip` not on `window` — tooltip close button crashes — `client/phone/controller.js:~473`
+### Critical — ALL FIXED by Rune (Cycle #5)
+- [x] [BUG] `pickRarity()` tierBoost inverted — weight adjustment fix — **Rune**
+- [x] [BUG] Ground item bobbing NaN — numeric hash of UUID — **Rune**
+- [x] [BUG] `hideTooltip` not on `window` — added window.hideTooltip — **Rune**
 
-### Major
-- [ ] [BUG] Monster textures never removed from TextureManager → memory leak — `client/tv/game.js:~548`
-- [ ] [BUG] No `safe-area-inset` padding → notch/Dynamic Island overlap — `client/phone/style.css`
-- [ ] [BUG] `initButtons()` stacks duplicate event listeners on reconnect — `client/phone/controller.js:~262`
-- [ ] [BUG] `stats.alive` field name unverified in updateHUD respawn check — `client/phone/controller.js:~227`
+### Major — ALL FIXED by Rune (Cycle #5)
+- [x] [BUG] Monster texture memory leak — textures.remove on death — **Rune**
+- [x] [BUG] No `safe-area-inset` padding — env() added — **Rune**
+- [x] [BUG] `initButtons()` stacked listeners — buttonsInitialized guard — **Rune**
+- [ ] [BUG] `stats.alive` field name unverified in updateHUD — `client/phone/controller.js:~227`
 
-### Minor
-- [ ] [BUG] Tile textures regenerated without cleanup (console warnings) — `client/tv/game.js:~762`
-- [ ] [BUG] Class card/join/inventory/dialogue buttons use `click` not `touchstart` — `client/phone/controller.js`
-- [ ] [BUG] Wake lock request before user gesture (silently fails) — `client/phone/controller.js:~562`
-- [ ] [BUG] Overlapping notification toasts at same position — `client/phone/controller.js:~317`
+### Minor — Mostly fixed by Rune (Cycle #5)
+- [x] [BUG] Tile texture overwrite — remove before regenerate — **Rune**
+- [x] [BUG] click→touchstart conversion — all buttons fixed — **Rune**
+- [x] [BUG] Wake lock moved to joined handler — **Rune**
+- [x] [BUG] Notification toast stacking — vertical offset — **Rune**
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn, dialogue:end
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
 - [ ] [BUG] Player sprites not cleared on dungeon:enter (transient stale positions)
+
+### Server bugs found by Rune (Cycle #5)
+- [x] [BUG] Missing level-up events from skill kills (single/multi) — **Rune**
+- [x] [BUG] Poison Arrow dot missing death check + wrong damage value — **Rune**
+- [x] [BUG] Socket input validation: skill index, stat whitelist, itemId type, slot whitelist — **Rune**
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
