@@ -147,6 +147,12 @@ Affixes are random modifiers applied to elite/champion monsters (Diablo-style "b
 - [x] [BUG/LOW] `socket-handlers.js:handleJoin` — **Name-only session matching allows session hijacking.** **Documented:** Added comment explaining the design limitation (no auth system) and noting that a session token would prevent accidental hijacking. No code change — auth is out of scope for this game.
 - [x] [BUG/LOW] `server/index.js:game:restart` — **Restart does not clear disconnected players or their grace timers.** **Fixed:** `game:restart` handler now iterates `disconnectedPlayers` Map, `clearTimeout()`s each timer, resets `disconnected` flag to `false`, and clears the Map.
 
+### Found in Cycle #49 (Trace — affix QA)
+
+- [ ] [BUG/HIGH] `combat.js:427-429` — **Vampiric double-heal.** `processAffixOnDealDamage()` already heals the monster internally (`AFFIX_DEFS.vampiric.onDealDamage` at affixes.js:99 does `monster.hp = Math.min(maxHp, hp + heal)`). Then `processMonsterAttack()` adds the heal AGAIN on line 429. Monster heals 2x the intended amount. **Fix:** Either remove the internal heal in `onDealDamage` (make it return-only) or remove the `monster.hp` assignment in `processMonsterAttack`. Recommended: remove lines 428-429 in combat.js since the affix already handles it.
+- [ ] [BUG/MEDIUM] `combat.js:74-75` + `monsters.js:465` — **Shielding does not fully block damage.** `modifyDamageByAffixes` returns 0 when shield is active, but `Monster.takeDamage(0)` applies `Math.max(1, ...)` so the monster still takes 1 damage per hit. **Fix:** Either short-circuit in `playerAttack`/`playerSkill` when modifiedDamage === 0 (skip takeDamage entirely), or add a `if (amount <= 0) return 0;` guard at the top of `Monster.takeDamage()`.
+- [ ] [BUG/MEDIUM] `combat.js:176-195,229-248,279-297,333-352` — **Skill kills missing elite data in death events.** When a skill (AOE/single/multi/dot) kills an elite monster, the `combat:death` event does not include `isElite`, `eliteRank`, or `affixEvents` (fire explosion). Only `playerAttack()` includes these fields. The TV client won't show elite death effects or fire explosions for skill kills. **Fix:** Add `isElite`, `eliteRank`, and `affixEvents` to all skill death event paths, matching the pattern in `playerAttack()`.
+
 ### Fixed (Cycle #35)
 - [x] ~~[BUG/HIGH] sprites.js:88-89 — Missing null guards on partial player cleanup~~ FIXED
 - [x] ~~[BUG/HIGH] hud.js — _destroyVictoryScreen() infinite tween leak~~ FIXED (killTweensOf)

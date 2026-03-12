@@ -960,3 +960,25 @@ Built the full project foundation from scratch. Every file is real, working code
 - 450/450 testů PASS
 **Stav:** Phase 6 feature-complete (server + TV + phone). Trace next for testing.
 ---
+
+### Cycle #49 — Trace (tester)
+**Čas:** 2026-03-13 ~03:50
+**Co jsem udělal/a:**
+- **NEW: `server/tests/affixes.test.js`** (362 LOC, 52 tests):
+  - rollAffixes: floor rules, boss/slime exclusion, rank/count, no duplicates (11)
+  - applyAffixes: elite flags, XP/loot bonuses, all 8 affix apply effects (15)
+  - processAffixUpdates: teleporter timing, shielding cycle (6)
+  - modifyDamageByAffixes: shield block, passthrough (4)
+  - processAffixOnDeath: fire explosion (3)
+  - processAffixOnDealDamage: vampiric heal + cap (4)
+  - processAffixOnHitPlayer: fire/cold debuffs (4)
+  - AFFIX_DEFS structure validation (3)
+  - Edge case: combined affixes (2)
+- **14 debuff tests** added to player.test.js (addDebuff, processDebuffs, speedMultiplier, serialization)
+- **516/516 testů PASS** (was 450 → +66 new)
+- **3 bugy nalezeny:**
+  1. [BUG/HIGH] Vampiric double-heal in combat.js
+  2. [BUG/MEDIUM] Shielding doesn't fully block (Math.max(1) floor)
+  3. [BUG/MEDIUM] Skill kills missing elite death data
+**Stav:** 516 tests, 15 suites. 3 affix bugs for Rune. Phase 6 nearly stable.
+---

@@ -808,4 +808,97 @@ describe('Player', () => {
       expect(p.baseAttackSpeed).toBe(600);
     });
   });
+
+  // ── Debuff System ─────────────────────────────────────────────────
+  describe('debuffs', () => {
+    let player;
+
+    beforeEach(() => {
+      player = new Player('DebuffTest', 'warrior');
+    });
+
+    it('addDebuff() adds a debuff to the array', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob1' });
+      expect(player.debuffs.length).toBe(1);
+      expect(player.debuffs[0].effect).toBe('fire_dot');
+    });
+
+    it('addDebuff() replaces existing debuff with same source + effect', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob1' });
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob1' });
+      expect(player.debuffs.length).toBe(1);
+    });
+
+    it('addDebuff() does not replace debuff from different source', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob1' });
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob2' });
+      expect(player.debuffs.length).toBe(2);
+    });
+
+    it('addDebuff() does not replace debuff with different effect', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob1' });
+      player.addDebuff({ effect: 'slow', speedMult: 0.7, ticksRemaining: 60, source: 'mob1' });
+      expect(player.debuffs.length).toBe(2);
+    });
+
+    it('processDebuffs() ticks down fire_dot and returns damage', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 3, source: 'mob1' });
+      const dmg = player.processDebuffs();
+      expect(dmg).toBe(5);
+      expect(player.debuffs[0].ticksRemaining).toBe(2);
+    });
+
+    it('processDebuffs() ticks down slow debuff', () => {
+      player.addDebuff({ effect: 'slow', speedMult: 0.7, ticksRemaining: 3, source: 'mob1' });
+      player.processDebuffs();
+      expect(player.debuffs[0].ticksRemaining).toBe(2);
+    });
+
+    it('processDebuffs() removes expired debuffs', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 1, source: 'mob1' });
+      player.processDebuffs(); // ticks to 0
+      expect(player.debuffs.length).toBe(0);
+    });
+
+    it('processDebuffs() returns 0 with no debuffs', () => {
+      expect(player.processDebuffs()).toBe(0);
+    });
+
+    it('processDebuffs() accumulates damage from multiple fire_dot sources', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 10, source: 'mob1' });
+      player.addDebuff({ effect: 'fire_dot', damage: 8, ticksRemaining: 10, source: 'mob2' });
+      const dmg = player.processDebuffs();
+      expect(dmg).toBe(13); // 5 + 8
+    });
+
+    it('speedMultiplier returns 0.7 with slow debuff', () => {
+      player.addDebuff({ effect: 'slow', speedMult: 0.7, ticksRemaining: 60, source: 'mob1' });
+      expect(player.speedMultiplier).toBe(0.7);
+    });
+
+    it('speedMultiplier returns 1.0 without slow debuff', () => {
+      expect(player.speedMultiplier).toBe(1.0);
+    });
+
+    it('speedMultiplier returns 1.0 with only fire_dot (no slow)', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: 'mob1' });
+      expect(player.speedMultiplier).toBe(1.0);
+    });
+
+    it('debuffs appear in serialize() output', () => {
+      player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 30, source: 'mob1' });
+      const s = player.serialize();
+      expect(s.debuffs).toBeDefined();
+      expect(s.debuffs.length).toBe(1);
+      expect(s.debuffs[0].effect).toBe('fire_dot');
+    });
+
+    it('debuffs appear in serializeForPhone() output', () => {
+      player.addDebuff({ effect: 'slow', speedMult: 0.7, ticksRemaining: 60, source: 'mob1' });
+      const s = player.serializeForPhone();
+      expect(s.debuffs).toBeDefined();
+      expect(s.debuffs.length).toBe(1);
+      expect(s.debuffs[0].effect).toBe('slow');
+    });
+  });
 });
