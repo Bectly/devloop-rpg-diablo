@@ -100,12 +100,12 @@ Architecture for `server/game/dialogue.js`:
 | `server/game/quests.js` | 209 | OK |
 
 ## Open Bugs
-- [ ] [BUG][MAJOR] Desktop action buttons missing click handlers — `controller.js`
+- [x] [BUG][MAJOR] Desktop action buttons missing click handlers — **Rune** — `controller.js`
 - [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn, dialogue:end
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
 - [ ] [BUG] Player sprites not cleared on dungeon:enter
-- [ ] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown
+- [x] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — **Rune** — `shutdown()` method added
 
 ## Notes
 - Server is authoritative: all game logic runs server-side

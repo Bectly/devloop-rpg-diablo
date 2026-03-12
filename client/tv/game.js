@@ -251,6 +251,7 @@ class GameScene extends Phaser.Scene {
     // Quest announcement queue (prevents overlapping banners)
     this.questAnnouncementQueue = [];
     this.questAnnouncementActive = false;
+    this._activeBannerObjs = [];
 
     // Smooth camera tracking position
     this.camTargetX = GAME_W / 2;
@@ -1562,6 +1563,7 @@ class GameScene extends Phaser.Scene {
 
     // Gold banner background
     const banner = this.add.rectangle(cx, cy, 350, 40, 0x000000, 0.6);
+    this._activeBannerObjs.push(banner);
     banner.setStrokeStyle(1, 0xffaa33, 0.8);
     banner.setDepth(1000);
     banner.setAlpha(0);
@@ -1579,6 +1581,7 @@ class GameScene extends Phaser.Scene {
     label.setOrigin(0.5);
     label.setDepth(1001);
     label.setAlpha(0);
+    this._activeBannerObjs.push(label);
 
     // Quest title below
     const titleText = this.add.text(cx, cy + 14, title, {
@@ -1592,6 +1595,7 @@ class GameScene extends Phaser.Scene {
     titleText.setOrigin(0.5);
     titleText.setDepth(1001);
     titleText.setAlpha(0);
+    this._activeBannerObjs.push(titleText);
 
     // Animate in
     this.tweens.add({
@@ -1642,9 +1646,20 @@ class GameScene extends Phaser.Scene {
           banner.destroy();
           label.destroy();
           titleText.destroy();
+          this._activeBannerObjs = this._activeBannerObjs.filter(o => o !== banner && o !== label && o !== titleText);
         },
       });
     });
+  }
+
+  shutdown() {
+    // Destroy any in-flight quest banner objects (prevents leaks on scene restart)
+    for (const obj of this._activeBannerObjs) {
+      if (obj && obj.active) obj.destroy();
+    }
+    this._activeBannerObjs = [];
+    this.questAnnouncementQueue = [];
+    this.questAnnouncementActive = false;
   }
 }
 
