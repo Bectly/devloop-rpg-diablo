@@ -516,4 +516,89 @@ describe('World', () => {
       expect(mp).toBeDefined();
     });
   });
+
+  // ── Loot Chests ──────────────────────────────────────────────
+  describe('lootChests', () => {
+    it('initializes lootChests as empty array', () => {
+      const w = new World();
+      expect(w.lootChests).toBeDefined();
+      expect(Array.isArray(w.lootChests)).toBe(true);
+      expect(w.lootChests.length).toBe(0);
+    });
+
+    it('resets lootChests on generateFloor', () => {
+      // Manually push a fake chest
+      world.lootChests.push({
+        id: 'test-chest',
+        x: 100,
+        y: 200,
+        gold: 50,
+        items: [{ id: 'sword1' }],
+        opened: false,
+      });
+      expect(world.lootChests.length).toBe(1);
+
+      // Generate a new floor — chests must be cleared
+      world.generateFloor(1);
+      expect(world.lootChests.length).toBe(0);
+    });
+
+    it('serializes lootChests (unopened only)', () => {
+      // Push one opened and one unopened chest
+      world.lootChests.push({
+        id: 'chest-opened',
+        x: 100,
+        y: 200,
+        gold: 30,
+        items: [{ id: 'item1' }],
+        opened: true,
+      });
+      world.lootChests.push({
+        id: 'chest-sealed',
+        x: 300,
+        y: 400,
+        gold: 75,
+        items: [{ id: 'item2' }, { id: 'item3' }],
+        opened: false,
+      });
+
+      const s = world.serialize();
+      expect(Array.isArray(s.lootChests)).toBe(true);
+      // Only the unopened chest should appear
+      expect(s.lootChests.length).toBe(1);
+      expect(s.lootChests[0].id).toBe('chest-sealed');
+      expect(s.lootChests[0].x).toBe(300);
+      expect(s.lootChests[0].y).toBe(400);
+      expect(s.lootChests[0].gold).toBe(75);
+      expect(s.lootChests[0].itemCount).toBe(2);
+    });
+
+    it('serialize returns empty lootChests when none exist', () => {
+      const s = world.serialize();
+      expect(Array.isArray(s.lootChests)).toBe(true);
+      expect(s.lootChests.length).toBe(0);
+    });
+
+    it('serialize excludes all chests when all are opened', () => {
+      world.lootChests.push({
+        id: 'c1',
+        x: 10,
+        y: 20,
+        gold: 10,
+        items: [],
+        opened: true,
+      });
+      world.lootChests.push({
+        id: 'c2',
+        x: 50,
+        y: 60,
+        gold: 20,
+        items: [{ id: 'i1' }],
+        opened: true,
+      });
+
+      const s = world.serialize();
+      expect(s.lootChests.length).toBe(0);
+    });
+  });
 });

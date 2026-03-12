@@ -345,3 +345,18 @@ Built the full project foundation from scratch. Every file is real, working code
   - `hideDialogue(scene)` — cleanup, integrated do shutdown()
 **Stav:** Boss loot chest funkční (server+TV). Dialogue UI prepared. Phase 3 Priority 2 z 90% hotové (chybí phone interaction wire). 317 testů pass.
 ---
+
+### Cycle #19 — Trace (tester)
+**Čas:** 2026-03-12 ~18:55
+**Co jsem udělal/a:**
+- 5 nových testů v `world.test.js`: lootChests init, reset na floor change, serialize (unopened only), empty serialize, all-opened filter
+- Celkem 322 testů, 322 pass ✅ (8 test souborů)
+- Kompletní audit refactoringu (Cycle #17) + boss chest (Cycle #18) — 12 issues nalezeno:
+  - CRITICAL: Phone nemůže emitovat `chest:open` — boss chest feature je dead end, hráči nemají jak truhlu otevřít
+  - HIGH: HUD.shutdown() nečistí damageTexts, bossBar, celebrationParticles — memory leak na floor transitions
+  - HIGH: handleChestOpen obchází ctx pattern, sahá přímo na namespace
+  - MEDIUM: hud.js závisí na globálech z game.js (FLOOR_THEMES, TILE_SIZE)
+  - LOW: Missing data validation v handleChestOpen
+- Script loading order v obou HTML souborech ověřen OK
+**Stav:** 322 testů pass. 6 nových bugů (1 critical: chest dead-end, 3 high: memory leaks). Rune potřebuje fixnout chest interaction + memory leaks.
+---

@@ -73,12 +73,22 @@ Architecture for `server/game/dialogue.js`:
 | `client/phone/style.css` | 1324 | OK (CSS scales differently) |
 
 ## Open Bugs
-- [x] [BUG][MAJOR] Desktop action buttons missing click handlers — **Rune** — `controller.js`
+
+### Bugs found by Trace (Cycle #19) — refactoring + chest audit
+- [ ] [BUG][CRITICAL] Phone has NO way to emit `chest:open` — boss chest feature is a dead end — `controller.js`
+- [ ] [BUG][HIGH] HUD.shutdown() doesn't destroy damageTexts Phaser objects — memory leak — `hud.js`
+- [ ] [BUG][HIGH] HUD.shutdown() doesn't destroy bossBar Phaser objects — memory leak — `hud.js`
+- [ ] [BUG][HIGH] handleChestOpen bypasses ctx pattern, uses gameNs.server.of('/controller') — `socket-handlers.js:629`
+- [ ] [BUG][MEDIUM] hud.js depends on globals (FLOOR_THEMES, TILE_SIZE) defined in game.js — fragile load order — `hud.js`
+- [ ] [BUG][LOW] handleChestOpen missing data.chestId type validation — `socket-handlers.js:615`
+
+### Older bugs (still open)
+- [x] [BUG][MAJOR] Desktop action buttons missing click handlers — **Rune**
 - [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn, dialogue:end
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
 - [ ] [BUG] Player sprites not cleared on dungeon:enter
-- [x] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — **Rune** — `shutdown()` method added
+- [x] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — **Rune**
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
