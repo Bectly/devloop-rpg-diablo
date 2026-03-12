@@ -243,6 +243,11 @@ class GameScene extends Phaser.Scene {
     // Shrine sprites
     this.shrineSprites = new Map();
 
+    // Boss fight tracking
+    this.bossBar = null;
+    this.lastBossId = null;
+    this.discoveredRooms = new Set();
+
     // Smooth camera tracking position
     this.camTargetX = GAME_W / 2;
     this.camTargetY = GAME_H / 2;
@@ -643,6 +648,43 @@ class GameScene extends Phaser.Scene {
       }
     }
 
+    // ── Boss HP Bar (bottom of screen, fixed to camera) ──
+    if (!this.bossBar) {
+      this.bossBar = {
+        bg: this.add.rectangle(GAME_W / 2, GAME_H - 30, GAME_W - 100, 24, 0x111122, 0.85).setScrollFactor(0).setDepth(1000),
+        fill: this.add.rectangle(50, GAME_H - 30, 0, 20, 0xcc2222, 1).setScrollFactor(0).setDepth(1001).setOrigin(0, 0.5),
+        border: this.add.rectangle(GAME_W / 2, GAME_H - 30, GAME_W - 100, 24).setScrollFactor(0).setDepth(1002).setStrokeStyle(2, 0x666666).setFillStyle(0, 0),
+        nameText: this.add.text(GAME_W / 2, GAME_H - 52, '', { fontSize: '16px', fontFamily: 'Courier New', color: '#ff4444', fontStyle: 'bold' }).setScrollFactor(0).setDepth(1002).setOrigin(0.5),
+        hpText: this.add.text(GAME_W / 2, GAME_H - 30, '', { fontSize: '11px', fontFamily: 'Courier New', color: '#ffffff', fontStyle: 'bold' }).setScrollFactor(0).setDepth(1003).setOrigin(0.5),
+      };
+      Object.values(this.bossBar).forEach(v => v.setVisible(false));
+    }
+
+    const boss = state.world.monsters ? state.world.monsters.find(m => m.isBoss && m.alive) : null;
+    if (boss) {
+      const pct = boss.hp / boss.maxHp;
+      const barWidth = (GAME_W - 100 - 4) * pct;
+
+      Object.values(this.bossBar).forEach(v => v.setVisible(true));
+      this.bossBar.fill.setSize(barWidth, 20);
+      this.bossBar.fill.setPosition(50 + 2, GAME_H - 30);
+
+      const barColor = pct > 0.5 ? 0xcc2222 : pct > 0.25 ? 0xcc8822 : 0xff4444;
+      this.bossBar.fill.setFillStyle(barColor);
+
+      this.bossBar.nameText.setText(boss.phase ? `${boss.name || 'BOSS'} — Phase ${boss.phase}` : (boss.name || 'BOSS'));
+      this.bossBar.hpText.setText(`${boss.hp} / ${boss.maxHp}`);
+
+      // Boss entrance announcement (first time seeing this boss)
+      if (this.lastBossId !== boss.id) {
+        this.lastBossId = boss.id;
+        this.showBossAnnouncement(boss.name);
+      }
+    } else {
+      Object.values(this.bossBar).forEach(v => v.setVisible(false));
+      this.lastBossId = null;
+    }
+
     // ── Render ground items with rarity glow + bobbing + legendary sparkle ──
     const seenItems = new Set();
     if (state.world.groundItems) {
@@ -760,7 +802,17 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── Render Healing Shrines ──
+    // ── Room Discovery Detection ──
+    if (state.world.rooms) {
+      for (const room of state.world.rooms) {
+        if (room.discovered && !this.discoveredRooms.has(room.id)) {
+          this.discoveredRooms.add(room.id);
+          this.showRoomDiscovery();
+        }
+      }
+    }
+
+    // ── Render Healing Shrines (improved visuals) ──
     if (state.world.rooms) {
       const seenShrines = new Set();
       for (const room of state.world.rooms) {
@@ -773,33 +825,80 @@ class GameScene extends Phaser.Scene {
           const sy = (room.y + room.h / 2) * TILE_SIZE - 16;
           shrine = this.add.sprite(sx, sy, 'shrine').setDepth(5).setScale(0.9);
           shrine._baseY = sy;
+          shrine._baseX = sx;
           shrine.label = this.add.text(sx, sy - 22, 'SHRINE', {
             fontSize: '9px',
-            fill: room.shrineUsed ? '#666666' : '#44ffaa',
+            fill: room.shrineUsed ? '#444444' : '#44ffaa',
             fontFamily: 'Courier New',
             fontStyle: 'bold',
             backgroundColor: '#00000066',
             padding: { x: 3, y: 1 },
           }).setOrigin(0.5).setDepth(6);
+
+          // Orbiting particle dots (4 dots) for active shrines
+          shrine._orbitDots = [];
+          for (let di = 0; di < 4; di++) {
+            const dot = this.add.graphics().setDepth(6);
+            dot._angle = (Math.PI * 2 / 4) * di;
+            shrine._orbitDots.push(dot);
+          }
+
+          // Cracked lines overlay for used shrines
+          shrine._crackGfx = this.add.graphics().setDepth(6);
+
           this.shrineSprites.set(room.id, shrine);
         }
         // Update shrine appearance
         if (room.shrineUsed) {
-          shrine.setAlpha(0.3);
-          shrine.label.setColor('#666666');
-          shrine.label.setText('USED');
+          shrine.setAlpha(0.25);
+          shrine.setTint(0x555555);
+          shrine.label.setColor('#444444');
+          shrine.label.setText('DEPLETED');
+
+          // Hide orbit dots
+          for (const dot of shrine._orbitDots) {
+            dot.clear();
+          }
+
+          // Draw cracked appearance (dark lines over sprite)
+          shrine._crackGfx.clear();
+          shrine._crackGfx.lineStyle(1, 0x222222, 0.7);
+          const cx = shrine._baseX;
+          const cy = shrine._baseY;
+          shrine._crackGfx.lineBetween(cx - 6, cy - 8, cx + 2, cy);
+          shrine._crackGfx.lineBetween(cx + 2, cy, cx - 3, cy + 7);
+          shrine._crackGfx.lineBetween(cx + 4, cy - 5, cx + 7, cy + 3);
+          shrine._crackGfx.lineBetween(cx - 4, cy + 2, cx + 1, cy + 9);
         } else {
-          // Pulsing glow
+          // Pulsing glow for active shrine
+          shrine.clearTint();
           const pulse = 0.7 + Math.sin(Date.now() / 500) * 0.3;
           shrine.setAlpha(pulse);
           shrine.y = shrine._baseY + Math.sin(Date.now() / 800) * 2;
           shrine.label.y = shrine.y - 22;
+          shrine._crackGfx.clear();
+
+          // Animate orbiting particle dots
+          const time = Date.now() / 1200;
+          for (const dot of shrine._orbitDots) {
+            dot.clear();
+            const a = dot._angle + time;
+            const dx = shrine._baseX + Math.cos(a) * 18;
+            const dy = shrine.y + Math.sin(a) * 18;
+            const dotAlpha = 0.5 + Math.sin(time * 2 + dot._angle) * 0.4;
+            dot.fillStyle(0x44ffaa, dotAlpha);
+            dot.fillCircle(dx, dy, 2);
+          }
         }
       }
       // Clean up old shrines
       for (const [id, shrine] of this.shrineSprites) {
         if (!seenShrines.has(id)) {
           shrine.label.destroy();
+          if (shrine._orbitDots) {
+            for (const dot of shrine._orbitDots) dot.destroy();
+          }
+          if (shrine._crackGfx) shrine._crackGfx.destroy();
           shrine.destroy();
           this.shrineSprites.delete(id);
         }
@@ -1344,6 +1443,75 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── Boss Entrance Announcement ──
+  showBossAnnouncement(name) {
+    const overlay = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.7)
+      .setScrollFactor(0).setDepth(2000);
+
+    const nameText = this.add.text(GAME_W / 2, GAME_H / 2 - 20, name || 'BOSS', {
+      fontSize: '32px', fontFamily: 'Courier New', color: '#ff4444', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+
+    const subText = this.add.text(GAME_W / 2, GAME_H / 2 + 20, '— PREPARE FOR BATTLE —', {
+      fontSize: '14px', fontFamily: 'Courier New', color: '#cc8844',
+      stroke: '#000000', strokeThickness: 2,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+
+    this.tweens.add({
+      targets: nameText, alpha: 1, scale: 1,
+      duration: 500, ease: 'Back.easeOut',
+    });
+    this.tweens.add({
+      targets: subText, alpha: 1,
+      duration: 400, delay: 300,
+    });
+
+    this.time.delayedCall(2000, () => {
+      this.tweens.add({
+        targets: [overlay, nameText, subText],
+        alpha: 0, duration: 500,
+        onComplete: () => { overlay.destroy(); nameText.destroy(); subText.destroy(); },
+      });
+    });
+  }
+
+  // ── Room Discovery Flash ──
+  showRoomDiscovery() {
+    const flash = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0xffffff, 0.15)
+      .setScrollFactor(0).setDepth(1999);
+    this.tweens.add({
+      targets: flash, alpha: 0, duration: 300,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  // ── Shrine Used Burst Effect ──
+  showShrineUsedBurst(x, y) {
+    // Expanding green circle burst
+    const burst = this.add.circle(x, y, 10, 0x44ffaa, 0.6).setDepth(7);
+    this.tweens.add({
+      targets: burst,
+      scale: 3,
+      alpha: 0,
+      duration: 600,
+      ease: 'Sine.easeOut',
+      onComplete: () => burst.destroy(),
+    });
+    // Secondary ring
+    const ring = this.add.circle(x, y, 8, 0x44ffaa, 0).setDepth(7);
+    ring.setStrokeStyle(2, 0x88ffcc);
+    this.tweens.add({
+      targets: ring,
+      scale: 4,
+      alpha: 0,
+      duration: 800,
+      delay: 100,
+      ease: 'Sine.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+  }
+
   // ── Room Cleared Celebration Effect ──
   spawnCelebrationParticles() {
     const cx = GAME_W / 2;
@@ -1418,12 +1586,26 @@ socket.on('dungeon:enter', (data) => {
         scene.shopNpcLabel = null;
       }
 
-      // Clean up shrine sprites
+      // Clean up shrine sprites (including orbit dots and crack graphics)
       for (const [id, shrine] of scene.shrineSprites) {
         if (shrine.label) shrine.label.destroy();
+        if (shrine._orbitDots) {
+          for (const dot of shrine._orbitDots) dot.destroy();
+        }
+        if (shrine._crackGfx) shrine._crackGfx.destroy();
         shrine.destroy();
       }
       scene.shrineSprites.clear();
+
+      // Reset boss tracking for new floor
+      scene.lastBossId = null;
+      scene.discoveredRooms.clear();
+      if (scene.bossBar) {
+        Object.values(scene.bossBar).forEach(v => v.setVisible(false));
+      }
+
+      // Room discovery flash
+      scene.showRoomDiscovery();
 
       // Floor transition effect
       const floorIdx = data.floor || 0;
@@ -1438,6 +1620,10 @@ socket.on('wave:start', (data) => {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
       scene.showWaveAnnouncement(`WAVE ${data.wave}/${data.totalWaves}`, '#ff4444');
+      // Trigger boss announcement if this is a boss room wave
+      if (data.roomType === 'boss' && data.bossName) {
+        scene.showBossAnnouncement(data.bossName);
+      }
     }
   }
 });
@@ -1477,6 +1663,16 @@ socket.on('shrine:used', (data) => {
       scene.time.delayedCall(2600, () => {
         scene.waveText.setColor('#ff4444');
       });
+      // Burst effect at shrine location
+      if (data && data.x !== undefined && data.y !== undefined) {
+        scene.showShrineUsedBurst(data.x, data.y);
+      } else if (data && data.roomId) {
+        // Find shrine by room ID and burst at its position
+        const shrine = scene.shrineSprites.get(data.roomId);
+        if (shrine) {
+          scene.showShrineUsedBurst(shrine._baseX, shrine._baseY);
+        }
+      }
     }
   }
 });

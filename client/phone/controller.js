@@ -604,172 +604,18 @@ function createShopScreen() {
   shopEl.id = 'shop-screen';
   shopEl.className = 'hidden';
   shopEl.innerHTML = `
-    <div id="shop-header">
-      <h2>Merchant</h2>
-      <span id="shop-gold">0g</span>
-      <button id="shop-close">&times;</button>
+    <div class="shop-header">
+      <span class="shop-title">Merchant</span>
+      <span class="shop-gold" id="shop-gold">0g</span>
+      <button class="shop-close" id="shop-close">&times;</button>
     </div>
-    <div id="shop-tabs">
+    <div class="shop-tabs">
       <button class="shop-tab active" data-tab="buy">Buy</button>
       <button class="shop-tab" data-tab="sell">Sell</button>
     </div>
-    <div id="shop-items"></div>
+    <div class="shop-items" id="shop-items"></div>
   `;
   document.body.appendChild(shopEl);
-
-  // Style the shop screen
-  const style = document.createElement('style');
-  style.textContent = `
-    #shop-screen {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(18, 18, 30, 0.95);
-      backdrop-filter: blur(16px);
-      z-index: 210;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    #shop-screen.hidden { display: none !important; }
-    #shop-header {
-      display: flex;
-      align-items: center;
-      padding: 10px 16px;
-      background: rgba(18, 18, 30, 0.9);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      gap: 10px;
-    }
-    #shop-header h2 {
-      color: #ffcc00;
-      font-size: 18px;
-      font-family: 'Courier New', monospace;
-      flex: 1;
-    }
-    #shop-gold {
-      color: #ffcc00;
-      font-size: 14px;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-    }
-    #shop-close {
-      background: none;
-      border: none;
-      color: #e0e0e0;
-      font-size: 28px;
-      cursor: pointer;
-      padding: 0 8px;
-    }
-    #shop-tabs {
-      display: flex;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .shop-tab {
-      flex: 1;
-      padding: 10px;
-      background: rgba(0,0,0,0.3);
-      border: none;
-      color: #888;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      font-weight: bold;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: all 0.2s ease;
-    }
-    .shop-tab.active {
-      color: #ffcc00;
-      background: rgba(255,204,0,0.08);
-      border-bottom: 2px solid #ffcc00;
-    }
-    #shop-items {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .shop-item {
-      display: flex;
-      align-items: center;
-      padding: 10px 12px;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 8px;
-      gap: 10px;
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    .shop-item:active {
-      background: rgba(255,255,255,0.05);
-    }
-    .shop-item-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .shop-item-name {
-      font-size: 13px;
-      font-weight: bold;
-      font-family: 'Courier New', monospace;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .shop-item-details {
-      font-size: 10px;
-      color: #888;
-      font-family: 'Courier New', monospace;
-      margin-top: 2px;
-    }
-    .shop-item-price {
-      font-size: 14px;
-      font-weight: bold;
-      font-family: 'Courier New', monospace;
-      color: #ffcc00;
-      white-space: nowrap;
-    }
-    .shop-item-btn {
-      padding: 6px 14px;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      font-weight: bold;
-      cursor: pointer;
-      text-transform: uppercase;
-      transition: all 0.15s ease;
-    }
-    .shop-item-btn.buy-btn {
-      background: rgba(34, 136, 34, 0.5);
-      color: #66ff66;
-      border-color: rgba(68,204,68,0.3);
-    }
-    .shop-item-btn.buy-btn:active {
-      background: rgba(34, 136, 34, 0.8);
-    }
-    .shop-item-btn.buy-btn.disabled {
-      opacity: 0.3;
-      pointer-events: none;
-    }
-    .shop-item-btn.sell-btn {
-      background: rgba(170, 136, 0, 0.4);
-      color: #ffcc66;
-      border-color: rgba(204,170,68,0.3);
-    }
-    .shop-item-btn.sell-btn:active {
-      background: rgba(170, 136, 0, 0.7);
-    }
-    .shop-item-empty {
-      text-align: center;
-      padding: 30px;
-      color: #555;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-    }
-  `;
-  document.head.appendChild(style);
 
   // Tab handlers
   shopEl.querySelectorAll('.shop-tab').forEach(tab => {
@@ -811,34 +657,55 @@ function renderShop() {
 
   if (shopTab === 'buy') {
     if (!shopData.items || shopData.items.length === 0) {
-      container.innerHTML = '<div class="shop-item-empty">Nothing for sale</div>';
+      container.innerHTML = '<div class="shop-empty">Nothing for sale</div>';
       return;
     }
     for (const item of shopData.items) {
       const canAfford = (shopData.playerGold || 0) >= item.shopPrice;
+      const rarityClass = (item.rarity || 'common').toLowerCase();
       const el = document.createElement('div');
       el.className = 'shop-item';
 
-      let details = '';
-      if (item.damage) details += `DMG:${item.damage} `;
-      if (item.armor) details += `ARM:${item.armor} `;
+      // Build stat line
+      let statsText = '';
+      if (item.damage) statsText += `DMG:${item.damage} `;
+      if (item.armor) statsText += `ARM:${item.armor} `;
       if (item.bonuses) {
         for (const [stat, val] of Object.entries(item.bonuses)) {
-          details += `+${val}${stat.toUpperCase()} `;
+          statsText += `+${val} ${stat.toUpperCase()} `;
         }
       }
-      if (item.type === 'consumable') details = item.subType === 'health_potion' ? 'Restores HP' : 'Restores MP';
+      if (item.type === 'consumable') statsText = item.subType === 'health_potion' ? 'Restores HP' : 'Restores MP';
 
-      el.innerHTML = `
-        <div class="shop-item-info">
-          <div class="shop-item-name" style="color:${item.rarityColor || '#aaa'}">${item.name}</div>
-          <div class="shop-item-details">${(item.rarity || '').toUpperCase()} ${item.type || ''} ${details ? '| ' + details.trim() : ''}</div>
-        </div>
-        <div class="shop-item-price">${item.shopPrice}g</div>
-        <button class="shop-item-btn buy-btn ${canAfford ? '' : 'disabled'}">BUY</button>
-      `;
+      const nameEl = document.createElement('div');
+      nameEl.className = `shop-item-name ${rarityClass}`;
+      nameEl.textContent = item.name;
 
-      const btn = el.querySelector('.buy-btn');
+      const typeEl = document.createElement('div');
+      typeEl.className = 'shop-item-type';
+      typeEl.textContent = `${(item.rarity || '').toUpperCase()} ${item.type || ''}`;
+
+      const infoEl = document.createElement('div');
+      infoEl.className = 'shop-item-info';
+      infoEl.appendChild(nameEl);
+      infoEl.appendChild(typeEl);
+
+      if (statsText.trim()) {
+        const statsEl = document.createElement('div');
+        statsEl.className = 'shop-item-stats';
+        statsEl.textContent = statsText.trim();
+        infoEl.appendChild(statsEl);
+      }
+
+      const priceEl = document.createElement('div');
+      priceEl.className = 'shop-item-price';
+      priceEl.textContent = `${item.shopPrice}g`;
+
+      const btn = document.createElement('button');
+      btn.className = 'shop-btn';
+      btn.textContent = 'BUY';
+      if (!canAfford) btn.disabled = true;
+
       const buyHandler = () => {
         if (!canAfford) return;
         socket.emit('shop:buy', { itemId: item.id });
@@ -847,12 +714,15 @@ function renderShop() {
       btn.addEventListener('touchstart', (e) => { e.preventDefault(); buyHandler(); });
       btn.addEventListener('click', buyHandler);
 
+      el.appendChild(infoEl);
+      el.appendChild(priceEl);
+      el.appendChild(btn);
       container.appendChild(el);
     }
   } else {
     // Sell tab — show player inventory items
     if (!inventoryData || !inventoryData.items || inventoryData.items.length === 0) {
-      container.innerHTML = '<div class="shop-item-empty">No items to sell</div>';
+      container.innerHTML = '<div class="shop-empty">No items to sell</div>';
       return;
     }
     for (const item of inventoryData.items) {
@@ -860,23 +730,48 @@ function renderShop() {
       if (item.type === 'consumable') continue;
 
       const sellPrice = Math.max(1, Math.floor((item.shopPrice || estimateSellPrice(item)) * 0.4));
+      const rarityClass = (item.rarity || 'common').toLowerCase();
       const el = document.createElement('div');
       el.className = 'shop-item';
 
-      let details = '';
-      if (item.damage) details += `DMG:${item.damage} `;
-      if (item.armor) details += `ARM:${item.armor} `;
+      // Build stat line
+      let statsText = '';
+      if (item.damage) statsText += `DMG:${item.damage} `;
+      if (item.armor) statsText += `ARM:${item.armor} `;
+      if (item.bonuses) {
+        for (const [stat, val] of Object.entries(item.bonuses)) {
+          statsText += `+${val} ${stat.toUpperCase()} `;
+        }
+      }
 
-      el.innerHTML = `
-        <div class="shop-item-info">
-          <div class="shop-item-name" style="color:${item.rarityColor || '#aaa'}">${item.name}</div>
-          <div class="shop-item-details">${(item.rarity || '').toUpperCase()} ${item.type || ''} ${details ? '| ' + details.trim() : ''}</div>
-        </div>
-        <div class="shop-item-price">${sellPrice}g</div>
-        <button class="shop-item-btn sell-btn">SELL</button>
-      `;
+      const nameEl = document.createElement('div');
+      nameEl.className = `shop-item-name ${rarityClass}`;
+      nameEl.textContent = item.name;
 
-      const btn = el.querySelector('.sell-btn');
+      const typeEl = document.createElement('div');
+      typeEl.className = 'shop-item-type';
+      typeEl.textContent = `${(item.rarity || '').toUpperCase()} ${item.type || ''}`;
+
+      const infoEl = document.createElement('div');
+      infoEl.className = 'shop-item-info';
+      infoEl.appendChild(nameEl);
+      infoEl.appendChild(typeEl);
+
+      if (statsText.trim()) {
+        const statsEl = document.createElement('div');
+        statsEl.className = 'shop-item-stats';
+        statsEl.textContent = statsText.trim();
+        infoEl.appendChild(statsEl);
+      }
+
+      const priceEl = document.createElement('div');
+      priceEl.className = 'shop-item-price';
+      priceEl.textContent = `${sellPrice}g`;
+
+      const btn = document.createElement('button');
+      btn.className = 'shop-btn sell';
+      btn.textContent = 'SELL';
+
       const sellHandler = () => {
         socket.emit('shop:sell', { itemId: item.id });
         hapticFeedback();
@@ -884,10 +779,13 @@ function renderShop() {
       btn.addEventListener('touchstart', (e) => { e.preventDefault(); sellHandler(); });
       btn.addEventListener('click', sellHandler);
 
+      el.appendChild(infoEl);
+      el.appendChild(priceEl);
+      el.appendChild(btn);
       container.appendChild(el);
     }
     if (container.children.length === 0) {
-      container.innerHTML = '<div class="shop-item-empty">No items to sell</div>';
+      container.innerHTML = '<div class="shop-empty">No items to sell</div>';
     }
   }
 }
@@ -940,6 +838,93 @@ setInterval(() => {
     }
   }
 }, 100);
+
+// ─── Skill Tooltip System ────────────────────────────────────────
+const SKILL_DESCRIPTIONS = {
+  warrior: [
+    { name: 'Cleave', desc: 'Swing weapon in wide arc. Deals 1.8x damage to all enemies within 60px.', type: 'AoE' },
+    { name: 'Shield Bash', desc: 'Bash enemy with shield. Deals 1.2x damage and stuns for 2 seconds.', type: 'Single' },
+    { name: 'War Cry', desc: 'Rally allies! All party members gain +30% attack power for 8 seconds.', type: 'Buff' },
+  ],
+  ranger: [
+    { name: 'Multi-Shot', desc: 'Fire 3 arrows at once. Each deals 0.8x damage to nearby targets.', type: 'Multi' },
+    { name: 'Poison Arrow', desc: 'Poison-tipped arrow. Deals damage over time for 5 seconds.', type: 'DoT' },
+    { name: 'Evasion', desc: 'Sharpen reflexes. Greatly increased dodge chance for 5 seconds.', type: 'Buff' },
+  ],
+  mage: [
+    { name: 'Fireball', desc: 'Hurl a fireball. Deals 2.5x spell damage in 50px explosion.', type: 'AoE' },
+    { name: 'Frost Nova', desc: 'Frozen blast around you. Deals damage and slows enemies for 3 seconds.', type: 'AoE' },
+    { name: 'Teleport', desc: 'Blink 150px forward instantly. Escape danger or reposition.', type: 'Movement' },
+  ],
+};
+
+function showSkillTooltip(index, btn) {
+  hideSkillTooltip();
+
+  const classSkills = SKILL_DESCRIPTIONS[selectedClass];
+  if (!classSkills || !classSkills[index]) return;
+
+  const skillInfo = classSkills[index];
+  const skill = playerStats && playerStats.skills ? playerStats.skills[index] : null;
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'skill-tooltip';
+  tooltip.id = 'active-skill-tooltip';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'skill-tooltip-name';
+  nameEl.textContent = skillInfo.name;
+
+  const statsEl = document.createElement('div');
+  statsEl.className = 'skill-tooltip-stats';
+  const mpText = skill ? `MP: ${skill.mpCost}` : '';
+  const cdText = skill ? `CD: ${(skill.cooldown / 1000).toFixed(1)}s` : '';
+  statsEl.textContent = [mpText, cdText].filter(Boolean).join('  |  ');
+
+  const descEl = document.createElement('div');
+  descEl.className = 'skill-tooltip-desc';
+  descEl.textContent = skillInfo.desc;
+
+  const typeEl = document.createElement('div');
+  typeEl.className = 'skill-tooltip-type';
+  typeEl.textContent = skillInfo.type;
+
+  tooltip.appendChild(nameEl);
+  tooltip.appendChild(statsEl);
+  tooltip.appendChild(descEl);
+  tooltip.appendChild(typeEl);
+
+  document.body.appendChild(tooltip);
+
+  // Haptic for tooltip
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+
+function hideSkillTooltip() {
+  const existing = document.getElementById('active-skill-tooltip');
+  if (existing) existing.remove();
+}
+
+function initSkillTooltips() {
+  document.querySelectorAll('.action-btn.skill').forEach((btn, i) => {
+    let holdTimer;
+    btn.addEventListener('touchstart', (e) => {
+      holdTimer = setTimeout(() => {
+        showSkillTooltip(i, btn);
+      }, 500);
+    });
+    btn.addEventListener('touchend', () => {
+      clearTimeout(holdTimer);
+      hideSkillTooltip();
+    });
+    btn.addEventListener('touchmove', () => {
+      clearTimeout(holdTimer);
+    });
+  });
+}
+
+// Initialize tooltips once DOM is ready
+initSkillTooltips();
 
 // ─── Keep screen awake ──────────────────────────────────────────
 // Wake lock is requested inside the 'joined' handler to avoid

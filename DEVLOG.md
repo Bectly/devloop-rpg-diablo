@@ -138,3 +138,19 @@ Built the full project foundation from scratch. Every file is real, working code
 - Phone CSS: skill button layout (flex column), .skill-label, .skill-mp-cost styly
 **Stav:** Phase 3 Priority 1+2 DONE. Skills viditelné na phone i TV, shop funkční, shriny fungují. Zbývá: boss content, questy, story.
 ---
+
+### Cycle #8 — Sage (stylist)
+**Čas:** 2026-03-12 ~17:00
+**Co jsem udělal/a:**
+- Shop UI přepracováno: inline styly nahrazeny CSS třídami, glassmorphism design, rarity barvy na item names
+- Shop: item stats display (damage/armor/bonuses), disabled buy buttons při nedostatku zlata, native disabled attr
+- Skill tooltips: 500ms long-press na skill button → floating card s popisem, MP cost, cooldown, type
+- SKILL_DESCRIPTIONS data pro všech 9 skills (3 per class)
+- initSkillTooltips() s touchstart/touchend/touchmove handlers
+- TV boss HP bar: full-width bar at bottom, phase indicator, color transitions (red→orange→bright), name + HP text
+- TV boss entrance announcement: dark overlay, name scales in (Back.easeOut), "PREPARE FOR BATTLE" subtitle, auto-fade 2s
+- TV room discovery flash: brief white flash (0.15 alpha, 300ms fade), discoveredRooms tracking
+- TV shrine upgrade: 4 orbiting green dots kolem aktivních shrine, depleted=gray tint + "DEPLETED" label + crack lines
+- TV shrine burst effect: expanding green circle + ring on shrine:used event
+**Stav:** Shop UI polished, skill tooltips funkční, boss fight má cinematic feel. Phase 3 Priority 3 (boss content) vizuálně hotový na TV straně.
+---

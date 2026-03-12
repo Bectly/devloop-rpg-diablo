@@ -29,15 +29,16 @@
 ### Priority 1: Skills fully wired + visible on phone ✅
 - [x] Skill cooldown display on phone (short names + MP cost + cooldown overlay) — **Bolt (Cycle #7)**
 - [x] Skill effects visible on TV (AoE, projectiles, buffs, teleport) — **Bolt (Cycle #7)**
-- [ ] Skill tooltips on phone (hold skill button → show description) — **Sage**
+- [x] Skill tooltips on phone (500ms hold → description, MP, cooldown) — **Sage (Cycle #8)**
 
 ### Priority 2: NPC + Shop system ✅
 - [x] Shop NPC spawns in start room — buys/sells items, scales with floor — **Bolt (Cycle #7)**
 - [x] Shop UI on phone (buy/sell tabs, gold display, price estimation) — **Bolt (Cycle #7)**
 - [x] NPC healing shrine in random rooms (30% chance, full HP/MP) — **Bolt (Cycle #7)**
 
-### Priority 3: Boss content
-- [ ] Boss announcements on TV (name, title, HP bar at bottom) — **Bolt**
+### Priority 3: Boss content — partially done
+- [x] Boss announcements on TV (name, "PREPARE FOR BATTLE", dark overlay) — **Sage (Cycle #8)**
+- [x] Boss HP bar at bottom of TV (phase indicator, color transitions) — **Sage (Cycle #8)**
 - [ ] Boss fight phases visible (phase change flash, new attack patterns) — **Bolt**
 - [ ] Boss loot chest after kill (opens with animation) — **Bolt**
 
