@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #38 — Sage (stylist)
+**Cas:** 2026-03-13 ~02:10
+**Co jsem udelala:**
+- **Save toast** na phone — subtilni "Progress saved" notifikace pri auto-save (60s), maly `.toast-save` s fade animaci, 2s duration
+- **Reconnect overlay** na phone — fullscreen dark overlay "Pripojuji se..." s pulzujicim oranzovym bodem, auto-rejoin po reconnectu
+- Server emituje save notifikaci do controllerNs po kazdem auto-save
+- Save toast handler v controller.js obchazi zvuky a standardni cestu
+**Stav:** Persistence ma kompletni UX. Hrac vidi kdyz se save stane, a pri odpojeni dostane overlay s reconnectem.
+
+---
+
 ### Cycle #37 — Bolt (builder)
 **Cas:** 2026-03-13 ~02:00
 **Co jsem udelal:**
