@@ -23,7 +23,7 @@ let buttonsInitialized = false;
 let notificationCount = 0;
 let shopData = null;
 let questData = [];
-let encounteredElites = new Set(); // track which elites we've already notified about
+// encounteredElites moved to reconnect.js (Reconnect.encounteredElites)
 
 // ─── DOM Elements ───────────────────────────────────────────────
 const joinScreen = document.getElementById('join-screen');
@@ -64,15 +64,8 @@ document.getElementById('btn-join').addEventListener('click', () => {
 socket.on('connect', () => {
   console.log('[Phone] Connected');
 
-  // Stop countdown and hide reconnect overlay if it was showing
-  if (_reconnectCountdownInterval) {
-    clearInterval(_reconnectCountdownInterval);
-    _reconnectCountdownInterval = null;
-  }
-
-  const overlay = document.getElementById('reconnect-overlay');
-  if (overlay && !overlay.classList.contains('hidden')) {
-    overlay.classList.add('hidden');
+  const wasReconnect = Reconnect.onConnect();
+  if (wasReconnect) {
     // Re-join automatically if we had an active session.
     // Use joinedName (cached at join time) — NOT the input field, which may
     // have been cleared or may show the join screen placeholder.
@@ -191,7 +184,7 @@ socket.on('dialogue:sync', (data) => {
 socket.on('floor:change', (data) => {
   currentFloor = data.floor;
   currentFloorName = data.floorName || '';
-  encounteredElites.clear();
+  Reconnect.clearElites();
   updateFloorDisplay();
 });
 
@@ -200,8 +193,7 @@ socket.on('damage:taken', (data) => {
   flashDamage();
 
   // Elite encounter notification — show once per elite
-  if (data.isElite && data.monsterName && !encounteredElites.has(data.monsterName)) {
-    encounteredElites.add(data.monsterName);
+  if (Reconnect.handleEliteEncounter(data)) {
     const affixList = (data.affixes || []).join(', ');
     if (data.eliteRank === 'rare') {
       showNotification(`\u{1F480} Rare ${data.monsterName} \u2014 ${affixList}`, 'elite_rare');
@@ -270,38 +262,10 @@ socket.on('game:restarted', () => {
   hideVictoryScreen();
 });
 
-// ─── Reconnect Overlay ───────────────────────────────────────
-const _reconnectOverlay = document.createElement('div');
-_reconnectOverlay.id = 'reconnect-overlay';
-_reconnectOverlay.className = 'hidden';
-_reconnectOverlay.innerHTML = `
-  <div class="reconnect-content">
-    <div class="reconnect-dot"></div>
-    <div class="reconnect-text">Pripojuji se...</div>
-    <div class="reconnect-countdown" id="reconnect-countdown">30</div>
-  </div>`;
-document.body.appendChild(_reconnectOverlay);
-
-let _reconnectCountdownInterval = null;
-
+// ─── Reconnect Overlay — delegated to reconnect.js (window.Reconnect) ──
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');
-  _reconnectOverlay.classList.remove('hidden');
-
-  // Start visual 30s countdown (cosmetic — real grace period is server-side)
-  if (_reconnectCountdownInterval) clearInterval(_reconnectCountdownInterval);
-  let _reconnectSecsLeft = 30;
-  const _countdownEl = document.getElementById('reconnect-countdown');
-  if (_countdownEl) _countdownEl.textContent = _reconnectSecsLeft;
-
-  _reconnectCountdownInterval = setInterval(() => {
-    _reconnectSecsLeft--;
-    if (_countdownEl) _countdownEl.textContent = Math.max(0, _reconnectSecsLeft);
-    if (_reconnectSecsLeft <= 0) {
-      clearInterval(_reconnectCountdownInterval);
-      _reconnectCountdownInterval = null;
-    }
-  }, 1000);
+  Reconnect.onDisconnect();
 });
 
 // ─── Floor Display ──────────────────────────────────────────────
@@ -531,45 +495,12 @@ function updateHUD(stats) {
   }
 
   // Update debuff indicators
-  updateDebuffDisplay(stats.debuffs || []);
+  Reconnect.updateDebuffDisplay(stats.debuffs || []);
 
   updateFloorDisplay();
 }
 
-// ─── Debuff Display ──────────────────────────────────────────────
-function updateDebuffDisplay(debuffs) {
-  let container = document.getElementById('debuff-indicators');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'debuff-indicators';
-    container.className = 'debuff-indicator';
-    document.body.appendChild(container);
-  }
-
-  container.innerHTML = '';
-  if (!debuffs || debuffs.length === 0) {
-    container.classList.add('hidden');
-    return;
-  }
-
-  container.classList.remove('hidden');
-
-  for (const d of debuffs) {
-    const el = document.createElement('div');
-    el.className = 'debuff-icon';
-    const secs = Math.ceil(d.ticksRemaining / 20);
-
-    if (d.effect === 'fire_dot') {
-      el.classList.add('debuff-fire');
-      el.innerHTML = `\u{1F525}<span class="debuff-timer">${secs}s</span>`;
-    } else if (d.effect === 'slow') {
-      el.classList.add('debuff-slow');
-      el.innerHTML = `\u2744<span class="debuff-timer">${secs}s</span>`;
-    }
-
-    container.appendChild(el);
-  }
-}
+// ─── Debuff Display — delegated to reconnect.js (Reconnect.updateDebuffDisplay) ──
 
 // ─── Joystick ───────────────────────────────────────────────────
 function initJoystick() {

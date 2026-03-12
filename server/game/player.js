@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { QuestManager } = require('./quests');
+const { applyResistance, applyArmor, DAMAGE_TYPES } = require('./damage-types');
 
 const CLASS_BONUSES = {
   warrior: { str: 3, dex: 0, int: 0, vit: 2 },
@@ -89,6 +90,9 @@ class Player {
     // Equipment bonuses
     this.equipBonuses = { str: 0, dex: 0, int: 0, vit: 0, armor: 0, damage: 0 };
 
+    // Elemental resistances (0-75 cap, from gear)
+    this.resistances = { fire: 0, cold: 0, poison: 0 };
+
     this.recalcStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
@@ -173,6 +177,8 @@ class Player {
 
   recalcEquipBonuses() {
     this.equipBonuses = { str: 0, dex: 0, int: 0, vit: 0, armor: 0, damage: 0 };
+    let fireResist = 0, coldResist = 0, poisonResist = 0, allResist = 0;
+
     for (const slot of Object.keys(this.equipment)) {
       const item = this.equipment[slot];
       if (!item) continue;
@@ -181,11 +187,22 @@ class Player {
           if (this.equipBonuses[stat] !== undefined) {
             this.equipBonuses[stat] += val;
           }
+          // Resistance bonuses
+          if (stat === 'fire_resist') fireResist += val;
+          if (stat === 'cold_resist') coldResist += val;
+          if (stat === 'poison_resist') poisonResist += val;
+          if (stat === 'all_resist') allResist += val;
         }
       }
       if (item.armor) this.equipBonuses.armor += item.armor;
       if (item.damage) this.equipBonuses.damage += item.damage;
     }
+
+    // Apply all_resist to each element, cap at 75
+    this.resistances.fire = Math.min(75, fireResist + allResist);
+    this.resistances.cold = Math.min(75, coldResist + allResist);
+    this.resistances.poison = Math.min(75, poisonResist + allResist);
+
     this.recalcStats();
   }
 
@@ -234,7 +251,7 @@ class Player {
     return true;
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, damageType = 'physical') {
     if (!this.alive || this.isDying) return 0;
 
     // Dodge check
@@ -242,8 +259,18 @@ class Player {
       return -1; // dodged
     }
 
-    // Armor reduction
-    const reduced = Math.max(1, Math.floor(amount - this.armor * 0.4));
+    let reduced;
+    const typeDef = DAMAGE_TYPES[damageType];
+
+    if (typeDef && typeDef.resistKey) {
+      // Elemental damage — skip armor, apply resistance
+      const resist = this.resistances[typeDef.resistKey] || 0;
+      reduced = applyResistance(amount, resist);
+    } else {
+      // Physical damage — apply armor reduction (existing formula)
+      reduced = applyArmor(amount, this.armor);
+    }
+
     this.hp -= reduced;
     this.lastDamageTaken = Date.now();
 
@@ -444,6 +471,7 @@ class Player {
       isDying: this.isDying,
       deathTimer: this.deathTimer,
       disconnected: this.disconnected || false,
+      resistances: { ...this.resistances },
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
       debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
     };
@@ -479,7 +507,7 @@ class Player {
       }
     }
 
-    // Recalc bonuses from restored equipment, then set HP/MP to max
+    // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
@@ -500,6 +528,7 @@ class Player {
       stats: { ...this.stats },
       freeStatPoints: this.freeStatPoints,
       armor: Math.round(this.armor),
+      resistances: { ...this.resistances },
       critChance: Math.round(this.critChance),
       attackPower: Math.round(this.attackPower),
       spellPower: Math.round(this.spellPower),

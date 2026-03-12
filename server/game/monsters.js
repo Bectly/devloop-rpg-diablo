@@ -14,6 +14,7 @@ const MONSTER_DEFS = {
     xpReward: 25,
     lootTier: 1,
     behavior: 'melee',
+    damageType: 'physical',
     color: 0xccccaa,
     size: 14,
   },
@@ -30,6 +31,7 @@ const MONSTER_DEFS = {
     xpReward: 35,
     lootTier: 2,
     behavior: 'melee_poison',
+    damageType: 'poison',
     color: 0x66aa66,
     size: 16,
   },
@@ -46,6 +48,7 @@ const MONSTER_DEFS = {
     xpReward: 50,
     lootTier: 3,
     behavior: 'ranged',
+    damageType: 'fire',
     color: 0xcc3333,
     size: 15,
   },
@@ -62,6 +65,7 @@ const MONSTER_DEFS = {
     xpReward: 30,
     lootTier: 2,
     behavior: 'ranged_kite',
+    damageType: 'physical',
     color: 0xccaa66,
     size: 13,
     projectileSpeed: 300,
@@ -80,6 +84,7 @@ const MONSTER_DEFS = {
     xpReward: 15,
     lootTier: 1,
     behavior: 'melee_split',
+    damageType: 'poison',
     color: 0x44cc88,
     size: 12,
     splitCount: 2,     // splits into 2 smaller slimes on death
@@ -98,6 +103,7 @@ const MONSTER_DEFS = {
     xpReward: 8,
     lootTier: 0,
     behavior: 'melee',
+    damageType: 'poison',
     color: 0x33aa77,
     size: 8,
   },
@@ -114,13 +120,14 @@ const MONSTER_DEFS = {
     xpReward: 200,
     lootTier: 4,
     behavior: 'boss',
+    damageType: 'physical',
     color: 0x8800aa,
     size: 22,
     isBoss: true,
     phases: [
-      { hpPercent: 100, mode: 'melee' },
-      { hpPercent: 60, mode: 'charge' },
-      { hpPercent: 30, mode: 'aoe_frenzy' },
+      { hpPercent: 100, mode: 'melee',      damageType: 'physical' },
+      { hpPercent: 60,  mode: 'charge',     damageType: 'fire' },
+      { hpPercent: 30,  mode: 'aoe_frenzy', damageType: 'physical' },
     ],
   },
 };
@@ -171,6 +178,9 @@ class Monster {
     this.size = def.size;
     this.isBoss = def.isBoss || false;
     this.phases = def.phases || null;
+
+    // Damage type
+    this.damageType = def.damageType || 'physical';
 
     // Ranged/archer specifics
     this.projectileSpeed = def.projectileSpeed || 0;
@@ -389,6 +399,7 @@ class Monster {
 
           let dmg = this.damage;
           let attackType = 'melee';
+          let damageType = this.damageType;
 
           // Boss phase modifiers
           if (this.isBoss && this.phases) {
@@ -399,6 +410,10 @@ class Monster {
             } else if (phase.mode === 'aoe_frenzy') {
               dmg = Math.floor(this.damage * 0.8);
               attackType = 'aoe';
+            }
+            // Phase-specific damage type override
+            if (phase.damageType) {
+              damageType = phase.damageType;
             }
           }
 
@@ -415,6 +430,7 @@ class Monster {
             monsterId: this.id,
             targetId: closest.id,
             damage: dmg,
+            damageType,
             attackType,
             projectile: this.behavior === 'ranged_kite' ? {
               fromX: this.x,

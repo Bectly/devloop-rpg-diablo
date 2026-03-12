@@ -1,5 +1,6 @@
 const { generateLoot } = require('./items');
 const { modifyDamageByAffixes, processAffixOnHitPlayer, processAffixOnDealDamage, processAffixOnDeath } = require('./affixes');
+const { applyResistance, getSkillDamageType, DAMAGE_TYPES } = require('./damage-types');
 
 class CombatSystem {
   constructor() {
@@ -45,7 +46,16 @@ class CombatSystem {
       }
     }
 
-    return { damage: Math.max(1, baseDamage), isCrit };
+    // Determine damage type from weapon bonuses (elemental weapons deal that type)
+    let damageType = 'physical';
+    if (player.equipment.weapon && player.equipment.weapon.bonuses) {
+      const wb = player.equipment.weapon.bonuses;
+      if (wb.fire_damage) damageType = 'fire';
+      else if (wb.cold_damage) damageType = 'cold';
+      else if (wb.poison_damage) damageType = 'poison';
+    }
+
+    return { damage: Math.max(1, baseDamage), isCrit, damageType };
   }
 
   // Player attacks nearest monster
@@ -70,7 +80,7 @@ class CombatSystem {
     if (!nearest) return null;
 
     player.startAttackCooldown();
-    const { damage, isCrit } = this.calcPlayerDamage(player);
+    const { damage, isCrit, damageType } = this.calcPlayerDamage(player);
     const modifiedDamage = nearest.affixes ? modifyDamageByAffixes(nearest, damage) : damage;
     const dealt = nearest.takeDamage(modifiedDamage);
 
@@ -81,6 +91,7 @@ class CombatSystem {
       targetId: nearest.id,
       targetName: nearest.name,
       damage: dealt,
+      damageType,
       isCrit,
       targetHp: nearest.hp,
       targetMaxHp: nearest.maxHp,
@@ -138,6 +149,7 @@ class CombatSystem {
     const skill = player.useSkill(skillIndex);
     if (!skill) return null;
 
+    const skillDamageType = getSkillDamageType(skill.name);
     const results = [];
 
     switch (skill.type) {
@@ -166,6 +178,7 @@ class CombatSystem {
               targetId: monster.id,
               targetName: monster.name,
               damage: dealt,
+              damageType: skillDamageType,
               isCrit: false,
               skillName: skill.name,
               targetHp: monster.hp,
@@ -227,6 +240,7 @@ class CombatSystem {
             attackerId: player.id,
             targetId: nearest.id,
             damage: dealt,
+            damageType: skillDamageType,
             skillName: skill.name,
             targetHp: nearest.hp,
             targetMaxHp: nearest.maxHp,
@@ -283,6 +297,7 @@ class CombatSystem {
             attackerId: player.id,
             targetId: t.id,
             damage: dealt,
+            damageType: skillDamageType,
             skillName: skill.name,
             targetHp: t.hp,
             targetMaxHp: t.maxHp,
@@ -343,6 +358,7 @@ class CombatSystem {
             attackerId: player.id,
             targetId: nearest.id,
             damage: dealt,
+            damageType: skillDamageType,
             skillName: skill.name,
             effect: 'poison',
             targetHp: nearest.hp,
@@ -431,13 +447,19 @@ class CombatSystem {
     const target = players.find(p => p.id === event.targetId);
     if (!target || !target.alive) return null;
 
-    const dealt = target.takeDamage(event.damage);
+    // Determine damage type: use event.damageType from monster, override for fire/cold enchanted
+    let damageType = event.damageType || 'physical';
+    if (monster && monster.fireEnchanted) damageType = 'fire';
+    else if (monster && monster.coldEnchanted) damageType = 'cold';
+
+    const dealt = target.takeDamage(event.damage, damageType);
 
     const hitEvent = {
       type: 'combat:hit',
       attackerId: event.monsterId,
       targetId: target.id,
       damage: dealt === -1 ? 0 : dealt,
+      damageType,
       dodged: dealt === -1,
       attackType: event.attackType,
     };

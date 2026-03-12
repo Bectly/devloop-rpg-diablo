@@ -126,18 +126,17 @@ Affixes are random modifiers applied to elite/champion monsters (Diablo-style "b
 
 ## 🔥 NEXT PRIORITIES (Phase 7: Damage Types & Resistances)
 
-### 7.0 Refactoring: file splits [Bolt — FIRST]
-**Why:** hud.js 1284 LOC, controller.js 1084 LOC — both over 1000 threshold. Must split before adding more code.
-- [ ] Extract `hud.js` victory screen → `client/tv/victory.js` (~200 LOC)
-- [ ] Extract `hud.js` dialogue/NPC HUD → `client/tv/dialogue-hud.js` (~150 LOC)
-- [ ] Extract `controller.js` reconnect + debuff UI → `client/phone/reconnect.js` (~120 LOC)
-- [ ] Verify 516 tests still pass
+### 7.0 Refactoring: file splits [DONE — Bolt, Cycle #52]
+- [x] `hud.js` 1284 → 807 LOC. Extracted `victory.js` (339 LOC) + `dialogue-hud.js` (153 LOC)
+- [x] `controller.js` 1084 → 1015 LOC. Extracted `reconnect.js` (119 LOC)
+- [x] HTML script tags updated (TV + phone)
+- [x] 516/516 tests PASS
 
-### 7.1 Damage type system — Server [Bolt]
-**New file:** `server/game/damage-types.js`
+### 7.1 Damage type system — Server [DONE — Bolt, Cycle #52]
+**New file:** `server/game/damage-types.js` (90 LOC)
 Four damage types that affect all combat. Builds on existing fire/cold affix system.
 
-- [ ] **Damage type definitions:**
+- [x] **Damage type definitions:**
   | Type | Color | Effect |
   |------|-------|--------|
   | Physical | white | Default, reduced by armor |
@@ -145,27 +144,28 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
   | Cold | blue | Slows target, reduced by cold resist |
   | Poison | green | Stacking DoT, reduced by poison resist |
 
-- [ ] **Resistance system:**
+- [x] **Resistance system:**
   - Player resistances: `player.resistances = { fire: 0, cold: 0, poison: 0 }` (0-75%, capped)
   - Monster resistances: defined per monster type in MONSTER_DEFS
   - Resistance reduces incoming damage of that type: `finalDmg = dmg * (1 - resist/100)`
   - Equipment can grant resistances (new bonus type in items.js)
 
-- [ ] **Skill damage types:**
+- [x] **Skill damage types:**
   - Warrior: skills deal physical
   - Mage: fireball = fire, ice shard = cold, arcane blast = physical
   - Rogue: poison blade = poison, others = physical
 
-- [ ] **Monster damage types:**
+- [x] **Monster damage types:**
   - Skeleton/Zombie: physical
   - Demon: fire (ranged attacks)
   - Slime: poison
   - Boss phases: physical → fire → mixed
 
-### 7.2 Items — resistance bonuses [Bolt]
-- [ ] New bonus types in items.js: `fire_resist`, `cold_resist`, `poison_resist`, `all_resist`
-- [ ] Roll resistance bonuses on armor drops (helmets, chests especially)
-- [ ] Display in item tooltips on phone
+### 7.2 Items — resistance bonuses [DONE — Bolt, Cycle #52]
+- [x] New bonus types: `fire_resist` (5-20), `cold_resist` (5-20), `poison_resist` (5-20), `all_resist` (3-10)
+- [x] Resistance suffixes: Flame Ward, Frost Ward, Venom Ward, Protection
+- [x] ~55% of armor drops roll at least one resist bonus
+- [ ] Display in item tooltips on phone (Sage)
 
 ### 7.3 UI — resistance display [Sage]
 - [ ] **Phone stats screen:** show fire/cold/poison resistance percentages

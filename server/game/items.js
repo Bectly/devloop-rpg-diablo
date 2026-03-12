@@ -78,6 +78,14 @@ const BONUS_POOL = [
   { stat: 'damage', min: 1, max: 6, label: 'Damage' },
 ];
 
+// Resistance bonuses — only roll on armor items (helmet, chest, gloves, boots)
+const RESIST_BONUS_POOL = [
+  { stat: 'fire_resist', min: 5, max: 20, label: 'Fire Resist' },
+  { stat: 'cold_resist', min: 5, max: 20, label: 'Cold Resist' },
+  { stat: 'poison_resist', min: 5, max: 20, label: 'Poison Resist' },
+  { stat: 'all_resist', min: 3, max: 10, label: 'All Resist' },
+];
+
 // Name prefixes by rarity
 const PREFIXES = {
   common:    ['Worn', 'Old', 'Simple', 'Plain'],
@@ -95,6 +103,10 @@ const SUFFIXES = {
   vit: ['of Vitality', 'of the Oak', 'of Endurance', 'of Fortitude'],
   armor: ['of the Fortress', 'of Warding', 'of the Bulwark', 'of Iron'],
   damage: ['of Slaying', 'of Ruin', 'of Carnage', 'of the Destroyer'],
+  fire_resist: ['of Flame Ward', 'of the Phoenix', 'of Fire Guard', 'of Embers'],
+  cold_resist: ['of Frost Ward', 'of the Glacier', 'of Ice Guard', 'of Winter'],
+  poison_resist: ['of Venom Ward', 'of the Antidote', 'of Poison Guard', 'of Purity'],
+  all_resist: ['of Protection', 'of Warding', 'of the Sentinel', 'of Resilience'],
 };
 
 // Unique handcrafted names for legendary items
@@ -142,11 +154,11 @@ function pickRarity(tierBoost = 0) {
   return 'common';
 }
 
-function generateBonuses(rarity) {
+function generateBonuses(rarity, extraPool = null) {
   const r = RARITIES[rarity];
   const count = randomInt(r.bonusCount[0], r.bonusCount[1]);
   const bonuses = {};
-  const pool = [...BONUS_POOL];
+  const pool = extraPool ? [...BONUS_POOL, ...extraPool] : [...BONUS_POOL];
 
   for (let i = 0; i < count && pool.length > 0; i++) {
     const idx = randomInt(0, pool.length - 1);
@@ -228,7 +240,8 @@ function generateArmor(tierBoost = 0) {
   const prefix = PREFIXES[rarity][randomInt(0, PREFIXES[rarity].length - 1)];
 
   const armor = Math.ceil(randomInt(base.baseArmor[0], base.baseArmor[1]) * r.multiplier);
-  const bonuses = generateBonuses(rarity);
+  // Armor items can roll resistance bonuses
+  const bonuses = generateBonuses(rarity, RESIST_BONUS_POOL);
 
   return {
     id: uuidv4(),
@@ -361,6 +374,8 @@ module.exports = {
   ARMORS,
   ACCESSORIES,
   CONSUMABLES,
+  BONUS_POOL,
+  RESIST_BONUS_POOL,
   PREFIXES,
   SUFFIXES,
   LEGENDARY_NAMES,

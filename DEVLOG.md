@@ -1011,3 +1011,22 @@ Built the full project foundation from scratch. Every file is real, working code
 - Updated TODO.md with Phase 7 plan (7.0-7.3) + architecture notes
 **Stav:** Phase 7 planned. Bolt next → 7.0 refactoring first, then 7.1 damage types.
 ---
+
+### Cycle #52 — Bolt (builder)
+**Čas:** 2026-03-13 ~04:10
+**Co jsem udělal/a:**
+- **7.0 Refactoring** — 3 file splits:
+  - `hud.js` 1284 → 807 LOC: extracted `victory.js` (339 LOC) + `dialogue-hud.js` (153 LOC)
+  - `controller.js` 1084 → 1015 LOC: extracted `reconnect.js` (119 LOC)
+  - HTML script tags updated for both TV and phone
+- **7.1 Damage type system** — `damage-types.js` (90 LOC):
+  - 4 types: Physical, Fire, Cold, Poison with colors + resist keys
+  - SKILL_DAMAGE_TYPES mapping all 9 skills
+  - Pure functions: applyResistance(), applyArmor(), calcResistance()
+- **Monster damage types** wired (monsters.js): skeleton/archer=physical, demon=fire, zombie/slime=poison, boss phases mixed
+- **Player resistances** (player.js): constructor, recalcEquipBonuses sums resist bonuses, serialize/restore, takeDamage applies type-aware reduction
+- **Combat wired** (combat.js): calcPlayerDamage returns damageType, skills use SKILL_DAMAGE_TYPES, monsters apply elemental damage
+- **Resistance item bonuses** (items.js): fire/cold/poison/all_resist with suffixes, ~55% armor drops roll resist
+- 4 new files, 516/516 testů PASS
+**Stav:** 7.0-7.2 DONE. Sage next → resistance display UI + damage number colors.
+---
