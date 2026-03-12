@@ -601,4 +601,112 @@ describe('World', () => {
       expect(s.lootChests.length).toBe(0);
     });
   });
+
+  // ── Story NPCs (Cycle #22) ──────────────────────────────────────
+  describe('World — storyNpcs placement (Cycle #22)', () => {
+    it('storyNpcs initialized as empty array', () => {
+      const w = new World();
+      expect(w.storyNpcs).toBeDefined();
+      expect(Array.isArray(w.storyNpcs)).toBe(true);
+      expect(w.storyNpcs.length).toBe(0);
+    });
+
+    it('floor 0 has Old Sage', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const sage = w.storyNpcs.find(n => n.id === 'old_sage');
+      expect(sage).toBeDefined();
+      expect(sage.name).toBe('Old Sage');
+    });
+
+    it('Old Sage only on floor 0 (not floor 1+)', () => {
+      for (let f = 1; f <= 4; f++) {
+        const w = new World();
+        w.generateFloor(f);
+        const sage = w.storyNpcs.find(n => n.id === 'old_sage');
+        expect(sage).toBeUndefined();
+      }
+    });
+
+    it('Shrine Guardian placed when shrine exists', () => {
+      let found = false;
+      for (let trial = 0; trial < 50 && !found; trial++) {
+        const w = new World();
+        w.generateFloor(trial % 7);
+        const hasShrineRoom = w.rooms.some(r => r.hasShrine);
+        const guardian = w.storyNpcs.find(n => n.id === 'shrine_guardian');
+        if (hasShrineRoom) {
+          expect(guardian).toBeDefined();
+          expect(guardian.name).toBe('Shrine Guardian');
+          found = true;
+        }
+      }
+      // With 30% shrine chance across many trials, we should find one
+    });
+
+    it('Dying Adventurer appears on floor 2+ (index >= 2)', () => {
+      for (let f = 2; f <= 5; f++) {
+        const w = new World();
+        w.generateFloor(f);
+        const herald = w.storyNpcs.find(n => n.id === 'floor_herald');
+        expect(herald).toBeDefined();
+        expect(herald.name).toBe('Dying Adventurer');
+      }
+    });
+
+    it('Dying Adventurer NOT on floor 0 or 1', () => {
+      for (let f = 0; f <= 1; f++) {
+        const w = new World();
+        w.generateFloor(f);
+        const herald = w.storyNpcs.find(n => n.id === 'floor_herald');
+        expect(herald).toBeUndefined();
+      }
+    });
+
+    it('storyNpcs reset on new floor generation', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const countFloor0 = w.storyNpcs.length;
+      expect(countFloor0).toBeGreaterThan(0); // At least Old Sage
+
+      w.generateFloor(1);
+      // Old Sage should NOT carry over from floor 0
+      const sage = w.storyNpcs.find(n => n.id === 'old_sage');
+      expect(sage).toBeUndefined();
+    });
+
+    it('serialize() includes storyNpcs', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const s = w.serialize();
+      expect(s).toHaveProperty('storyNpcs');
+      expect(Array.isArray(s.storyNpcs)).toBe(true);
+      expect(s.storyNpcs.length).toBeGreaterThan(0);
+    });
+
+    it('storyNpc objects have correct shape {id, name, x, y}', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const s = w.serialize();
+      for (const npc of s.storyNpcs) {
+        expect(typeof npc.id).toBe('string');
+        expect(typeof npc.name).toBe('string');
+        expect(typeof npc.x).toBe('number');
+        expect(typeof npc.y).toBe('number');
+        // Should only have these 4 keys
+        expect(Object.keys(npc).sort()).toEqual(['id', 'name', 'x', 'y']);
+      }
+    });
+
+    it('storyNpc positions are within valid bounds (x > 0, y > 0)', () => {
+      for (let f = 0; f <= 4; f++) {
+        const w = new World();
+        w.generateFloor(f);
+        for (const npc of w.storyNpcs) {
+          expect(npc.x).toBeGreaterThan(0);
+          expect(npc.y).toBeGreaterThan(0);
+        }
+      }
+    });
+  });
 });

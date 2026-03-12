@@ -52,11 +52,16 @@
 - [ ] Leaderboard / stats tracking
 - [ ] Session reconnection handling
 
-## Architecture Notes (Updated Cycle #22)
-**Current LOC:** ~9500 total (18+ source files), 322 tests across 8 suites
+## Architecture Notes (Updated Cycle #24)
+**Current LOC:** ~9800 total (18+ source files), 351 tests across 9 suites
 **No files over threshold.** Split done in Cycle #17.
 
 ## Open Bugs
+- [ ] [BUG/HIGH] `dungeon:enter` never cleans up HUD dialogue overlay — fade-out tween fires on stale objects — `game.js`
+- [ ] [BUG/HIGH] Stagger setTimeout IDs in dialogue choice reveal not stored/cleared — orphaned timeouts on `dialogue:end` — `controller.js`
+- [ ] [BUG/MEDIUM] Story NPC sprites not cleaned when `state.world.storyNpcs` is absent — `game.js:672`
+- [ ] [BUG/MEDIUM] Orphaned tweens on story NPC glow/marker not killed before destroy — `game.js`
+- [ ] [BUG/MEDIUM] `dialogue:end` doesn't remove `.typing` class from `#dialogue-text` — `controller.js`
 - [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js

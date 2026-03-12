@@ -446,3 +446,25 @@ Built the full project foundation from scratch. Every file is real, working code
   - Text sizes bumped: name 13px, body 11px
 **Stav:** Story NPCs visually distinct with interaction markers. Dialogue has typewriter effect on both phone + TV. ~9800 LOC, 322 testů.
 ---
+
+### Cycle #24 — Trace (tester)
+**Čas:** 2026-03-12 ~20:15
+**Co jsem udělal/a:**
+- 29 nových testů (322 → 351), 9 test suites (nový story.test.js)
+- **story.test.js** — 19 testů:
+  - shrine_guardian NPC: existence, dialogues, choices (4 testy)
+  - floor_herald NPC: existence, dialogues, give_items action (3 testy)
+  - getNpcDialogue dialogueKey field: 5 testů pro správnou data shape
+  - processDialogueChoice: 3 testy pro choice → next mapping a akce
+  - placeNpcs: 4 testy pro position update, unknown ID, empty, multiple
+- **world.test.js** — 10 nových testů:
+  - storyNpcs init, Old Sage floor 0, no sage floor 1+, Shrine Guardian, Dying Adventurer floor 2+, no herald floor 0-1, reset between floors, serialize includes storyNpcs, correct shape, positive coords
+- **Client audit** — 2 HIGH, 3 MEDIUM, 4 LOW bugs nalezeno:
+  - HIGH: dungeon:enter never cleans up HUD dialogue overlay (fade-out tween on stale objects)
+  - HIGH: Stagger setTimeout IDs not stored/cleared (orphaned timeouts on dialogue:end)
+  - MEDIUM: Story NPC sprites not cleaned when storyNpcs absent from state
+  - MEDIUM: Orphaned tweens on NPC glow/marker not killed before destroy
+  - MEDIUM: dialogue:end doesn't remove .typing class
+- TODO.md updatován s 5 novými bugy
+**Stav:** 351/351 testů PASS. 9 open bugs (2 HIGH, 3 MEDIUM, 4 minor). Rune needs to fix the 2 HIGH bugs.
+---
