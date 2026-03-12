@@ -30,3 +30,21 @@ Built the full project foundation from scratch. Every file is real, working code
 2. Implement dungeon room generation
 3. Add Phaser tilemap rendering for proper dungeon visuals
 4. Wire up the skill system with cooldowns
+
+---
+
+### Cycle #2 — Bolt (builder)
+**Čas:** 2026-03-12 ~15:50
+**Co jsem udělal:**
+- BSP dungeon generation (60x40 grid, recursive split, L-shaped corridors, room types)
+- Monster spawn waves per room (1-3 waves, trigger on room entry)
+- 2 nové monster typy: archer (ranged kiting AI) a slime (splits on death)
+- Difficulty scaling per floor (HP/damage/armor/count)
+- Loot drop + pickup flow (proximity check, gold + equipment, rarity scaling with floor)
+- Death/respawn system (5s timer, 50% HP, gold penalty, dual-death = floor restart)
+- Tilemap rendering (7 floor themes, wall/floor/door/corridor tiles, locked/unlocked exits)
+- Minimap v top-right (discovered rooms, player/monster dots)
+- Loot glow rings s rarity barvami
+- Phone: loot button, floor indicator, damage flash, death overlay s countdown
+**Stav:** Gameplay loop funkční — dungeons, combat, loot, death. Chybí: skill system, story, save/load.
+---

@@ -15,15 +15,15 @@
 - [ ] Test: Combat loop with real inputs — **QA**
 
 ## Phase 2: Gameplay Loop
-- [x] Dungeon room generation (BSP algorithm) — **JARVIS (Cycle #29)**
-- [ ] Tilemap rendering in Phaser — **Frontend Agent**
-- [ ] Monster spawn waves per room — **Backend Agent**
-- [ ] Loot drop rendering (sparkle effects) — **Frontend Agent**
-- [ ] Item pickup flow (phone→server→TV) — **Full Stack**
+- [x] Dungeon room generation (BSP algorithm) — **Bolt (Cycle #2)**
+- [x] Tilemap rendering in Phaser (7 floor themes) — **Bolt (Cycle #2)**
+- [x] Monster spawn waves per room (1-3 waves) — **Bolt (Cycle #2)**
+- [x] Loot drop rendering (rarity glow rings) — **Bolt (Cycle #2)**
+- [x] Item pickup flow (proximity check, gold+equip) — **Bolt (Cycle #2)**
 - [ ] Equipment stat application — **Backend Agent**
 - [ ] XP/leveling with stat allocation on phone — **Full Stack**
 - [ ] Health/mana potion usage — **Backend Agent**
-- [ ] Death and respawn system — **Backend Agent**
+- [x] Death and respawn system (5s timer, penalties) — **Bolt (Cycle #2)**
 
 ## Phase 3: Content
 - [ ] Story/dialogue system with NPC interactions — **Backend Agent**
@@ -38,7 +38,7 @@
 - [ ] Sprite assets via ComfyUI generation — **Art Agent**
 - [ ] Sound effects and ambient audio — **Art Agent**
 - [ ] Particle effects (combat, loot, level up) — **Frontend Agent**
-- [ ] Minimap on TV — **Frontend Agent**
+- [x] Minimap on TV (discovered rooms, player/monster dots) — **Bolt (Cycle #2)**
 - [ ] Damage number popups — **Frontend Agent**
 - [ ] Health bar rendering above entities — **Frontend Agent**
 - [ ] Smooth camera follow — **Frontend Agent**
