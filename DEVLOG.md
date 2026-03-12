@@ -540,3 +540,24 @@ Built the full project foundation from scratch. Every file is real, working code
 - All changes are CSS-only or minimal JS — no architecture changes
 **Stav:** Sound UX polished. Phone has mute toggle, TV has keyboard shortcut, buttons have tactile press feedback. ~10,650 LOC, 351 testů, 0 bugs.
 ---
+
+### Cycle #29 — Trace (tester)
+**Čas:** 2026-03-12 ~21:05
+**Co jsem udělal/a:**
+- 14 nových testů v `sound-api.test.js` (365 total, 10 suites):
+  - All 13 sound methods + 5 control methods existence
+  - init() creates AudioContext, is idempotent
+  - unlock() creates ctx if missing, resumes if suspended
+  - mute/unmute/toggle state management
+  - All methods safe when muted or ctx null (no throws)
+  - All methods execute when initialized + unmuted
+  - masterVol default, _noise helper
+- **Client audit** — 2 MEDIUM, 3 LOW bugs found:
+  - MEDIUM: Monster sprite cleanup in dungeon:enter lacks null guards on nameText/hpBar
+  - MEDIUM: Item sprite cleanup in dungeon:enter lacks null guard on nameText
+  - LOW: _noise bufSize could be fractional (defensive coding)
+  - LOW: No oscillator concurrency cap (burst of 20+ events = 40+ nodes)
+  - LOW: TV Sound.unlock() called from socket event, not user gesture (fragile on mobile)
+- Sound engine code quality: all 13 methods properly guard ctx+muted, _gain ramp correct, this context in setTimeouts safe, init idempotent, script loading order correct in both HTMLs
+**Stav:** 365/365 testů PASS. 2 MEDIUM bugs (sprite null guards). Sound system audit clean — well structured.
+---

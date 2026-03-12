@@ -117,9 +117,11 @@ Modify `handleDialogueChoose`:
 
 ## Open Bugs
 - [x] ~~[BUG] stats.alive — verified correct~~ Cycle #27
-- [x] ~~[BUG] Missing TV handlers~~ FIXED Cycle #27 (room:discovered, monster:split, player:respawn added)
-- [x] ~~[BUG] Dead variables initialized/currentFloor~~ FIXED Cycle #27 (removed)
+- [x] ~~[BUG] Missing TV handlers~~ FIXED Cycle #27
+- [x] ~~[BUG] Dead variables initialized/currentFloor~~ FIXED Cycle #27
 - [x] ~~[BUG] Player sprites not cleared on dungeon:enter~~ FIXED Cycle #27
+- [ ] [BUG/MEDIUM] Monster sprite cleanup in dungeon:enter lacks null guards on nameText/hpBar — `game.js`
+- [ ] [BUG/MEDIUM] Item sprite cleanup in dungeon:enter lacks null guard on nameText — `game.js`
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
