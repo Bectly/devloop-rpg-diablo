@@ -48,12 +48,49 @@
 - `loadCharacter()` called `JSON.parse()` on stats/equipment/inventory with no try/catch — each field now wrapped in individual try/catch with safe fallback
 - Reconnect flow (`controller.js`) re-read `name-input` DOM value instead of cached name — introduced `joinedName` variable set at join time, used on reconnect
 
-### 5.3 Session reconnection [PRIORITY: AFTER 5.2]
-- On disconnect → keep player in `disconnectedPlayers` Map for 30s (grace period)
-- On reconnect with same name within grace → restore full in-memory state
-- On reconnect after grace → load from SQLite (via 5.2 Step C)
-- Phone: "Reconnecting..." overlay with countdown timer
-- TV: ghost sprite (50% opacity) for disconnected players during grace
+### 5.3 Session reconnection [PRIORITY: BOLT NEXT]
+**Files to change:** `server/socket-handlers.js`, `server/index.js`, `client/tv/game.js` (or `sprites.js`)
+
+**Step A: Grace period in handleDisconnect**
+Instead of immediately deleting player from `players` Map, move to a `disconnectedPlayers` Map:
+```js
+// In socket-handlers.js — new module-level Map
+const disconnectedPlayers = new Map(); // name → { player, inventory, socketId, timer }
+
+// In handleDisconnect:
+// 1. Save to DB (already done)
+// 2. Move player to disconnectedPlayers Map (key = player.name)
+// 3. Set 30s timeout — when it fires, THEN delete from players + emit player:left
+// 4. Do NOT emit player:left immediately — player stays visible on TV
+// 5. Mark player as disconnected: player.disconnected = true
+```
+
+**Step B: Reconnect in handleJoin**
+```js
+// In handleJoin, BEFORE creating new Player:
+// 1. Check disconnectedPlayers.has(data.name)
+// 2. If found:
+//    a. clearTimeout(entry.timer)
+//    b. Move player back to players Map with NEW socket.id
+//    c. Restore inventory reference
+//    d. player.disconnected = false
+//    e. Emit notification "Welcome back!"
+//    f. Skip Player creation entirely
+// 3. If not found: proceed with DB load or new player (existing flow)
+```
+
+**Step C: Game loop — skip disconnected players**
+In `index.js` game loop, skip movement/input for players where `player.disconnected === true`.
+They should still be visible (rendered on TV) but frozen in place. They should still take damage from monsters.
+
+**Step D: TV ghost sprite**
+In `client/tv/sprites.js` (or game.js), when rendering a player with `disconnected: true`:
+- Set sprite alpha to 0.4
+- Add a "..." or "DC" text above their head
+- When they reconnect (disconnected=false), restore alpha to 1.0
+
+**Step E: Export disconnectedPlayers from socket-handlers**
+Add `disconnectedPlayers` to exports so index.js can access it for cleanup on server shutdown.
 
 ### Future (not this cycle)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)

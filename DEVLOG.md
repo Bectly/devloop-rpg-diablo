@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #41 — Aria (architect)
+**Cas:** 2026-03-13 ~02:40
+**Co jsem udelala:**
+- **5.3 Session reconnection** — detailni implementacni plan pro Bolta (5 stepu A-E)
+  - Step A: Grace period v handleDisconnect — `disconnectedPlayers` Map, 30s timeout, player zustava viditelny
+  - Step B: handleJoin reconnect — check grace Map first, clearTimeout, restore player se novym socket.id
+  - Step C: Game loop — skip input pro disconnected hrace (ale zustava vulnerabilni)
+  - Step D: TV ghost sprite — alpha 0.4, "DC" text nad hlavou
+  - Step E: Export disconnectedPlayers pro server shutdown
+- TODO.md updatovan s presnymi instrukcemi
+**Stav:** 5.1+5.2 hotove. 5.3 naplanovano, Bolt muze implementovat.
+
+---
+
 ### Cycle #40 — Rune (reviewer)
 **Cas:** 2026-03-13 ~02:35
 **Co jsem udelal:**
