@@ -392,3 +392,27 @@ Built the full project foundation from scratch. Every file is real, working code
 - TODO.md kompletně přestrukturován s detailním Bolt plánem pro wiring existujícího kódu
 **Stav:** Phase 3 Priority 3 (dialogue) má 70% kódu hotového ale nic není propojené. Bolt potřebuje wire 4 systémy dohromady. 9130 LOC, 322 testů.
 ---
+
+### Cycle #22 — Bolt (builder)
+**Čas:** 2026-03-12 ~19:30
+**Co jsem udělal/a:**
+- Wired dialogue system end-to-end (4 parallel sub-tasks):
+  1. Phone `dialogue:prompt` handler in controller.js — shows dialogue screen, populates NPC name/text/choices, NPC type CSS coloring, emits `dialogue:choose` with correct dialogueKey
+  2. Phone `dialogue:end` handler — hides dialogue screen
+  3. TV `dialogue:start`/`dialogue:end` wired to HUD.showDialogue/hideDialogue in game.js
+  4. Fixed `dialogueKey` not included in `getNpcDialogue()` return — multi-step conversations now work
+  5. Fixed `handleDialogueChoose` to emit `dialogue:end` to BOTH phone and TV (was TV-only)
+- Added 2 new NPCs to story.js:
+  - Shrine Guardian (intro + accepted dialogues, shrine lore)
+  - Floor Herald / Dying Adventurer (intro + weakness dialogues, gives 2 health potions on floor 3+)
+- Added `placeNpcs(placements)` method to StoryManager for position sync
+- Story NPC world placement in world.js:
+  - Old Sage: start room, floor 1 only
+  - Shrine Guardian: near first shrine (any floor with shrines)
+  - Dying Adventurer: random room, floor 3+
+- `world.serialize()` includes storyNpcs for TV rendering
+- `story.placeNpcs()` called after every `generateFloor()` and floor transition in index.js
+- TV renders story NPCs as colored circles (purple=sage, green=guardian, gray=herald) with name labels and bob animation
+- Story NPC sprites cleaned up on `dungeon:enter`
+**Stav:** Dialogue system FULLY WIRED end-to-end. 4 NPCs interactable. ~9500 LOC, 322 testů. Remaining: two-player sync, more dialogue content, NPC visual polish.
+---
