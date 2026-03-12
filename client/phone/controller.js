@@ -319,15 +319,29 @@ function showVictoryScreen(data) {
   statsEl.innerHTML = '';
   const classIcons = { warrior: '\u2694\uFE0F', ranger: '\uD83C\uDFF9', mage: '\uD83D\uDD2E' };
 
-  for (const p of (data.players || [])) {
+  // Find MVP (most kills)
+  const players = data.players || [];
+  let mvpIndex = -1;
+  let maxKills = -1;
+  for (let i = 0; i < players.length; i++) {
+    if ((players[i].kills || 0) > maxKills) {
+      maxKills = players[i].kills || 0;
+      mvpIndex = i;
+    }
+  }
+
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
     const card = document.createElement('div');
     card.className = 'victory-player-card';
+    if (p.characterClass) card.setAttribute('data-class', p.characterClass);
+    if (i === mvpIndex && maxKills > 0) card.classList.add('mvp');
     card.innerHTML = `
       <div class="victory-player-icon">${classIcons[p.characterClass] || '\u2694\uFE0F'}</div>
       <div class="victory-player-info">
         <div class="victory-player-name">${p.name}</div>
         <div class="victory-player-class">${p.characterClass}</div>
-        <div class="victory-player-stats">Lv.${p.level} &middot; ${p.kills} kills &middot; ${p.gold}g</div>
+        <div class="victory-player-stats">\u2B06\uFE0F Lv.${p.level} \u00B7 \uD83D\uDC80 ${p.kills} \u00B7 \uD83E\uDE99 ${p.gold}</div>
       </div>
     `;
     statsEl.appendChild(card);

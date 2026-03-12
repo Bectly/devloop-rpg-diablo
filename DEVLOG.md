@@ -621,3 +621,24 @@ Built the full project foundation from scratch. Every file is real, working code
 - 365/365 testů PASS
 **Stav:** 3/3 Aria priorities DONE. game.js under threshold. Game has victory condition. Loot names are flavorful. ~11,500 LOC, 365 testů. Phase 5 (SQLite) next.
 ---
+
+### Cycle #33 — Sage (stylist)
+**Čas:** 2026-03-12 ~21:45
+**Co jsem udělal/a:**
+- **Phone victory screen polish** (controller.js + style.css):
+  - Class-colored left borders on player cards (warrior=blue, ranger=green, mage=purple) via `data-class` attribute
+  - MVP detection — player with most kills gets gold `.mvp` badge with `::after` "MVP" label
+  - Stat icons: ⬆️ level, 💀 kills, 🪙 gold before each value
+  - Crown drop animation — bounces in from above with cubic-bezier, then subtle glow pulse
+  - Player card entrance stagger — fade+slide-up with nth-child delays (1.0s, 1.2s, 1.4s, 1.6s)
+  - NEW GAME button infinite gold glow pulse after 2s delay
+- **TV victory screen polish** (hud.js):
+  - Class-colored accent bars — 4px vertical bar on left of each player card (blue/green/purple)
+  - MVP indicator — gold pulsing "⭐ MVP" label above best player's card (2+ players only)
+  - Title letter-by-letter animation — individual letter objects with 40ms stagger + Back.easeOut
+  - White screen flash — 0.3 alpha flash fades over 500ms at victory start
+  - Sparkle particles — 45% star-shaped (4-point polygons), 5-color palette, 8 large blinking sparkles
+  - Floor theme tint — overlay blends final floor color (Throne of Ruin dark red) at 30%
+- 365/365 testů PASS
+**Stav:** Victory screens polished on both phone + TV. Class identity, MVP highlight, dramatic animations. ~11,600 LOC, 365 testů.
+---

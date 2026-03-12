@@ -1489,14 +1489,21 @@ html, body {
 
 #victory-crown {
   font-size: 48px;
-  animation: victory-pulse 2s ease-in-out infinite;
+  animation: crownDrop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) backwards,
+             victory-crown-glow 2s ease-in-out infinite 0.8s;
   filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
   margin-bottom: 8px;
 }
 
-@keyframes victory-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.8; }
+@keyframes crownDrop {
+  0% { transform: translateY(-30px) scale(0.5); opacity: 0; }
+  60% { transform: translateY(5px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes victory-crown-glow {
+  0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 35px rgba(255, 215, 0, 0.8)); transform: scale(1.06); }
 }
 
 #victory-title {
@@ -1533,17 +1540,56 @@ html, body {
   flex-direction: column;
   gap: 8px;
   margin-bottom: 24px;
-  animation: victory-title-in 0.5s ease backwards 1.0s;
 }
 
 .victory-player-card {
   background: rgba(255, 215, 0, 0.06);
   border: 1px solid rgba(255, 215, 0, 0.15);
+  border-left: 3px solid rgba(255, 215, 0, 0.15);
   border-radius: 10px;
   padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  opacity: 0;
+  animation: victoryCardIn 0.4s ease forwards;
+}
+
+@keyframes victoryCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.victory-player-card:nth-child(1) { animation-delay: 1.0s; }
+.victory-player-card:nth-child(2) { animation-delay: 1.2s; }
+.victory-player-card:nth-child(3) { animation-delay: 1.4s; }
+.victory-player-card:nth-child(4) { animation-delay: 1.6s; }
+
+/* Class-colored left border accents */
+.victory-player-card[data-class="warrior"] { border-left: 3px solid #4488ff; }
+.victory-player-card[data-class="ranger"] { border-left: 3px solid #44cc44; }
+.victory-player-card[data-class="mage"] { border-left: 3px solid #bb44ff; }
+
+/* MVP highlight */
+.victory-player-card.mvp {
+  border-color: rgba(255, 215, 0, 0.4);
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.victory-player-card.mvp::after {
+  content: '\2B50 MVP';
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(10, 10, 18, 0.9);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  letter-spacing: 1px;
 }
 
 .victory-player-icon {
@@ -1589,8 +1635,14 @@ html, body {
   letter-spacing: 3px;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
-  animation: victory-title-in 0.5s ease backwards 1.3s;
+  animation: victory-title-in 0.5s ease backwards 1.3s,
+             victoryBtnPulse 2s ease-in-out infinite 2s;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+@keyframes victoryBtnPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(255, 215, 0, 0.6); }
 }
 
 #btn-new-game:active {
