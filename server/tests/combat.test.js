@@ -69,9 +69,9 @@ describe('CombatSystem', () => {
     });
 
     it('dagger gets extra 20% crit damage on crit', () => {
-      player.critChance = 100;
       player.equipment.weapon = { type: 'weapon', subType: 'dagger', damage: 5, bonuses: {}, attackSpeed: 500 };
       player.recalcEquipBonuses();
+      player.critChance = 100; // set after recalc (recalcStats resets critChance)
 
       const daggerDamages = [];
       for (let i = 0; i < 500; i++) {
@@ -82,6 +82,7 @@ describe('CombatSystem', () => {
       // Switch to sword with same damage
       player.equipment.weapon = { type: 'weapon', subType: 'sword', damage: 5, bonuses: {}, attackSpeed: 800 };
       player.recalcEquipBonuses();
+      player.critChance = 100; // set after recalc
       const swordDamages = [];
       for (let i = 0; i < 500; i++) {
         swordDamages.push(combat.calcPlayerDamage(player).damage);
