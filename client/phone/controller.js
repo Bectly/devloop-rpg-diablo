@@ -344,6 +344,10 @@ function initButtons() {
     socket.emit('attack');
     hapticFeedback();
   });
+  document.getElementById('btn-attack').addEventListener('click', () => {
+    if (isDead) return;
+    socket.emit('attack');
+  });
 
   // Skills
   for (let i = 0; i < 3; i++) {
@@ -353,11 +357,19 @@ function initButtons() {
       socket.emit('skill', { skillIndex: i });
       hapticFeedback();
     });
+    document.getElementById(`btn-skill-${i}`).addEventListener('click', () => {
+      if (isDead) return;
+      socket.emit('skill', { skillIndex: i });
+    });
   }
 
   // Health Potion
   document.getElementById('btn-potion').addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (isDead) return;
+    socket.emit('use:potion', { type: 'health' });
+  });
+  document.getElementById('btn-potion').addEventListener('click', () => {
     if (isDead) return;
     socket.emit('use:potion', { type: 'health' });
   });
@@ -368,6 +380,10 @@ function initButtons() {
     if (isDead) return;
     socket.emit('interact');
   });
+  document.getElementById('btn-interact').addEventListener('click', () => {
+    if (isDead) return;
+    socket.emit('interact');
+  });
 
   // Pickup (LOOT button)
   document.getElementById('btn-pickup').addEventListener('touchstart', (e) => {
@@ -375,10 +391,17 @@ function initButtons() {
     if (isDead) return;
     socket.emit('loot:pickup_nearest');
   });
+  document.getElementById('btn-pickup').addEventListener('click', () => {
+    if (isDead) return;
+    socket.emit('loot:pickup_nearest');
+  });
 
   // Inventory
   document.getElementById('btn-inventory').addEventListener('touchstart', (e) => {
     e.preventDefault();
+    openInventory();
+  });
+  document.getElementById('btn-inventory').addEventListener('click', () => {
     openInventory();
   });
 

@@ -1,136 +1,111 @@
 # DevLoop RPG — Task Board
 
 ## Phase 1: Foundation ✅ COMPLETE
-- [x] Project scaffold and spec — **Aria**
-- [x] Server: Express + Socket.io + game loop — **Aria**
-- [x] Server: Player class with stats, skills, leveling — **Aria**
-- [x] Server: World state manager — **Aria**
-- [x] Server: Combat system with damage formulas — **Aria**
-- [x] Server: Monster definitions + AI state machine — **Aria**
-- [x] Server: Item/loot system with rarities — **Aria**
-- [x] Server: Grid inventory (10x6) — **Aria**
-- [x] Client: TV Phaser 3 renderer — **Aria**
-- [x] Client: Phone controller with joystick — **Aria**
-- [x] Test: 237 unit tests (vitest) — **Trace (Cycle #4)**
-
 ## Phase 2: Gameplay Loop ✅ COMPLETE
-- [x] Dungeon room generation (BSP algorithm) — **Bolt (Cycle #2)**
-- [x] Tilemap rendering in Phaser (7 floor themes) — **Bolt (Cycle #2)**
-- [x] Monster spawn waves per room (1-3 waves) — **Bolt (Cycle #2)**
-- [x] Loot drop rendering (rarity glow rings) — **Bolt (Cycle #2)**
-- [x] Item pickup flow (proximity check, gold+equip) — **Bolt (Cycle #2)**
-- [x] Equipment stat application (recalcEquipBonuses) — **Aria (in player.js)**
-- [x] XP/leveling with stat allocation on phone — **Aria + Bolt**
-- [x] Health/mana potion usage — **Aria (in player.js + index.js)**
-- [x] Death and respawn system (5s timer, penalties) — **Bolt (Cycle #2)**
+## Phase 3: Content — mostly complete
 
-## Phase 3: Content — 🔥 PRIORITY FOR BOLT (Cycle #7)
+### Completed ✅
+- Skills fully wired + visible (phone cooldowns, TV effects, tooltips)
+- NPC + Shop system (shop NPC, buy/sell UI, healing shrines)
+- Boss announcements + HP bar on TV
+- Quest system (QuestManager, 7 types, phone UI, rewards, TV announcements)
 
-### Priority 1: Skills fully wired + visible on phone ✅
-- [x] Skill cooldown display on phone (short names + MP cost + cooldown overlay) — **Bolt (Cycle #7)**
-- [x] Skill effects visible on TV (AoE, projectiles, buffs, teleport) — **Bolt (Cycle #7)**
-- [x] Skill tooltips on phone (500ms hold → description, MP, cooldown) — **Sage (Cycle #8)**
+### Remaining
+- [ ] Boss loot chest after kill (gold fountain + rare item)
+- [ ] Story NPCs with branching dialogue trees
+- [ ] Two-player decision sync (both must agree)
+- [ ] Dialogue choices affect NPC behavior
 
-### Priority 2: NPC + Shop system ✅
-- [x] Shop NPC spawns in start room — buys/sells items, scales with floor — **Bolt (Cycle #7)**
-- [x] Shop UI on phone (buy/sell tabs, gold display, price estimation) — **Bolt (Cycle #7)**
-- [x] NPC healing shrine in random rooms (30% chance, full HP/MP) — **Bolt (Cycle #7)**
+---
 
-### Priority 3: Boss content — partially done
-- [x] Boss announcements on TV (name, "PREPARE FOR BATTLE", dark overlay) — **Sage (Cycle #8)**
-- [x] Boss HP bar at bottom of TV (phase indicator, color transitions) — **Sage (Cycle #8)**
-- [ ] Boss loot chest after kill (gold fountain + rare item) — **Bolt**
+## 🔥 BOLT CYCLE #17 PRIORITIES (in order)
 
-### Priority 4: Quest system ✅
-- [x] `server/game/quests.js` — QuestManager class (7 quest types, floor scaling, rewards) — **Aria (Cycle #11)**
-- [x] Wire quest events in `server/index.js` (9 integration points: kill, clear_room, reach_floor, collect_gold, use_shrine, buy_item) — **Bolt (Cycle #12)**
-- [x] Phone: quest log UI (QST button, collapsible list, progress bars, claim button, badge) — **Bolt (Cycle #12)**
-- [x] Quest rewards: gold + chance for rare item on claim — **Bolt (Cycle #12)**
+### Priority 1: REFACTORING — CRITICAL, DO FIRST
+Files are dangerously large. Split before adding more features.
 
-### Priority 5: Refactoring — BOLT should do BEFORE quest system
-- [ ] Extract `server/socket-handlers.js` from `server/index.js` (864→~400+400)
-  - Move all socket.on handlers into exported functions
-  - index.js keeps server setup, game loop, state management
-- [ ] Extract `client/tv/hud.js` from `client/tv/game.js` (1710→~1200+500)
-  - Move HUD elements, boss bar, minimap, announcements, damage numbers into separate file
-  - game.js keeps scene lifecycle, rendering, socket events
+**1A. Split `server/index.js` (1000 lines → ~500 + ~500)**
+- Create `server/socket-handlers.js`
+- Move ALL `socket.on(...)` handler bodies into exported functions
+- Each handler function takes `(socket, io, gameNs, players, world, ...)` as params
+- `index.js` keeps: server setup, Express routes, game loop, state management, namespace setup
+- `index.js` calls: `handlers.onJoin(socket, ...)`, `handlers.onMove(socket, ...)`, etc.
+- Pattern:
+  ```javascript
+  // socket-handlers.js
+  exports.onQuestClaim = (socket, player, players, world, gameNs) => {
+    // ... handler body moved here ...
+  };
 
-### Priority 6: Story/dialogue (after quests)
-- [ ] Story NPCs with branching dialogue trees — **Bolt**
-- [ ] Two-player decision sync (both must agree) — **Bolt**
-- [ ] Dialogue choices affect NPC behavior — **Bolt**
+  // index.js
+  const handlers = require('./socket-handlers');
+  socket.on('quest:claim', (data) => handlers.onQuestClaim(socket, player, players, world, gameNs));
+  ```
+
+**1B. Split `client/tv/game.js` (1835 lines → ~1200 + ~600)**
+- Create `client/tv/hud.js` — loaded via `<script src="hud.js">` before game.js
+- Move to hud.js: drawMinimap, drawHUD, showWaveText, showAnnouncement, showQuestComplete, _showQuestBanner, _processQuestQueue, spawnDamageNumber, spawnCelebrationParticles, boss HP bar logic, room discovery flash
+- hud.js exports functions that GameScene calls: `HUD.drawMinimap(scene, ...)`, `HUD.showAnnouncement(scene, ...)`, etc.
+- game.js keeps: BootScene, GameScene lifecycle (create/update/destroy), rendering, socket events, camera, input
+
+**1C. Split `client/phone/controller.js` (1090 lines → ~700 + ~400)**
+- Create `client/phone/screens.js` — loaded before controller.js
+- Move to screens.js: createQuestScreen, toggleQuestLog, renderQuests, updateQuestBadge, QUEST_ICONS, createShopScreen, toggleShop, renderShopItems, estimateSellPrice, SKILL_DESCRIPTIONS, showSkillTooltip, hideSkillTooltip
+- controller.js keeps: socket connection, join flow, joystick, action buttons, updateHUD, notifications, core event handlers
+
+### Priority 2: Boss loot chest
+After refactoring, implement:
+- Server: on boss kill, spawn a `loot_chest` ground item at boss position
+- Server: chest contains 3-5 items (higher rarity bias) + gold fountain (50-200g)
+- TV: chest sprite (gold rectangle with sparkle), open animation on interaction
+- Phone: chest notification, auto-pickup gold, items go to inventory
+- TV: gold fountain particle effect (15-20 gold circles spraying upward)
+
+### Priority 3: Story/dialogue system
+Architecture for `server/game/dialogue.js`:
+- DialogueTree class: `{ nodes: Map<id, DialogueNode> }`
+- DialogueNode: `{ text, speaker, choices: [{ text, nextId, condition?, effect? }] }`
+- Pre-built dialogue trees for: shop keeper greeting, shrine guardian lore, floor boss taunt
+- Two-player sync: both players must pick same choice (majority vote with 10s timeout)
+- Server: `dialogue:start`, `dialogue:choice`, `dialogue:end` socket events
+- Phone: dialogue UI already exists (dialogue-screen in index.html), wire it up
+- TV: show dialogue text overlay at bottom of screen
+
+---
 
 ## Phase 4: Polish — partially done
-- [ ] Sprite assets via ComfyUI generation — **Art Agent**
-- [ ] Sound effects and ambient audio — **Art Agent**
-- [x] Particle effects (celebration, sparkles) — **Sage (Cycle #3)**
-- [x] Minimap on TV — **Bolt (Cycle #2)**
-- [x] Damage number popups (crit/dodge/heal) — **Sage (Cycle #3)**
-- [x] Health bar rendering above entities — **Sage (Cycle #3)**
-- [x] Smooth camera follow (lerp 0.08) — **Sage (Cycle #3)**
-- [x] Phone haptic feedback on hits — **Bolt (Cycle #2)**
-- [x] Floor transition effects — **Sage (Cycle #3)**
-- [x] Loot bobbing + legendary sparkles — **Sage (Cycle #3)**
+- [ ] Sprite assets via ComfyUI generation
+- [ ] Sound effects and ambient audio
+- [x] Particle effects, minimap, damage numbers, health bars, camera, haptics, floor transitions, loot sparkles
 
 ## Phase 5: Persistence & Scale
-- [ ] SQLite character save/load — **Backend Agent**
-- [ ] Multiple dungeon zones — **Backend Agent**
-- [ ] Procedural loot name generation — **Backend Agent**
-- [ ] Leaderboard / stats tracking — **Full Stack**
-- [ ] Session reconnection handling — **Backend Agent**
+- [ ] SQLite character save/load
+- [ ] Multiple dungeon zones
+- [ ] Procedural loot name generation
+- [ ] Leaderboard / stats tracking
+- [ ] Session reconnection handling
 
-## Architecture Notes (Aria, Cycle #6)
-- `client/tv/game.js` at 1238 lines — approaching split threshold. If Bolt adds more, extract HUD/minimap into separate file.
-- `server/index.js` at 716 lines — extract socket handlers into `server/socket-handlers.js` when it hits 800+.
-- Consider adding `server/game/shop.js` for Phase 3 shop system.
-- Consider adding `server/game/quests.js` for quest tracking.
+## Architecture Notes (Aria, Cycle #16)
+**Current LOC:** 8508 total, 317 tests across 8 suites
+| File | Lines | Status |
+|------|-------|--------|
+| `server/index.js` | 1000 | ⚠️ SPLIT NOW |
+| `client/tv/game.js` | 1835 | ⚠️ SPLIT NOW |
+| `client/phone/controller.js` | 1090 | ⚠️ SPLIT NOW |
+| `client/phone/style.css` | 1324 | OK (CSS scales differently) |
+| `server/game/world.js` | 665 | OK |
+| `server/game/monsters.js` | 523 | OK |
+| `server/game/player.js` | 457 | OK |
+| `server/game/combat.js` | 436 | OK |
+| `server/game/items.js` | 303 | OK |
+| `server/game/quests.js` | 209 | OK |
 
-## Bugs & Issues
-
-### Critical — ALL FIXED by Rune (Cycle #5)
-- [x] [BUG] `pickRarity()` tierBoost inverted — weight adjustment fix — **Rune**
-- [x] [BUG] Ground item bobbing NaN — numeric hash of UUID — **Rune**
-- [x] [BUG] `hideTooltip` not on `window` — added window.hideTooltip — **Rune**
-
-### Major — ALL FIXED by Rune (Cycle #5)
-- [x] [BUG] Monster texture memory leak — textures.remove on death — **Rune**
-- [x] [BUG] No `safe-area-inset` padding — env() added — **Rune**
-- [x] [BUG] `initButtons()` stacked listeners — buttonsInitialized guard — **Rune**
-- [ ] [BUG] `stats.alive` field name unverified in updateHUD — `client/phone/controller.js:~227`
-
-### Minor — Mostly fixed by Rune (Cycle #5)
-- [x] [BUG] Tile texture overwrite — remove before regenerate — **Rune**
-- [x] [BUG] click→touchstart conversion — all buttons fixed — **Rune**
-- [x] [BUG] Wake lock moved to joined handler — **Rune**
-- [x] [BUG] Notification toast stacking — vertical offset — **Rune**
+## Open Bugs
+- [ ] [BUG][MAJOR] Desktop action buttons missing click handlers — `controller.js`
+- [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn, dialogue:end
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
-- [ ] [BUG] Player sprites not cleared on dungeon:enter (transient stale positions)
-
-### Server bugs found by Rune (Cycle #5)
-- [x] [BUG] Missing level-up events from skill kills (single/multi) — **Rune**
-- [x] [BUG] Poison Arrow dot missing death check + wrong damage value — **Rune**
-- [x] [BUG] Socket input validation: skill index, stat whitelist, itemId type, slot whitelist — **Rune**
-
-### Bugs found by Trace (Cycle #9) — ALL FIXED by Rune (Cycle #10)
-- [x] [BUG] Skill tooltip uses playerStats.characterClass now — **Rune**
-- [x] [BUG] Sell price formula aligned (40% of shopPrice) — **Rune**
-- [x] [BUG] Shrine burst now gets x/y coords from server — **Rune**
-- [x] [BUG] Player facing setRotation removed (NaN fix) — **Rune**
-- [x] [BUG] Stale test already resolved (correct expectation in place) — **Rune**
-
-### Bugs found by Trace (Cycle #14) — FIXED by Rune (Cycle #15)
-- [x] [BUG][CRITICAL] Server never emits `quest:claimed` — added emit in quest:claim handler — **Rune**
-- [x] [BUG][CRITICAL] `generateItem` import wrong — fixed to `generateWeapon`/`generateArmor` — **Rune**
-- [x] [BUG][MAJOR] Reward item lost on full inventory — now drops on ground + warning notification — **Rune**
-- [x] [BUG][MAJOR] TV showQuestComplete overlap — added announcement queue with 3s gap — **Rune**
-- [ ] [BUG][MAJOR] Desktop action buttons missing click handlers — only QST has click fallback — `controller.js`
-- [x] [BUG][MEDIUM] touchmove blocks quest-list/shop scrolling — extended allowlist — **Rune**
-- [x] [BUG][MEDIUM] Quest flash re-triggers on every update — now compares prev completedIds — **Rune**
-- [x] [BUG][MEDIUM] z-index collision quest/dialogue screen — quest z-index bumped to 260 — **Rune**
-- [x] [BUG][MEDIUM] questManager guard — confirmed non-issue (init in Player constructor) — **Rune**
-- [x] [BUG][MEDIUM] showQuestComplete no scene active guard — added isActive() check — **Rune**
-- [ ] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — `game.js`
+- [ ] [BUG] Player sprites not cleared on dungeon:enter
+- [ ] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown
 
 ## Notes
 - Server is authoritative: all game logic runs server-side

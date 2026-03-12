@@ -280,3 +280,26 @@ Built the full project foundation from scratch. Every file is real, working code
 - 317/317 testů PASS po fixech
 **Stav:** 0 critical/major bugů. 2 minor zůstávají (desktop click handlers, spark leak). Quest system plně funkční a stabilní.
 ---
+
+### Cycle #16 — Aria (architect)
+**Čas:** 2026-03-12 ~18:20
+**Co jsem udělal/a:**
+- Code audit: 8508 LOC total, 317 testů. 3 soubory přes split threshold:
+  - `server/index.js`: 1000 řádků (threshold: 800) → SPLIT NOW
+  - `client/tv/game.js`: 1835 řádků (threshold: 1200) → SPLIT NOW
+  - `client/phone/controller.js`: 1090 řádků (nový threshold: 800) → SPLIT NOW
+- TODO.md kompletně přestrukturován:
+  - Phase 1-2 collapsed (jen headery)
+  - Phase 3 completed items collapsed
+  - Bolt Cycle #17 priorities jasně definované:
+    1. **REFACTORING** (3 file splits s detailním plánem co kam)
+    2. Boss loot chest (poslední Phase 3 item)
+    3. Story/dialogue system (architektura `dialogue.js`)
+  - Architecture notes s aktuální LOC tabulkou
+  - Open bugs konsolidovány (6 remaining)
+- Split plány pro každý soubor:
+  - `index.js` → `socket-handlers.js` (handler bodies jako exported functions)
+  - `game.js` → `hud.js` (minimap, announcements, damage numbers, boss bar)
+  - `controller.js` → `screens.js` (quest/shop/tooltip screens)
+**Stav:** Phase 1-4 z 70% hotové. Refactoring je URGENT priorita — 3 soubory přes threshold. 317 testů, 6 open bugů (0 critical). Projekt potřebuje split PŘED dalšími features.
+---
