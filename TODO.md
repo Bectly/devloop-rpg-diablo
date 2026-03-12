@@ -68,13 +68,17 @@
 ---
 
 ## Architecture Notes (Updated Cycle #32)
-**Current LOC:** ~11,500 source + 3,500 tests = 15,000 total (22 source files, 10 test suites, 365 tests)
+**Current LOC:** ~11,600 source + 3,800 tests = 15,400 total (22 source files, 12 test suites, 393 tests)
 **Split DONE:** game.js 1553 → 1057 LOC. New sprites.js at 549 LOC.
 **Watch:** `controller.js` at ~900 (grew with victory screen), `socket-handlers.js` at 736 — both approaching threshold.
 **No persistence yet.** `better-sqlite3` in package.json, not imported anywhere.
 
-## Open Bugs
-None. All bugs resolved through Cycle #30.
+## Open Bugs (Cycle #34 audit)
+- [ ] [BUG/HIGH] sprites.js:88-89 — Missing null guards on nameText/hpBar in partial player sprite cleanup path
+- [ ] [BUG/HIGH] hud.js — _destroyVictoryScreen() doesn't kill 56+ infinite tweens (particles, sparkles) → memory/CPU leak
+- [ ] [BUG/HIGH] server/index.js — Race condition: two players hitting exit in same tick on final floor → duplicate victory emit
+- [ ] [BUG/MEDIUM] sprites.js — Monster type detection uses `m.name` string matching instead of `m.type` field
+- [ ] [BUG/MEDIUM] controller.js — showVictoryScreen() can overlay on open dialogue → soft-lock
 
 ## Notes
 - Server is authoritative: all game logic runs server-side

@@ -642,3 +642,30 @@ Built the full project foundation from scratch. Every file is real, working code
 - 365/365 testů PASS
 **Stav:** Victory screens polished on both phone + TV. Class identity, MVP highlight, dramatic animations. ~11,600 LOC, 365 testů.
 ---
+
+### Cycle #34 — Trace (tester)
+**Čas:** 2026-03-12 ~21:55
+**Co jsem udělal/a:**
+- 28 nových testů ve 2 nových test souborech (365 → 393 total, 12 suites):
+- **victory.test.js** — 8 testů:
+  - world.isFinalFloor() true on floor 6, false on 0/3/5
+  - Player.kills initialized to 0, incrementable, serialized
+  - FLOOR_NAMES has 7 entries, [6] is "Throne of Ruin"
+- **items-names.test.js** — 20 testů:
+  - Name generation per rarity tier (common/uncommon/rare/epic/legendary)
+  - Legendary gets unique names (no prefix), epic always gets suffix
+  - Rare has ~60% suffix probability (statistical test)
+  - getSuffix() handles null/empty bonuses, finds highest stat
+  - getLegendaryName() correct per category/subType, null for unknown
+  - buildItemName() central function per rarity
+  - Boss loot guaranteed rare+
+- Exported 6 new symbols from items.js for testability
+- **Client audit** — 3 HIGH, 2 MEDIUM bugs found:
+  - HIGH: sprites.js missing null guards on partial player cleanup (line 88-89)
+  - HIGH: hud.js _destroyVictoryScreen doesn't kill 56+ infinite tweens → memory leak
+  - HIGH: server/index.js race condition on final floor exit → duplicate victory emit
+  - MEDIUM: sprites.js uses m.name string matching instead of m.type for monster rendering
+  - MEDIUM: controller.js victory screen can overlay open dialogue → potential soft-lock
+- 393/393 testů PASS
+**Stav:** 393 testů, 12 suites. 3 HIGH + 2 MEDIUM bugs found in new victory/sprite code. Rune next → fix these.
+---
