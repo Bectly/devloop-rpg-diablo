@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { createMonster } = require('./monsters');
 const { generateConsumable } = require('./items');
+const { generateShopInventory } = require('./shop');
 
 const TILE_SIZE = 32;
 const GRID_W = 60;
@@ -293,6 +294,9 @@ function assignRoomTypes(rooms, floor) {
     else type = 'monster';
 
     const def = ROOM_TYPES[type];
+    // Healing shrines: 30% chance in non-boss, non-start rooms
+    const hasShrine = (type === 'monster' || type === 'treasure') && Math.random() < 0.3;
+
     roomData.push({
       id: uuidv4(),
       index: i,
@@ -300,6 +304,8 @@ function assignRoomTypes(rooms, floor) {
       type,
       name: def.name,
       hasChest: def.hasChest,
+      hasShrine,
+      shrineUsed: false,
       waveCount: def.monsterWaves,
       wavesSpawned: 0,
       wavesCleared: 0,
@@ -377,6 +383,9 @@ class World {
     this.waveTimer = 0;
     this.waveActive = false;
     this.currentWave = 0;
+
+    // Shop NPC
+    this.shopNpc = null;
   }
 
   generateFloor(floorNum) {
@@ -396,6 +405,10 @@ class World {
     this._advancing = false;
 
     this.roomName = `${this.floorName} - Floor ${floorNum + 1}`;
+
+    // Spawn shop NPC in start room
+    this.spawnShopNpc(floorNum);
+
     console.log(`[World] Generated floor ${floorNum + 1}: ${this.floorName} with ${this.rooms.length} rooms`);
     return this.getFloorInfo();
   }
@@ -446,7 +459,7 @@ class World {
 
       if (!room.discovered) {
         room.discovered = true;
-        events.push({ type: 'room:discovered', roomId: room.id, roomName: room.name, roomType: room.type });
+        events.push({ type: 'room:discovered', roomId: room.id, roomName: room.name, roomType: room.type, hasShrine: room.hasShrine });
 
         if (room.waveCount > 0 && room.wavesSpawned === 0) {
           this.spawnWave(room);
@@ -571,6 +584,29 @@ class World {
     return null;
   }
 
+  spawnShopNpc(floor) {
+    const startRoom = this.rooms.find(r => r.type === 'start');
+    if (!startRoom) {
+      this.shopNpc = null;
+      return;
+    }
+    const r = startRoom.room;
+    // Place shop NPC offset from center of start room so it doesn't overlap spawn
+    const cx = (r.x + 1 + Math.floor((r.w - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+    const cy = (r.y + 1 + Math.floor((r.h - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+    this.shopNpc = {
+      id: 'shop_npc',
+      name: 'Merchant',
+      x: cx + 50,
+      y: cy - 30,
+      inventory: generateShopInventory(floor),
+    };
+  }
+
+  getShopNpc() {
+    return this.shopNpc;
+  }
+
   isWalkable(x, y) {
     if (!this.tiles) return true;
     const col = Math.floor(x / TILE_SIZE);
@@ -603,6 +639,8 @@ class World {
         cleared: rd.cleared,
         waveCount: rd.waveCount,
         wavesSpawned: rd.wavesSpawned,
+        hasShrine: rd.hasShrine,
+        shrineUsed: rd.shrineUsed,
       })),
       monsters: this.monsters.filter(m => m.alive).map(m => m.serialize()),
       groundItems: this.groundItems.map(gi => ({
@@ -614,6 +652,12 @@ class World {
         x: Math.round(gi.x),
         y: Math.round(gi.y),
       })),
+      shopNpc: this.shopNpc ? {
+        id: this.shopNpc.id,
+        name: this.shopNpc.name,
+        x: Math.round(this.shopNpc.x),
+        y: Math.round(this.shopNpc.y),
+      } : null,
     };
   }
 }

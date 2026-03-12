@@ -8,19 +8,19 @@ const CLASS_BONUSES = {
 
 const CLASS_SKILLS = {
   warrior: [
-    { name: 'Cleave',      mpCost: 15, cooldown: 3000, damage: 1.8, type: 'aoe',    radius: 60, description: 'Wide slash hitting all nearby enemies' },
-    { name: 'Shield Bash',  mpCost: 20, cooldown: 5000, damage: 1.2, type: 'single', effect: 'stun', duration: 2000, description: 'Stun an enemy for 2 seconds' },
-    { name: 'War Cry',      mpCost: 25, cooldown: 15000, damage: 0, type: 'buff',    effect: 'attack_up', duration: 8000, description: 'Boost party attack by 30%' },
+    { name: 'Cleave',      shortName: 'CLV', mpCost: 15, cooldown: 3000, damage: 1.8, type: 'aoe',    radius: 60, description: 'Wide slash hitting all nearby enemies' },
+    { name: 'Shield Bash',  shortName: 'BSH', mpCost: 20, cooldown: 5000, damage: 1.2, type: 'single', effect: 'stun', duration: 2000, description: 'Stun an enemy for 2 seconds' },
+    { name: 'War Cry',      shortName: 'CRY', mpCost: 25, cooldown: 15000, damage: 0, type: 'buff',    effect: 'attack_up', duration: 8000, description: 'Boost party attack by 30%' },
   ],
   ranger: [
-    { name: 'Multi-Shot',   mpCost: 18, cooldown: 4000, damage: 0.8, type: 'multi',  count: 3, description: 'Fire 3 arrows in a spread' },
-    { name: 'Poison Arrow',  mpCost: 12, cooldown: 3000, damage: 0.6, type: 'dot',    tickDamage: 5, duration: 5000, description: 'Poison dealing damage over time' },
-    { name: 'Evasion',       mpCost: 20, cooldown: 12000, damage: 0, type: 'buff',    effect: 'dodge_up', duration: 5000, description: 'Greatly increase dodge chance' },
+    { name: 'Multi-Shot',   shortName: 'MLT', mpCost: 18, cooldown: 4000, damage: 0.8, type: 'multi',  count: 3, description: 'Fire 3 arrows in a spread' },
+    { name: 'Poison Arrow',  shortName: 'PSN', mpCost: 12, cooldown: 3000, damage: 0.6, type: 'dot',    tickDamage: 5, duration: 5000, description: 'Poison dealing damage over time' },
+    { name: 'Evasion',       shortName: 'EVD', mpCost: 20, cooldown: 12000, damage: 0, type: 'buff',    effect: 'dodge_up', duration: 5000, description: 'Greatly increase dodge chance' },
   ],
   mage: [
-    { name: 'Fireball',     mpCost: 22, cooldown: 3500, damage: 2.5, type: 'aoe',    radius: 50, description: 'Explosive fireball dealing area damage' },
-    { name: 'Frost Nova',   mpCost: 18, cooldown: 6000, damage: 1.0, type: 'aoe',    radius: 80, effect: 'slow', duration: 3000, description: 'Freeze nearby enemies' },
-    { name: 'Teleport',     mpCost: 30, cooldown: 8000, damage: 0,   type: 'movement', range: 150, description: 'Blink to target location' },
+    { name: 'Fireball',     shortName: 'FBL', mpCost: 22, cooldown: 3500, damage: 2.5, type: 'aoe',    radius: 50, description: 'Explosive fireball dealing area damage' },
+    { name: 'Frost Nova',   shortName: 'FRZ', mpCost: 18, cooldown: 6000, damage: 1.0, type: 'aoe',    radius: 80, effect: 'slow', duration: 3000, description: 'Freeze nearby enemies' },
+    { name: 'Teleport',     shortName: 'TLP', mpCost: 30, cooldown: 8000, damage: 0,   type: 'movement', range: 150, description: 'Blink to target location' },
   ],
 };
 
@@ -434,7 +434,15 @@ class Player {
       manaPotions: this.manaPotions,
       equipment: this.equipment,
       skillCooldowns: this.skillCooldowns,
-      skills: this.skills.map(s => ({ name: s.name, mpCost: s.mpCost, cooldown: s.cooldown, description: s.description })),
+      skills: this.skills.map((s, i) => ({
+        name: s.name,
+        shortName: s.shortName || s.name.substring(0, 3).toUpperCase(),
+        mpCost: s.mpCost,
+        cooldown: s.cooldown,
+        cooldownRemaining: Math.max(0, this.skillCooldowns[i] || 0),
+        type: s.type,
+        description: s.description,
+      })),
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
       lastDamageTaken: this.lastDamageTaken,
     };

@@ -338,6 +338,12 @@ html, body {
   background: radial-gradient(circle at 35% 35%, #3355dd, #1a2288);
   border-color: rgba(68, 136, 255, 0.4);
   box-shadow: 0 0 12px rgba(68, 136, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  position: relative;
 }
 
 .action-btn.potion {
@@ -374,6 +380,19 @@ html, body {
   border-color: rgba(204, 136, 68, 0.3);
 }
 
+/* Skill label and MP cost inside skill buttons */
+.action-btn .skill-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.action-btn .skill-mp-cost {
+  font-size: 7px;
+  color: #6688cc;
+  line-height: 1;
+}
+
 /* Cooldown overlay on buttons */
 .action-btn.on-cooldown {
   opacity: 0.5;
@@ -391,6 +410,7 @@ html, body {
   font-size: 14px;
   font-weight: 700;
   color: var(--accent);
+  z-index: 1;
 }
 
 .skill-row, .util-row {

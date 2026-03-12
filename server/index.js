@@ -9,6 +9,8 @@ const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
 const { generateConsumable, generateLoot } = require('./game/items');
+const { getSellPrice } = require('./game/shop');
+const uuid = require('uuid');
 
 // ─── Server Setup ──────────────────────────────────────────────
 const app = express();
@@ -362,11 +364,37 @@ controllerNs.on('connection', (socket) => {
     }
   });
 
-  // ── Interact (NPC) ──
+  // ── Interact (NPC / Shop / Shrine) ──
   socket.on('interact', () => {
     const player = players.get(socket.id);
     if (!player || !player.alive || player.isDying) return;
 
+    // Check shop NPC first
+    const shopNpc = world.getShopNpc();
+    if (shopNpc) {
+      const shopDist = Math.hypot(player.x - shopNpc.x, player.y - shopNpc.y);
+      if (shopDist < 80) {
+        socket.emit('shop:inventory', {
+          items: shopNpc.inventory,
+          playerGold: player.gold,
+        });
+        return;
+      }
+    }
+
+    // Check healing shrine
+    const room = world.getRoomAtPosition(player.x, player.y);
+    if (room && room.hasShrine && !room.shrineUsed) {
+      room.shrineUsed = true;
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
+      socket.emit('stats:update', player.serializeForPhone());
+      gameNs.emit('shrine:used', { roomId: room.id });
+      return;
+    }
+
+    // Check story NPCs
     const storyData = story.serialize();
     for (const npc of storyData.npcs) {
       const dx = npc.x - player.x;
@@ -399,6 +427,15 @@ controllerNs.on('connection', (socket) => {
         if (action.itemType === 'health_potion') {
           player.healthPotions += action.count;
           socket.emit('notification', { text: `Received ${action.count} Health Potions`, type: 'info' });
+        }
+      } else if (action.type === 'open_shop') {
+        // Trigger shop open via the shop NPC
+        const shopNpc = world.getShopNpc();
+        if (shopNpc) {
+          socket.emit('shop:inventory', {
+            items: shopNpc.inventory,
+            playerGold: player.gold,
+          });
         }
       }
     }
@@ -435,6 +472,106 @@ controllerNs.on('connection', (socket) => {
     if (!inv) return;
     socket.emit('inventory:update', inv.serialize());
     socket.emit('stats:update', player.serializeForPhone());
+  });
+
+  // ── Shop: Open ──
+  socket.on('shop:open', () => {
+    const player = players.get(socket.id);
+    if (!player || !player.alive || player.isDying) return;
+    const shopNpc = world.getShopNpc();
+    if (!shopNpc) return;
+    const dist = Math.hypot(player.x - shopNpc.x, player.y - shopNpc.y);
+    if (dist > 80) return;
+    socket.emit('shop:inventory', {
+      items: shopNpc.inventory,
+      playerGold: player.gold,
+    });
+  });
+
+  // ── Shop: Buy ──
+  socket.on('shop:buy', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.alive || player.isDying) return;
+    const shopNpc = world.getShopNpc();
+    if (!shopNpc) return;
+    if (!data || typeof data.itemId !== 'string') return;
+    const item = shopNpc.inventory.find(i => i.id === data.itemId);
+    if (!item) return;
+    if (player.gold < item.shopPrice) {
+      socket.emit('notification', { text: 'Not enough gold!', type: 'error' });
+      return;
+    }
+    const inv = inventories.get(player.id);
+    if (!inv) return;
+
+    // For consumables (potions), add to player potion count directly
+    if (item.subType === 'health_potion') {
+      player.gold -= item.shopPrice;
+      player.healthPotions += item.quantity;
+      socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: 'info' });
+      socket.emit('stats:update', player.serializeForPhone());
+      // Re-send shop inventory with updated gold
+      socket.emit('shop:inventory', { items: shopNpc.inventory, playerGold: player.gold });
+      return;
+    }
+    if (item.subType === 'mana_potion') {
+      player.gold -= item.shopPrice;
+      player.manaPotions += item.quantity;
+      socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: 'info' });
+      socket.emit('stats:update', player.serializeForPhone());
+      socket.emit('shop:inventory', { items: shopNpc.inventory, playerGold: player.gold });
+      return;
+    }
+
+    // Equipment: try to add to inventory with a new unique ID
+    const boughtItem = { ...item, id: uuid.v4() };
+    delete boughtItem.shopPrice;
+    const result = inv.addItem(boughtItem);
+    if (!result.success) {
+      socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+      return;
+    }
+    player.gold -= item.shopPrice;
+    socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: item.rarity || 'common' });
+    socket.emit('stats:update', player.serializeForPhone());
+    socket.emit('inventory:update', inv.serialize());
+    socket.emit('shop:inventory', { items: shopNpc.inventory, playerGold: player.gold });
+  });
+
+  // ── Shop: Sell ──
+  socket.on('shop:sell', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.alive || player.isDying) return;
+    if (!data || typeof data.itemId !== 'string') return;
+    const inv = inventories.get(player.id);
+    if (!inv) return;
+    const item = inv.getItem(data.itemId);
+    if (!item) return;
+    const sellPrice = getSellPrice(item);
+    inv.removeItem(data.itemId);
+    player.gold += sellPrice;
+    socket.emit('notification', { text: `Sold ${item.name} for ${sellPrice}g`, type: 'gold' });
+    socket.emit('stats:update', player.serializeForPhone());
+    socket.emit('inventory:update', inv.serialize());
+    // Re-send shop if still open
+    const shopNpc = world.getShopNpc();
+    if (shopNpc) {
+      socket.emit('shop:inventory', { items: shopNpc.inventory, playerGold: player.gold });
+    }
+  });
+
+  // ── Healing Shrine ──
+  socket.on('shrine:use', () => {
+    const player = players.get(socket.id);
+    if (!player || !player.alive || player.isDying) return;
+    const room = world.getRoomAtPosition(player.x, player.y);
+    if (!room || !room.hasShrine || room.shrineUsed) return;
+    room.shrineUsed = true;
+    player.hp = player.maxHp;
+    player.mp = player.maxMp;
+    socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
+    socket.emit('stats:update', player.serializeForPhone());
+    gameNs.emit('shrine:used', { roomId: room.id });
   });
 
   // ── Disconnect ──
@@ -506,6 +643,9 @@ function gameLoop() {
     if (ev.type === 'room:discovered') {
       gameNs.emit('room:discovered', ev);
       controllerNs.emit('notification', { text: `Discovered: ${ev.roomName}`, type: 'info' });
+      if (ev.hasShrine) {
+        controllerNs.emit('notification', { text: 'A Healing Shrine glows in this room!', type: 'quest' });
+      }
     }
     if (ev.type === 'wave:start') {
       gameNs.emit('wave:start', ev);

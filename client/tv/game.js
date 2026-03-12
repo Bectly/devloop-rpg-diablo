@@ -171,6 +171,46 @@ class BootScene extends Phaser.Scene {
     g.fillRect(14, 21, 4, 4);
     g.generateTexture('npc', 32, 32);
 
+    // Shop NPC — golden/brown figure with coin symbol
+    g.clear();
+    // Body circle (brown)
+    g.fillStyle(0x8b6914, 1);
+    g.fillCircle(16, 16, 14);
+    // Robe (golden)
+    g.fillStyle(0xccaa33, 1);
+    g.fillTriangle(6, 26, 26, 26, 16, 6);
+    // Inner robe highlight
+    g.fillStyle(0xddbf44, 0.8);
+    g.fillTriangle(10, 24, 22, 24, 16, 10);
+    // Coin symbol (circle with line)
+    g.fillStyle(0xffcc00, 1);
+    g.fillCircle(16, 15, 5);
+    g.fillStyle(0x8b6914, 1);
+    g.fillCircle(16, 15, 3);
+    g.fillStyle(0xffcc00, 1);
+    g.fillRect(15, 12, 2, 6);
+    // Eyes
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(12, 10, 2);
+    g.fillCircle(20, 10, 2);
+    g.fillStyle(0x000000, 1);
+    g.fillCircle(12, 10, 1);
+    g.fillCircle(20, 10, 1);
+    g.generateTexture('shop_npc', 32, 32);
+
+    // Healing shrine
+    g.clear();
+    g.fillStyle(0x44ffaa, 0.6);
+    g.fillCircle(16, 16, 14);
+    g.fillStyle(0xffffff, 0.8);
+    // Cross symbol
+    g.fillRect(13, 6, 6, 20);
+    g.fillRect(6, 13, 20, 6);
+    g.fillStyle(0x44ffaa, 1);
+    g.fillRect(14, 7, 4, 18);
+    g.fillRect(7, 14, 18, 4);
+    g.generateTexture('shrine', 32, 32);
+
     g.destroy();
   }
 
@@ -195,6 +235,13 @@ class GameScene extends Phaser.Scene {
     this.tileSprites = [];
     this.tilesDirty = true;
     this.lastTileFloor = -1;
+
+    // Shop NPC sprite
+    this.shopNpcSprite = null;
+    this.shopNpcLabel = null;
+
+    // Shrine sprites
+    this.shrineSprites = new Map();
 
     // Smooth camera tracking position
     this.camTargetX = GAME_W / 2;
@@ -682,7 +729,84 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── Combat events (damage numbers) ──
+    // ── Render Shop NPC ──
+    if (state.world.shopNpc) {
+      const npc = state.world.shopNpc;
+      if (!this.shopNpcSprite) {
+        this.shopNpcSprite = this.add.sprite(npc.x, npc.y, 'shop_npc').setDepth(9).setScale(1.2);
+        this.shopNpcLabel = this.add.text(npc.x, npc.y - 26, 'SHOP', {
+          fontSize: '11px',
+          fill: '#ffcc00',
+          fontFamily: 'Courier New',
+          fontStyle: 'bold',
+          backgroundColor: '#00000088',
+          padding: { x: 4, y: 2 },
+        }).setOrigin(0.5).setDepth(10);
+      }
+      this.shopNpcSprite.setPosition(npc.x, npc.y);
+      this.shopNpcLabel.setPosition(npc.x, npc.y - 26);
+      // Gentle idle bob
+      const bobShop = Math.sin(Date.now() / 600) * 1.5;
+      this.shopNpcSprite.y += bobShop;
+      this.shopNpcLabel.y += bobShop;
+    } else {
+      if (this.shopNpcSprite) {
+        this.shopNpcSprite.destroy();
+        this.shopNpcSprite = null;
+      }
+      if (this.shopNpcLabel) {
+        this.shopNpcLabel.destroy();
+        this.shopNpcLabel = null;
+      }
+    }
+
+    // ── Render Healing Shrines ──
+    if (state.world.rooms) {
+      const seenShrines = new Set();
+      for (const room of state.world.rooms) {
+        if (!room.hasShrine || !room.discovered) continue;
+        seenShrines.add(room.id);
+        let shrine = this.shrineSprites.get(room.id);
+        if (!shrine) {
+          // Place shrine at center of room
+          const sx = (room.x + room.w / 2) * TILE_SIZE;
+          const sy = (room.y + room.h / 2) * TILE_SIZE - 16;
+          shrine = this.add.sprite(sx, sy, 'shrine').setDepth(5).setScale(0.9);
+          shrine._baseY = sy;
+          shrine.label = this.add.text(sx, sy - 22, 'SHRINE', {
+            fontSize: '9px',
+            fill: room.shrineUsed ? '#666666' : '#44ffaa',
+            fontFamily: 'Courier New',
+            fontStyle: 'bold',
+            backgroundColor: '#00000066',
+            padding: { x: 3, y: 1 },
+          }).setOrigin(0.5).setDepth(6);
+          this.shrineSprites.set(room.id, shrine);
+        }
+        // Update shrine appearance
+        if (room.shrineUsed) {
+          shrine.setAlpha(0.3);
+          shrine.label.setColor('#666666');
+          shrine.label.setText('USED');
+        } else {
+          // Pulsing glow
+          const pulse = 0.7 + Math.sin(Date.now() / 500) * 0.3;
+          shrine.setAlpha(pulse);
+          shrine.y = shrine._baseY + Math.sin(Date.now() / 800) * 2;
+          shrine.label.y = shrine.y - 22;
+        }
+      }
+      // Clean up old shrines
+      for (const [id, shrine] of this.shrineSprites) {
+        if (!seenShrines.has(id)) {
+          shrine.label.destroy();
+          shrine.destroy();
+          this.shrineSprites.delete(id);
+        }
+      }
+    }
+
+    // ── Combat events (damage numbers + skill effects) ──
     if (state.events) {
       for (const ev of state.events) {
         if (ev.type === 'combat:hit' && ev.damage > 0) {
@@ -693,6 +817,51 @@ class GameScene extends Phaser.Scene {
             // Camera shake on crit
             if (ev.isCrit) {
               this.cameras.main.shake(200, 0.003);
+            }
+          }
+
+          // Skill visual effects
+          if (ev.skillName) {
+            const attacker = state.players?.find(p => p.id === ev.attackerId);
+            switch (ev.skillName) {
+              case 'Cleave': {
+                const ax = attacker ? attacker.x : (target ? target.x : 0);
+                const ay = attacker ? attacker.y : (target ? target.y : 0);
+                this.spawnAoeEffect(ax, ay, 60, 0xff8833, 500);
+                break;
+              }
+              case 'Fireball': {
+                const tx = target ? target.x : 0;
+                const ty = target ? target.y : 0;
+                this.spawnAoeEffect(tx, ty, 50, 0xff3311, 600);
+                break;
+              }
+              case 'Frost Nova': {
+                const ax = attacker ? attacker.x : (target ? target.x : 0);
+                const ay = attacker ? attacker.y : (target ? target.y : 0);
+                this.spawnAoeEffect(ax, ay, 80, 0x44ddff, 700);
+                break;
+              }
+              case 'Multi-Shot': {
+                if (attacker && target) {
+                  this.spawnProjectile(attacker.x, attacker.y, target.x, target.y, 0x44cc44);
+                }
+                break;
+              }
+              case 'Poison Arrow': {
+                if (attacker && target) {
+                  this.spawnProjectile(attacker.x, attacker.y, target.x, target.y, 0x88cc22);
+                  // Poison cloud at impact
+                  this.spawnAoeEffect(target.x, target.y, 20, 0x66aa11, 800);
+                }
+                break;
+              }
+              case 'Shield Bash': {
+                if (target) {
+                  this.spawnAoeEffect(target.x, target.y, 24, 0xffcc44, 300);
+                }
+                break;
+              }
             }
           }
         }
@@ -718,7 +887,21 @@ class GameScene extends Phaser.Scene {
           const p = state.players?.find(p => p.id === ev.playerId);
           if (p) {
             this.spawnDamageText(p.x, p.y - 40, ev.skillName, false, false, '#44ccff');
+            // Buff visual effect
+            if (ev.skillName === 'War Cry') {
+              this.spawnBuffEffect(p.x, p.y, 0xffcc00);
+            } else if (ev.skillName === 'Evasion') {
+              this.spawnBuffEffect(p.x, p.y, 0x44cc44);
+            }
           }
+        }
+        if (ev.type === 'effect:spawn' && ev.effectType === 'teleport') {
+          const p = state.players?.find(p => p.id === ev.playerId);
+          // We have the destination (ev.x, ev.y). Use prior position from sprite if available.
+          const sprite = p ? this.playerSprites.get(p.id) : null;
+          const fromX = sprite ? sprite.x : ev.x;
+          const fromY = sprite ? sprite.y : ev.y;
+          this.spawnTeleportEffect(fromX, fromY, ev.x, ev.y);
         }
       }
     }
@@ -765,6 +948,74 @@ class GameScene extends Phaser.Scene {
 
     // ── Minimap ──
     this.renderMinimap(state);
+  }
+
+  // ── Skill Visual Effects ──────────────────────────────────────
+
+  spawnAoeEffect(x, y, radius, color, duration) {
+    const circle = this.add.circle(x, y, radius, color, 0.3);
+    circle.setDepth(7);
+    this.tweens.add({
+      targets: circle,
+      alpha: 0,
+      scale: 1.2,
+      duration: duration || 500,
+      onComplete: () => circle.destroy(),
+    });
+  }
+
+  spawnProjectile(fromX, fromY, toX, toY, color) {
+    const proj = this.add.circle(fromX, fromY, 4, color, 1);
+    proj.setDepth(9);
+    this.tweens.add({
+      targets: proj,
+      x: toX,
+      y: toY,
+      duration: 200,
+      onComplete: () => proj.destroy(),
+    });
+  }
+
+  spawnBuffEffect(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const px = x + Math.cos(angle) * 20;
+      const py = y + Math.sin(angle) * 20;
+      const particle = this.add.circle(px, py, 3, color, 0.8);
+      particle.setDepth(9);
+      this.tweens.add({
+        targets: particle,
+        y: py - 30,
+        alpha: 0,
+        duration: 800,
+        delay: i * 50,
+        onComplete: () => particle.destroy(),
+      });
+    }
+  }
+
+  spawnTeleportEffect(fromX, fromY, toX, toY) {
+    // Vanish effect at origin
+    const vanish = this.add.circle(fromX, fromY, 16, 0xbb44ff, 0.6);
+    vanish.setDepth(9);
+    this.tweens.add({
+      targets: vanish,
+      scale: 0,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => vanish.destroy(),
+    });
+    // Appear effect at destination
+    const appear = this.add.circle(toX, toY, 0, 0xbb44ff, 0.6);
+    appear.setDepth(9);
+    this.tweens.add({
+      targets: appear,
+      scale: 1,
+      alpha: 0,
+      duration: 300,
+      delay: 150,
+      onComplete: () => appear.destroy(),
+    });
   }
 
   renderTiles(tiles, floor) {
@@ -1157,6 +1408,23 @@ socket.on('dungeon:enter', (data) => {
       }
       scene.itemSprites.clear();
 
+      // Clean up shop NPC sprite
+      if (scene.shopNpcSprite) {
+        scene.shopNpcSprite.destroy();
+        scene.shopNpcSprite = null;
+      }
+      if (scene.shopNpcLabel) {
+        scene.shopNpcLabel.destroy();
+        scene.shopNpcLabel = null;
+      }
+
+      // Clean up shrine sprites
+      for (const [id, shrine] of scene.shrineSprites) {
+        if (shrine.label) shrine.label.destroy();
+        shrine.destroy();
+      }
+      scene.shrineSprites.clear();
+
       // Floor transition effect
       const floorIdx = data.floor || 0;
       const floorName = data.floorName || FLOOR_NAMES[floorIdx % FLOOR_NAMES.length] || `Floor ${floorIdx + 1}`;
@@ -1195,6 +1463,18 @@ socket.on('exit:unlocked', () => {
       scene.showWaveAnnouncement('EXIT UNLOCKED!', '#ffcc00');
       scene.tilesDirty = true; // Re-render exit tile color
       scene.time.delayedCall(3100, () => {
+        scene.waveText.setColor('#ff4444');
+      });
+    }
+  }
+});
+
+socket.on('shrine:used', (data) => {
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene) {
+      scene.showWaveAnnouncement('SHRINE ACTIVATED!', '#44ffaa');
+      scene.time.delayedCall(2600, () => {
         scene.waveText.setColor('#ff4444');
       });
     }

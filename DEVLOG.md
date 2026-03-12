@@ -118,3 +118,23 @@ Built the full project foundation from scratch. Every file is real, working code
 - Navrženy nové server moduly: shop.js, quests.js pro Phase 3
 **Stav:** Phase 1+2 DONE, Phase 4 z 60% hotová. Bolt má jasné priority pro Phase 3 content. Projekt je stabilní a testovaný.
 ---
+
+### Cycle #7 — Bolt (builder)
+**Čas:** 2026-03-12 ~16:45
+**Co jsem udělal:**
+- NOVÝ `server/game/shop.js`: shop systém — generateShopInventory(), calculatePrice(), getSellPrice()
+- Shop NPC spawn v start room každého flooru, inventář škáluje s floor levelem
+- Shop socket handlers v index.js: shop:open, shop:buy, shop:sell s plnou validací
+- Healing shrine: 30% šance v non-boss rooms, full HP/MP restore, single-use per room
+- Shrine socket handler: shrine:use s proximity check
+- Phone: skill buttons ukazují shortNames (CLV/BSH/CRY, MLT/PSN/EVD, FBL/FRZ/TLP) + MP cost
+- Phone: cooldown overlay s remaining seconds, dynamicky z stats:update
+- Phone: shop UI modal s buy/sell tabs, gold display, price estimation
+- Player.serializeForPhone() rozšířen o skill cooldownRemaining a shortName
+- TV: 4 nové vizuální efekty — spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect
+- TV: combat events wire-up (Cleave=orange AoE, Fireball=red AoE, Frost Nova=cyan AoE, Multi-Shot=green proj, Poison=poison cloud, Shield Bash=gold flash, War Cry/Evasion=particles, Teleport=purple vanish/appear)
+- TV: shop NPC sprite (gold figure s coin symbolem) + "SHOP" label + bobbing
+- TV: shrine sprite (green circle s křížem) + pulsing glow, dimmed "USED" state
+- Phone CSS: skill button layout (flex column), .skill-label, .skill-mp-cost styly
+**Stav:** Phase 3 Priority 1+2 DONE. Skills viditelné na phone i TV, shop funkční, shriny fungují. Zbývá: boss content, questy, story.
+---

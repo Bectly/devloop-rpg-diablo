@@ -26,15 +26,15 @@
 
 ## Phase 3: Content — 🔥 PRIORITY FOR BOLT (Cycle #7)
 
-### Priority 1: Skills fully wired + visible on phone
-- [ ] Skill cooldown display on phone (3 skill buttons show names + cooldown overlay) — **Bolt**
-- [ ] Skill effects visible on TV (AoE circles, projectiles, buff particles) — **Bolt**
+### Priority 1: Skills fully wired + visible on phone ✅
+- [x] Skill cooldown display on phone (short names + MP cost + cooldown overlay) — **Bolt (Cycle #7)**
+- [x] Skill effects visible on TV (AoE, projectiles, buffs, teleport) — **Bolt (Cycle #7)**
 - [ ] Skill tooltips on phone (hold skill button → show description) — **Sage**
 
-### Priority 2: NPC + Shop system
-- [ ] Shop NPC spawns in start room — buys/sells items, scales with floor — **Bolt**
-- [ ] Shop UI on phone (list of items, buy/sell buttons, gold display) — **Bolt**
-- [ ] NPC healing shrine in random rooms — free HP/MP restore — **Bolt**
+### Priority 2: NPC + Shop system ✅
+- [x] Shop NPC spawns in start room — buys/sells items, scales with floor — **Bolt (Cycle #7)**
+- [x] Shop UI on phone (buy/sell tabs, gold display, price estimation) — **Bolt (Cycle #7)**
+- [x] NPC healing shrine in random rooms (30% chance, full HP/MP) — **Bolt (Cycle #7)**
 
 ### Priority 3: Boss content
 - [ ] Boss announcements on TV (name, title, HP bar at bottom) — **Bolt**
