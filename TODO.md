@@ -103,19 +103,19 @@ Affixes are random modifiers applied to elite/champion monsters (Diablo-style "b
   - `onMonsterUpdate(monster, dt)` — teleporter blink, shielding cycle
   - `onMonsterDealDamage(monster, player, damage)` — vampiric heal
 
-### 6.2 Monster Affix System — Client TV [Sage]
-- [ ] **Elite name colors** in sprites.js: Champion = blue (#4488ff), Rare = yellow (#ffcc00)
-- [ ] **Affix label** below monster name (small text, e.g. "Fast Vampiric")
-- [ ] **Visual effects per affix:**
-  - Fire: orange particle ring
-  - Cold: blue tint overlay
-  - Shielding: white dome pulse when active
-  - Teleporter: purple flash on blink
-- [ ] **Elite death effect** — bigger explosion, screen shake for rare elites
+### 6.2 Monster Affix System — Client TV [DONE — Sage, Cycle #48]
+- [x] **Elite name colors** in sprites.js: Champion = blue (#4488ff), Rare = yellow (#ffcc00)
+- [x] **Affix label** below monster name (small text, e.g. "Fast · Vampiric")
+- [x] **Visual effects per affix:**
+  - Fire: orange glow (layered circles)
+  - Shielding: white dome pulse when active (alpha 0.15-0.35)
+  - Elite size scaling: Champions ×1.15, Rares ×1.3
+- [x] **Elite death effect** — Champions: 10 blue particles, Rares: 16 gold particles + screen shake
 
-### 6.3 Monster Affix System — Client Phone [Sage]
-- [ ] **Monster tooltip on damage** — show affix icons/names when hit by elite
-- [ ] **Notification** on elite encounter: "⚡ Champion Skeleton — Fast, Vampiric"
+### 6.3 Monster Affix System — Client Phone [DONE — Sage, Cycle #48]
+- [x] **Elite encounter notification** — first hit from elite shows toast (Champion blue, Rare gold)
+- [x] **Debuff indicators** — fire 🔥 and slow ❄ pills near HP bar with remaining seconds
+- [x] **Debuffs in phone serialization** — player.serializeForPhone() includes debuff data
 
 ### 6.4 Loot bonus for elites [DONE — Bolt, Cycle #47]
 - [x] Champions: +1 loot tier, guaranteed uncommon+

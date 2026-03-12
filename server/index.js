@@ -10,7 +10,7 @@ const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
 const { generateConsumable, generateLoot, generateWeapon, generateArmor } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
-const { processAffixUpdates } = require('./game/affixes');
+const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
 const { GameDatabase } = require('./game/database');
@@ -466,7 +466,19 @@ function gameLoop() {
           if (socket) {
             socket.emit('stats:update', player.serializeForPhone());
             if (event.type === 'combat:hit' && !event.dodged && event.damage > 0) {
-              socket.emit('damage:taken', { damage: event.damage });
+              const dmgData = { damage: event.damage };
+              // Include elite monster info for phone encounter notifications
+              const attacker = world.monsters.find(m => m.id === event.attackerId);
+              if (attacker && attacker.isElite) {
+                dmgData.isElite = true;
+                dmgData.eliteRank = attacker.eliteRank;
+                dmgData.monsterName = attacker.name;
+                dmgData.affixes = (attacker.affixes || []).map(key => {
+                  const def = AFFIX_DEFS[key];
+                  return def ? def.name : key;
+                });
+              }
+              socket.emit('damage:taken', dmgData);
             }
             if (event.type === 'combat:player_death') {
               // Drop gold on death

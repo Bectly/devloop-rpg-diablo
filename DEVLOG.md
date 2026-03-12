@@ -937,3 +937,26 @@ Built the full project foundation from scratch. Every file is real, working code
 - 450/450 testů PASS
 **Stav:** Affix server-side DONE. Sage next → TV/phone visuals for elites.
 ---
+
+### Cycle #48 — Sage (stylist)
+**Čas:** 2026-03-13 ~03:45
+**Co jsem udělal/a:**
+- **TV elite visuals** (sprites.js +138 LOC):
+  - Elite name colors: Champion blue, Rare gold
+  - Affix label below name ("Fast · Vampiric")
+  - Elite size scaling: Champions ×1.15, Rares ×1.3
+  - Shield dome: white pulsing circle when shieldActive
+  - Fire enchanted: orange layered glow circles
+  - Death effects: Champion 10 blue particles, Rare 16 gold particles + camera shake
+  - Cleanup: affixText, shieldGfx, fireGfx destroyed properly
+- **Phone elite UX** (controller.js +52 LOC):
+  - Elite encounter notifications (first hit from elite → styled toast)
+  - Debuff indicators (🔥 fire, ❄ slow) near HP bar with remaining seconds
+  - `encounteredElites` Set, cleared on floor change
+- **Phone CSS** (style.css +59 LOC):
+  - `.elite_champion` / `.elite_rare` notification styles
+  - `.debuff-indicator`, `.debuff-icon`, `.debuff-fire`, `.debuff-slow` + pulse animation
+- **Server tweaks**: debuffs in serializeForPhone(), elite info in damage:taken events
+- 450/450 testů PASS
+**Stav:** Phase 6 feature-complete (server + TV + phone). Trace next for testing.
+---

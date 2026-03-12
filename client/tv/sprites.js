@@ -4,6 +4,18 @@
 // scene as the first parameter.  Sprite Maps (playerSprites, etc.)
 // remain on the scene object — this module only provides helpers.
 
+// ─── Elite Affix Display Names ──────────────────────────────────
+const AFFIX_DISPLAY = {
+  fast: 'Fast',
+  extra_strong: 'Strong',
+  fire_enchanted: 'Fire',
+  cold_enchanted: 'Cold',
+  teleporter: 'Teleport',
+  vampiric: 'Vampiric',
+  shielding: 'Shield',
+  extra_health: 'Tough',
+};
+
 window.Sprites = {
 
   // ════════════════════════════════════════════════════════════════
@@ -221,26 +233,92 @@ window.Sprites = {
     g.destroy();
 
     const sprite = scene.add.sprite(m.x, m.y, `monster_${m.id}`).setDepth(8);
+
+    // Elite size scaling
+    if (m.isElite && m.eliteRank === 'rare') {
+      sprite.setScale(1.3);
+    } else if (m.isElite && m.eliteRank === 'champion') {
+      sprite.setScale(1.15);
+    }
+
+    // Name color: boss > elite > normal
+    let nameColor = '#ff6666';
+    if (m.isBoss) nameColor = '#ff8800';
+    else if (m.isElite && m.eliteRank === 'rare') nameColor = '#ffcc00';
+    else if (m.isElite && m.eliteRank === 'champion') nameColor = '#4488ff';
+
     sprite.nameText = scene.add.text(m.x, m.y - m.size - 16, m.name, {
       fontSize: m.isBoss ? '14px' : '10px',
-      fill: m.isBoss ? '#ff8800' : '#ff6666',
+      fill: nameColor,
       fontFamily: 'Courier New',
       backgroundColor: '#00000066',
       padding: { x: 2, y: 1 },
     }).setOrigin(0.5).setDepth(9);
+
+    // Affix label for elite monsters
+    if (m.isElite && m.affixes && m.affixes.length > 0) {
+      const affixStr = m.affixes.map(a => AFFIX_DISPLAY[a] || a).join(' \u00b7 ');
+      const affixColor = m.eliteRank === 'rare' ? '#ccaa00' : '#3366cc';
+      sprite.affixText = scene.add.text(m.x, m.y - m.size - 6, affixStr, {
+        fontSize: '8px',
+        fill: affixColor,
+        fontFamily: 'Courier New',
+        backgroundColor: '#00000066',
+        padding: { x: 2, y: 0 },
+      }).setOrigin(0.5).setDepth(9);
+    }
+
     sprite.hpBar = scene.add.graphics().setDepth(9);
     sprite.monsterSize = m.size;
+    sprite._isElite = m.isElite || false;
+    sprite._eliteRank = m.eliteRank || null;
+
+    // Shield visual (graphics object, drawn each frame)
+    if (m.isElite) {
+      sprite.shieldGfx = scene.add.graphics().setDepth(9);
+    }
+    // Fire enchanted glow
+    if (m.fireEnchanted) {
+      sprite.fireGfx = scene.add.graphics().setDepth(7);
+    }
+
     scene.monsterSprites.set(m.id, sprite);
     return sprite;
   },
 
-  /** Per-frame update: lerp, status alpha, HP bar. */
+  /** Per-frame update: lerp, status alpha, HP bar, elite visuals. */
   updateMonsterSprite(scene, sprite, m) {
     sprite.x += (m.x - sprite.x) * 0.3;
     sprite.y += (m.y - sprite.y) * 0.3;
     if (sprite.nameText) sprite.nameText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 16);
+    if (sprite.affixText) sprite.affixText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 6);
 
     sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : 1);
+
+    // Shield dome visual (pulsing white circle)
+    if (sprite.shieldGfx) {
+      sprite.shieldGfx.clear();
+      if (m.shieldActive) {
+        const shieldAlpha = 0.15 + Math.sin(Date.now() / 400) * 0.1; // 0.05–0.25 range → ~0.15–0.35
+        const shieldRadius = sprite.monsterSize + 8;
+        sprite.shieldGfx.lineStyle(2, 0xffffff, shieldAlpha + 0.15);
+        sprite.shieldGfx.strokeCircle(sprite.x, sprite.y, shieldRadius);
+        sprite.shieldGfx.fillStyle(0xffffff, shieldAlpha);
+        sprite.shieldGfx.fillCircle(sprite.x, sprite.y, shieldRadius);
+      }
+    }
+
+    // Fire enchanted glow (orange circle behind monster)
+    if (sprite.fireGfx) {
+      sprite.fireGfx.clear();
+      if (m.fireEnchanted) {
+        const fireAlpha = 0.2 + Math.sin(Date.now() / 300) * 0.1;
+        sprite.fireGfx.fillStyle(0xff6600, fireAlpha);
+        sprite.fireGfx.fillCircle(sprite.x, sprite.y, sprite.monsterSize + 6);
+        sprite.fireGfx.fillStyle(0xff9900, fireAlpha * 0.6);
+        sprite.fireGfx.fillCircle(sprite.x, sprite.y - 2, sprite.monsterSize + 3);
+      }
+    }
 
     // HP bar
     if (sprite.hpBar) {
@@ -257,12 +335,58 @@ window.Sprites = {
     }
   },
 
-  /** Remove a single dead monster sprite and its texture. */
-  destroyMonsterSprite(scene, id) {
+  /** Remove a single dead monster sprite and its texture, with elite death FX. */
+  destroyMonsterSprite(scene, id, m) {
     const sprite = scene.monsterSprites.get(id);
     if (!sprite) return;
+
+    // Elite death effects
+    if (sprite._isElite) {
+      const isRare = sprite._eliteRank === 'rare';
+      const particleCount = isRare ? 16 : 10;
+      const particleSize = isRare ? 4 : 3;
+      const particleColor = isRare ? 0xffcc00 : 0x4488ff;
+      const gfx = scene.add.graphics().setDepth(20);
+      const particles = [];
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 / particleCount) * i;
+        const speed = 40 + Math.random() * 60;
+        particles.push({
+          x: sprite.x, y: sprite.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+        });
+      }
+      const startTime = Date.now();
+      const duration = isRare ? 600 : 400;
+      const updateEvent = scene.time.addEvent({
+        delay: 16, loop: true,
+        callback: () => {
+          const elapsed = Date.now() - startTime;
+          const t = elapsed / duration;
+          if (t >= 1) { gfx.destroy(); updateEvent.destroy(); return; }
+          gfx.clear();
+          for (const pt of particles) {
+            pt.x += pt.vx * 0.016;
+            pt.y += pt.vy * 0.016;
+            pt.life = 1 - t;
+            gfx.fillStyle(particleColor, pt.life);
+            gfx.fillCircle(pt.x, pt.y, particleSize * pt.life);
+          }
+        },
+      });
+      // Rare: screen shake
+      if (isRare) {
+        scene.cameras.main.shake(250, 0.005);
+      }
+    }
+
     if (sprite.nameText) sprite.nameText.destroy();
+    if (sprite.affixText) sprite.affixText.destroy();
     if (sprite.hpBar) sprite.hpBar.destroy();
+    if (sprite.shieldGfx) sprite.shieldGfx.destroy();
+    if (sprite.fireGfx) sprite.fireGfx.destroy();
     sprite.destroy();
     scene.monsterSprites.delete(id);
     const texKey = 'monster_' + id;
@@ -275,7 +399,10 @@ window.Sprites = {
       // Full cleanup (dungeon:enter path)
       for (const [id, sprite] of scene.monsterSprites) {
         if (sprite.nameText) sprite.nameText.destroy();
+        if (sprite.affixText) sprite.affixText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
+        if (sprite.shieldGfx) sprite.shieldGfx.destroy();
+        if (sprite.fireGfx) sprite.fireGfx.destroy();
         sprite.destroy();
       }
       scene.monsterSprites.clear();
@@ -284,7 +411,10 @@ window.Sprites = {
     for (const [id, sprite] of scene.monsterSprites) {
       if (!seenMonsters.has(id)) {
         if (sprite.nameText) sprite.nameText.destroy();
+        if (sprite.affixText) sprite.affixText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
+        if (sprite.shieldGfx) sprite.shieldGfx.destroy();
+        if (sprite.fireGfx) sprite.fireGfx.destroy();
         sprite.destroy();
         scene.monsterSprites.delete(id);
         const texKey = 'monster_' + id;

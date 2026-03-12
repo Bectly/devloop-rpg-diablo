@@ -521,6 +521,7 @@ class Player {
         description: s.description,
       })),
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
+      debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
       lastDamageTaken: this.lastDamageTaken,
       quests: this.questManager.getActiveQuests(),
     };

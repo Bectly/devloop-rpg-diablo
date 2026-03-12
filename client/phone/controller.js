@@ -23,6 +23,7 @@ let buttonsInitialized = false;
 let notificationCount = 0;
 let shopData = null;
 let questData = [];
+let encounteredElites = new Set(); // track which elites we've already notified about
 
 // ─── DOM Elements ───────────────────────────────────────────────
 const joinScreen = document.getElementById('join-screen');
@@ -190,12 +191,25 @@ socket.on('dialogue:sync', (data) => {
 socket.on('floor:change', (data) => {
   currentFloor = data.floor;
   currentFloorName = data.floorName || '';
+  encounteredElites.clear();
   updateFloorDisplay();
 });
 
 socket.on('damage:taken', (data) => {
   Sound.playerHurt();
   flashDamage();
+
+  // Elite encounter notification — show once per elite
+  if (data.isElite && data.monsterName && !encounteredElites.has(data.monsterName)) {
+    encounteredElites.add(data.monsterName);
+    const affixList = (data.affixes || []).join(', ');
+    if (data.eliteRank === 'rare') {
+      showNotification(`\u{1F480} Rare ${data.monsterName} \u2014 ${affixList}`, 'elite_rare');
+    } else {
+      showNotification(`\u2694 Champion ${data.monsterName} \u2014 ${affixList}`, 'elite_champion');
+    }
+    if (navigator.vibrate) navigator.vibrate([60, 30, 60, 30, 100]);
+  }
 });
 
 socket.on('player:death', (data) => {
@@ -516,7 +530,45 @@ function updateHUD(stats) {
     hideDeathScreen();
   }
 
+  // Update debuff indicators
+  updateDebuffDisplay(stats.debuffs || []);
+
   updateFloorDisplay();
+}
+
+// ─── Debuff Display ──────────────────────────────────────────────
+function updateDebuffDisplay(debuffs) {
+  let container = document.getElementById('debuff-indicators');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'debuff-indicators';
+    container.className = 'debuff-indicator';
+    document.body.appendChild(container);
+  }
+
+  container.innerHTML = '';
+  if (!debuffs || debuffs.length === 0) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  container.classList.remove('hidden');
+
+  for (const d of debuffs) {
+    const el = document.createElement('div');
+    el.className = 'debuff-icon';
+    const secs = Math.ceil(d.ticksRemaining / 20);
+
+    if (d.effect === 'fire_dot') {
+      el.classList.add('debuff-fire');
+      el.innerHTML = `\u{1F525}<span class="debuff-timer">${secs}s</span>`;
+    } else if (d.effect === 'slow') {
+      el.classList.add('debuff-slow');
+      el.innerHTML = `\u2744<span class="debuff-timer">${secs}s</span>`;
+    }
+
+    container.appendChild(el);
+  }
 }
 
 // ─── Joystick ───────────────────────────────────────────────────

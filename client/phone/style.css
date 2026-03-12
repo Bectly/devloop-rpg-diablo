@@ -1747,3 +1747,62 @@ html, body {
   transform: scale(0.96);
   box-shadow: 0 2px 10px rgba(255, 215, 0, 0.5);
 }
+
+/* ─── Elite Encounter Notifications ──────────────────────────── */
+.notification-toast.elite_champion {
+  background: rgba(20, 40, 80, 0.92);
+  border-color: rgba(68, 136, 255, 0.5);
+  box-shadow: 0 0 18px rgba(68, 136, 255, 0.35);
+  color: #88bbff;
+}
+
+.notification-toast.elite_rare {
+  background: rgba(80, 60, 10, 0.92);
+  border-color: rgba(255, 204, 0, 0.5);
+  box-shadow: 0 0 18px rgba(255, 204, 0, 0.35);
+  color: #ffdd44;
+}
+
+/* ─── Debuff Indicators ──────────────────────────────────────── */
+.debuff-indicator {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.debuff-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  animation: debuff-pulse 1s ease-in-out infinite;
+}
+
+.debuff-icon.debuff-fire {
+  border: 1px solid rgba(255, 68, 0, 0.5);
+  text-shadow: 0 0 6px rgba(255, 68, 0, 0.6);
+}
+
+.debuff-icon.debuff-slow {
+  border: 1px solid rgba(68, 136, 255, 0.5);
+  text-shadow: 0 0 6px rgba(68, 136, 255, 0.6);
+}
+
+.debuff-timer {
+  font-size: 10px;
+  color: #ccc;
+  font-family: 'Courier New', monospace;
+}
+
+@keyframes debuff-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

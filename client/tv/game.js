@@ -305,7 +305,7 @@ class GameScene extends Phaser.Scene {
     if (state.world.monsters) {
       for (const m of state.world.monsters) {
         if (!m.alive) {
-          Sprites.destroyMonsterSprite(this, m.id);
+          Sprites.destroyMonsterSprite(this, m.id, m);
           continue;
         }
         seenMonsters.add(m.id);
