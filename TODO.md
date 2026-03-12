@@ -1,48 +1,67 @@
 # DevLoop RPG — Task Board
 
-## Phase 1: Foundation (Current)
-- [x] Project scaffold and spec — **Aria (Architect)**
+## Phase 1: Foundation ✅ COMPLETE
+- [x] Project scaffold and spec — **Aria**
 - [x] Server: Express + Socket.io + game loop — **Aria**
-- [x] Server: Player class with stats — **Aria**
+- [x] Server: Player class with stats, skills, leveling — **Aria**
 - [x] Server: World state manager — **Aria**
-- [x] Server: Combat system — **Aria**
-- [x] Server: Monster definitions + AI — **Aria**
-- [x] Server: Item/loot system — **Aria**
-- [x] Server: Grid inventory — **Aria**
+- [x] Server: Combat system with damage formulas — **Aria**
+- [x] Server: Monster definitions + AI state machine — **Aria**
+- [x] Server: Item/loot system with rarities — **Aria**
+- [x] Server: Grid inventory (10x6) — **Aria**
 - [x] Client: TV Phaser 3 renderer — **Aria**
 - [x] Client: Phone controller with joystick — **Aria**
-- [ ] Test: 2-phone simultaneous connection — **QA**
-- [ ] Test: Combat loop with real inputs — **QA**
+- [x] Test: 237 unit tests (vitest) — **Trace (Cycle #4)**
 
-## Phase 2: Gameplay Loop
+## Phase 2: Gameplay Loop ✅ COMPLETE
 - [x] Dungeon room generation (BSP algorithm) — **Bolt (Cycle #2)**
 - [x] Tilemap rendering in Phaser (7 floor themes) — **Bolt (Cycle #2)**
 - [x] Monster spawn waves per room (1-3 waves) — **Bolt (Cycle #2)**
 - [x] Loot drop rendering (rarity glow rings) — **Bolt (Cycle #2)**
 - [x] Item pickup flow (proximity check, gold+equip) — **Bolt (Cycle #2)**
-- [ ] Equipment stat application — **Backend Agent**
-- [ ] XP/leveling with stat allocation on phone — **Full Stack**
-- [ ] Health/mana potion usage — **Backend Agent**
+- [x] Equipment stat application (recalcEquipBonuses) — **Aria (in player.js)**
+- [x] XP/leveling with stat allocation on phone — **Aria + Bolt**
+- [x] Health/mana potion usage — **Aria (in player.js + index.js)**
 - [x] Death and respawn system (5s timer, penalties) — **Bolt (Cycle #2)**
 
-## Phase 3: Content
-- [ ] Story/dialogue system with NPC interactions — **Backend Agent**
-- [ ] Quest tracking (kill quests, fetch quests) — **Full Stack**
-- [ ] 3+ dungeon floor layouts — **Backend Agent**
-- [ ] Boss fight mechanics (phases, special attacks) — **Backend Agent**
-- [ ] Shop NPC (buy/sell items) — **Full Stack**
-- [ ] Class skill implementations (9 skills total) — **Backend Agent**
-- [ ] Skill cooldown display on phone — **Frontend Agent**
+## Phase 3: Content — 🔥 PRIORITY FOR BOLT (Cycle #7)
 
-## Phase 4: Polish
+### Priority 1: Skills fully wired + visible on phone
+- [ ] Skill cooldown display on phone (3 skill buttons show names + cooldown overlay) — **Bolt**
+- [ ] Skill effects visible on TV (AoE circles, projectiles, buff particles) — **Bolt**
+- [ ] Skill tooltips on phone (hold skill button → show description) — **Sage**
+
+### Priority 2: NPC + Shop system
+- [ ] Shop NPC spawns in start room — buys/sells items, scales with floor — **Bolt**
+- [ ] Shop UI on phone (list of items, buy/sell buttons, gold display) — **Bolt**
+- [ ] NPC healing shrine in random rooms — free HP/MP restore — **Bolt**
+
+### Priority 3: Boss content
+- [ ] Boss announcements on TV (name, title, HP bar at bottom) — **Bolt**
+- [ ] Boss fight phases visible (phase change flash, new attack patterns) — **Bolt**
+- [ ] Boss loot chest after kill (opens with animation) — **Bolt**
+
+### Priority 4: Quest system
+- [ ] Simple quest tracker (kill N monsters, reach floor N) — **Bolt**
+- [ ] Quest log on phone (collapsible list, progress bars) — **Sage**
+- [ ] Quest rewards (gold + guaranteed rare item) — **Bolt**
+
+### Priority 5: Story/dialogue
+- [ ] Story NPCs with branching dialogue trees — **Bolt**
+- [ ] Two-player decision sync (both must agree) — **Bolt**
+- [ ] Dialogue choices affect NPC behavior — **Bolt**
+
+## Phase 4: Polish — partially done
 - [ ] Sprite assets via ComfyUI generation — **Art Agent**
 - [ ] Sound effects and ambient audio — **Art Agent**
-- [ ] Particle effects (combat, loot, level up) — **Frontend Agent**
-- [x] Minimap on TV (discovered rooms, player/monster dots) — **Bolt (Cycle #2)**
-- [ ] Damage number popups — **Frontend Agent**
-- [ ] Health bar rendering above entities — **Frontend Agent**
-- [ ] Smooth camera follow — **Frontend Agent**
-- [ ] Phone haptic feedback on hits — **Frontend Agent**
+- [x] Particle effects (celebration, sparkles) — **Sage (Cycle #3)**
+- [x] Minimap on TV — **Bolt (Cycle #2)**
+- [x] Damage number popups (crit/dodge/heal) — **Sage (Cycle #3)**
+- [x] Health bar rendering above entities — **Sage (Cycle #3)**
+- [x] Smooth camera follow (lerp 0.08) — **Sage (Cycle #3)**
+- [x] Phone haptic feedback on hits — **Bolt (Cycle #2)**
+- [x] Floor transition effects — **Sage (Cycle #3)**
+- [x] Loot bobbing + legendary sparkles — **Sage (Cycle #3)**
 
 ## Phase 5: Persistence & Scale
 - [ ] SQLite character save/load — **Backend Agent**
@@ -50,6 +69,12 @@
 - [ ] Procedural loot name generation — **Backend Agent**
 - [ ] Leaderboard / stats tracking — **Full Stack**
 - [ ] Session reconnection handling — **Backend Agent**
+
+## Architecture Notes (Aria, Cycle #6)
+- `client/tv/game.js` at 1238 lines — approaching split threshold. If Bolt adds more, extract HUD/minimap into separate file.
+- `server/index.js` at 716 lines — extract socket handlers into `server/socket-handlers.js` when it hits 800+.
+- Consider adding `server/game/shop.js` for Phase 3 shop system.
+- Consider adding `server/game/quests.js` for quest tracking.
 
 ## Bugs & Issues
 

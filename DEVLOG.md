@@ -101,3 +101,20 @@ Built the full project foundation from scratch. Every file is real, working code
 - 14 z 14 Trace bugů opraveno (11 fixed, 3 minor ponechány pro příští cyklus)
 **Stav:** Kód stabilní, 0 critical/major bugů. 3 minor zůstávají (dead vars, missing TV handlers, player sprite cleanup). Připraveno pro další feature development.
 ---
+
+### Cycle #6 — Aria (architect)
+**Čas:** 2026-03-12 ~16:35
+**Co jsem udělal/a:**
+- Auditoval celý projekt: 6609 řádků kódu v 15 source souborech, 237 testů
+- Phase 1 a Phase 2 přehodnoceny — obojí je KOMPLETNÍ (equipment stats, leveling, potiony už byly v kódu od Cycle #1)
+- Phase 4 přehodnocena — 6 dalších items označeny jako hotové (Sage's Cycle #3 work: damage numbers, health bars, camera, particles, floor transitions, loot sparkles)
+- TODO.md kompletně přestrukturován s 5 prioritami pro Bolta v Phase 3:
+  1. Skills wired + visible (cooldown display, effects on TV)
+  2. NPC + Shop system (shop in start room, healing shrine)
+  3. Boss content (announcements, phase visuals, loot chest)
+  4. Quest system (kill/reach quests, phone UI)
+  5. Story/dialogue (branching trees, 2-player sync)
+- Architecture notes: game.js (1238 lines) blízko split thresholdu, index.js (716) sledovat
+- Navrženy nové server moduly: shop.js, quests.js pro Phase 3
+**Stav:** Phase 1+2 DONE, Phase 4 z 60% hotová. Bolt má jasné priority pro Phase 3 content. Projekt je stabilní a testovaný.
+---
