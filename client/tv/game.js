@@ -1520,6 +1520,14 @@ socket.on('disconnect', () => {
   console.log('[TV] Disconnected from server');
 });
 
+// ─── Keyboard Shortcuts for TV ──────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'm' || e.key === 'M') {
+    const isOn = Sound.toggle();
+    console.log(`[TV] Sound ${isOn ? 'ON' : 'OFF'}`);
+  }
+});
+
 // ─── Phaser Config & Start ──────────────────────────────────────
 const config = {
   type: Phaser.AUTO,

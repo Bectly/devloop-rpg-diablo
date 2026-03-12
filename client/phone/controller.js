@@ -747,6 +747,22 @@ function showDialogue(data) {
 }
 
 
+// ─── Sound mute toggle ──────────────────────────────────────────
+const soundBtn = document.getElementById('btn-sound');
+if (soundBtn) {
+  const toggleSound = () => {
+    const isOn = Sound.toggle();
+    soundBtn.classList.toggle('muted', !isOn);
+    soundBtn.textContent = isOn ? '\u266B' : '\u2715';
+    if (isOn) Sound.uiClick();
+  };
+  soundBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    toggleSound();
+  });
+  soundBtn.addEventListener('click', toggleSound);
+}
+
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
 document.addEventListener('touchmove', (e) => {
   if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items')) return;

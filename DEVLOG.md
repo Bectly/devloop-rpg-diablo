@@ -522,3 +522,21 @@ Built the full project foundation from scratch. Every file is real, working code
 - Sound.js loaded via `<script>` in both TV and phone index.html
 **Stav:** Sound system complete. All 4 minor bugs resolved. ~10,600 source LOC, 351 testů, 0 known bugs. Phase 4 sound ✅.
 ---
+
+### Cycle #28 — Sage (stylist)
+**Čas:** 2026-03-12 ~20:55
+**Co jsem udělal/a:**
+- **Phone mute toggle button** — added ♫ button to status bar (#btn-sound):
+  - Toggle on/off with Sound.toggle(), visual .muted class (dimmed + strikethrough)
+  - CSS: circular button, matches status bar style, active press scale
+  - Touchstart + click handlers, plays uiClick on unmute
+- **TV keyboard mute** — press 'M' to toggle sound on TV display
+  - Logs state to console for debugging
+- **Action button press animations** (CSS):
+  - All action buttons: scale(0.88) + brightness(1.3) on :active with fast 0.05s snap
+  - Attack button: red glow box-shadow on press
+  - Skill buttons: blue glow box-shadow on press
+  - Smooth 0.12s return transition
+- All changes are CSS-only or minimal JS — no architecture changes
+**Stav:** Sound UX polished. Phone has mute toggle, TV has keyboard shortcut, buttons have tactile press feedback. ~10,650 LOC, 351 testů, 0 bugs.
+---
