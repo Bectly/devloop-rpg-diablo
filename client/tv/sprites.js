@@ -23,15 +23,19 @@ window.Sprites = {
     return sprite;
   },
 
-  /** Per-frame update: lerp position, swap texture, redraw HP/MP bars, death timer. */
+  /** Per-frame update: lerp position, swap texture, redraw HP/MP bars, death timer, DC ghost. */
   updatePlayerSprite(scene, sprite, p) {
     // Smooth lerp
     sprite.x += (p.x - sprite.x) * 0.3;
     sprite.y += (p.y - sprite.y) * 0.3;
     sprite.nameText.setPosition(sprite.x, sprite.y - 28);
 
-    // Texture swap
-    if (p.isDying) {
+    // Texture swap + disconnected ghost effect
+    if (p.disconnected) {
+      // Ghost sprite: semi-transparent with pulsing effect
+      sprite.setTexture(`player_${p.characterClass}`);
+      sprite.setAlpha(0.3 + Math.sin(Date.now() / 600) * 0.1);
+    } else if (p.isDying) {
       sprite.setTexture('player_dying');
       sprite.setAlpha(0.5 + Math.sin(Date.now() / 200) * 0.3);
     } else if (p.alive) {
@@ -40,6 +44,23 @@ window.Sprites = {
     } else {
       sprite.setTexture('player_dead');
       sprite.setAlpha(0.5);
+    }
+
+    // DC label above name
+    if (p.disconnected) {
+      // Create DC label if it doesn't exist
+      if (!sprite.dcLabel) {
+        sprite.dcLabel = scene.add.text(sprite.x, sprite.y - 40, 'DC', {
+          fontSize: '10px', fill: '#ff6666', fontFamily: 'Courier New',
+          fontStyle: 'bold',
+          backgroundColor: '#00000099', padding: { x: 3, y: 1 },
+        }).setOrigin(0.5).setDepth(12);
+      }
+      sprite.dcLabel.setPosition(sprite.x, sprite.y - 40);
+      sprite.dcLabel.setVisible(true);
+    } else if (sprite.dcLabel) {
+      // Player reconnected — remove DC label
+      sprite.dcLabel.setVisible(false);
     }
 
     // HP / MP bars
@@ -66,6 +87,8 @@ window.Sprites = {
     if (p.isDying && p.deathTimer > 0) {
       const secs = (p.deathTimer / 1000).toFixed(1);
       sprite.nameText.setText(`${p.name} [${secs}s]`);
+    } else if (p.disconnected) {
+      sprite.nameText.setText(`${p.name} [DC]`);
     } else {
       sprite.nameText.setText(p.name);
     }
@@ -78,6 +101,7 @@ window.Sprites = {
       for (const [id, sprite] of scene.playerSprites) {
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
+        if (sprite.dcLabel) sprite.dcLabel.destroy();
         sprite.destroy();
       }
       scene.playerSprites.clear();
@@ -87,6 +111,7 @@ window.Sprites = {
       if (!seenPlayers.has(id)) {
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
+        if (sprite.dcLabel) sprite.dcLabel.destroy();
         sprite.destroy();
         scene.playerSprites.delete(id);
       }

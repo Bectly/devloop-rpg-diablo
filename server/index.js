@@ -210,7 +210,24 @@ function gameLoop() {
 
   // Update players (handles death timers and respawns)
   for (const player of allPlayers) {
+    // Disconnected players: freeze input so they don't move,
+    // but still run update() for death timers / respawn logic.
+    // They can still take damage from monsters (combat system uses allPlayers).
+    let savedDx, savedDy;
+    if (player.disconnected) {
+      savedDx = player.inputDx;
+      savedDy = player.inputDy;
+      player.inputDx = 0;
+      player.inputDy = 0;
+    }
+
     const result = player.update(dt);
+
+    if (player.disconnected) {
+      player.inputDx = savedDx;
+      player.inputDy = savedDy;
+    }
+
     if (result && result.type === 'player:respawn') {
       // Player respawned, notify
       for (const [sid, p] of players) {
@@ -450,7 +467,7 @@ function gameLoop() {
   // Check if player is on exit (floor progression)
   if (!world.exitLocked && !world._advancing && !gameWon) {
     for (const player of allPlayers) {
-      if (!player.alive || player.isDying) continue;
+      if (!player.alive || player.isDying || player.disconnected) continue;
       if (world.isPlayerOnExit(player)) {
         world._advancing = true;
         console.log(`[World] ${player.name} reached the exit! Advancing to floor ${world.currentFloor + 2}...`);
@@ -585,6 +602,22 @@ setInterval(gameLoop, TICK_MS);
 function gracefulShutdown(signal) {
   console.log(`\n[Server] ${signal} received — saving all players...`);
   saveAllPlayers();
+
+  // Also save disconnected players still in grace period
+  const { disconnectedPlayers } = handlers;
+  if (disconnectedPlayers && disconnectedPlayers.size > 0) {
+    for (const [name, entry] of disconnectedPlayers) {
+      clearTimeout(entry.timer);
+      try {
+        gameDb.saveCharacter(entry.player, entry.inventory, world.currentFloor);
+        console.log(`[DB] Saved disconnected player ${name} on shutdown`);
+      } catch (err) {
+        console.error(`[DB] Failed to save disconnected ${name}:`, err.message);
+      }
+    }
+    disconnectedPlayers.clear();
+  }
+
   gameDb.close();
   console.log('[Server] Database closed. Goodbye.');
   process.exit(0);

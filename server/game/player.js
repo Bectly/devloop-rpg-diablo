@@ -411,6 +411,7 @@ class Player {
       alive: this.alive,
       isDying: this.isDying,
       deathTimer: this.deathTimer,
+      disconnected: this.disconnected || false,
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
     };
   }

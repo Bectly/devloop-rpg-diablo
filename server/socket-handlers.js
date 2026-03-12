@@ -12,6 +12,10 @@ const uuid = require('uuid');
 // Two-player dialogue vote state: npcId → { votes: Map(socketId → choiceIdx), timeout: null }
 const dialogueVotes = new Map();
 
+// Grace period map for disconnected players: name → { player, inventory, socketId, timer }
+const disconnectedPlayers = new Map();
+const GRACE_PERIOD_MS = 30000; // 30 seconds
+
 function _resolveDialogue(socket, data, { players, world, story, gameNs, io }) {
   const player = players.get(socket.id);
   if (!player) return;
@@ -54,13 +58,65 @@ function _resolveDialogue(socket, data, { players, world, story, gameNs, io }) {
 
 // ── Join Game ──
 exports.handleJoin = (socket, data, { players, inventories, controllerSockets, world, gameNs, gameDb }) => {
-  if (players.size >= 2) {
+  const name = (data.name || 'Hero').substring(0, 20);
+
+  // ── Reconnect: check grace period map first ──
+  if (disconnectedPlayers.has(name)) {
+    const entry = disconnectedPlayers.get(name);
+    clearTimeout(entry.timer);
+    disconnectedPlayers.delete(name);
+
+    const player = entry.player;
+    const inv = entry.inventory;
+
+    // Remove old socket.id entry from players Map
+    players.delete(entry.socketId);
+
+    // Re-map to new socket
+    player.disconnected = false;
+    player.inputDx = 0;
+    player.inputDy = 0;
+    players.set(socket.id, player);
+    inventories.set(player.id, inv);
+    controllerSockets.set(socket.id, player.id);
+
+    console.log(`[Game] ${name} reconnected (grace period). Players: ${players.size}`);
+
+    // Confirm to phone
+    socket.emit('joined', {
+      playerId: player.id,
+      stats: player.serializeForPhone(),
+      inventory: inv.serialize(),
+      floor: world.currentFloor,
+      floorName: world.floorName,
+      quests: player.questManager.getActiveQuests(),
+    });
+
+    socket.emit('stats:update', player.serializeForPhone());
+    socket.emit('inventory:update', inv.serialize());
+
+    // Notify TV that this player is back (not a new join — reconnect)
+    gameNs.emit('player:reconnected', {
+      id: player.id,
+      name: player.name,
+      characterClass: player.characterClass,
+    });
+
+    socket.emit('notification', {
+      text: `Welcome back, ${name}!`,
+      type: 'quest',
+    });
+    return;
+  }
+
+  // Count only active (non-disconnected) players toward the 2-player cap
+  const activePlayers = Array.from(players.values()).filter(p => !p.disconnected).length;
+  if (activePlayers >= 2) {
     socket.emit('notification', { text: 'Game is full (max 2 players)', type: 'error' });
     return;
   }
 
   const { Player } = require('./game/player');
-  const name = (data.name || 'Hero').substring(0, 20);
   const characterClass = ['warrior', 'ranger', 'mage'].includes(data.characterClass)
     ? data.characterClass
     : 'warrior';
@@ -754,7 +810,7 @@ exports.handleChestOpen = (socket, data, { players, world, gameNs, io }) => {
 exports.handleDisconnect = (socket, data, { players, inventories, controllerSockets, gameNs, gameDb, world }) => {
   const player = players.get(socket.id);
   if (player) {
-    // Save character to DB before removing (include current floor)
+    // Save character to DB immediately (include current floor)
     if (gameDb) {
       try {
         const inv = inventories.get(player.id);
@@ -766,11 +822,40 @@ exports.handleDisconnect = (socket, data, { players, inventories, controllerSock
       }
     }
 
-    console.log(`[Game] ${player.name} left`);
-    inventories.delete(player.id);
-    players.delete(socket.id);
+    // Mark as disconnected — player stays in game world during grace period
+    player.disconnected = true;
+    player.inputDx = 0;
+    player.inputDy = 0;
+
+    // Move to grace period map
+    const inv = inventories.get(player.id);
+    const timer = setTimeout(() => {
+      // Grace period expired — actually remove the player
+      disconnectedPlayers.delete(player.name);
+      inventories.delete(player.id);
+      players.delete(socket.id);
+      controllerSockets.delete(socket.id);
+      console.log(`[Game] ${player.name} grace period expired — removed`);
+      gameNs.emit('player:left', { id: player.id, name: player.name });
+    }, GRACE_PERIOD_MS);
+
+    disconnectedPlayers.set(player.name, {
+      player,
+      inventory: inv,
+      socketId: socket.id,
+      timer,
+    });
+
+    // Remove from active socket maps but keep in players Map
+    // so the game loop still processes this player (takes damage, stays visible)
+    // We do NOT delete from players or inventories yet.
     controllerSockets.delete(socket.id);
-    gameNs.emit('player:left', { id: player.id, name: player.name });
+
+    console.log(`[Game] ${player.name} disconnected — 30s grace period started`);
+    // Do NOT emit player:left — player stays visible on TV as a ghost
   }
   console.log(`[Phone] Disconnected: ${socket.id}`);
 };
+
+// ── Exports for external access ──
+exports.disconnectedPlayers = disconnectedPlayers;
