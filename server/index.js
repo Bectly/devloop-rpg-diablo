@@ -185,23 +185,7 @@ function saveAllPlayers(floor) {
   for (const [sid, player] of players) {
     const inv = inventories.get(player.id);
     try {
-      // Override the default floor=0 with actual floor
-      const invItems = inv ? inv.getAllItems() : [];
-      gameDb._stmtSave.run({
-        name: player.name,
-        class: player.characterClass,
-        level: player.level,
-        xp: player.xp,
-        stats: JSON.stringify(player.stats),
-        equipment: JSON.stringify(player.equipment),
-        inventory: JSON.stringify(invItems),
-        gold: player.gold,
-        floor: currentFloor,
-        kills: player.kills,
-        health_potions: player.healthPotions,
-        mana_potions: player.manaPotions,
-        free_stat_points: player.freeStatPoints,
-      });
+      gameDb.saveCharacter(player, inv, currentFloor);
     } catch (err) {
       console.error(`[DB] Failed to save ${player.name}:`, err.message);
     }

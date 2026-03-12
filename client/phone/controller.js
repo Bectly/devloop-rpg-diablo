@@ -8,6 +8,7 @@ let playerId = null;
 let playerStats = null;
 let inventoryData = null;
 let selectedClass = 'warrior';
+let joinedName = null;   // cached at join time so reconnect uses correct name
 let currentDialogue = null;
 let typewriterInterval = null;
 let staggerTimeouts = [];
@@ -48,14 +49,14 @@ document.querySelectorAll('.class-card').forEach(card => {
 document.getElementById('btn-join').addEventListener('touchstart', (e) => {
   e.preventDefault();
   Sound.unlock();
-  const name = document.getElementById('name-input').value.trim() || 'Hero';
-  socket.emit('join', { name, characterClass: selectedClass });
+  joinedName = document.getElementById('name-input').value.trim() || 'Hero';
+  socket.emit('join', { name: joinedName, characterClass: selectedClass });
 });
 // Fallback for desktop testing
 document.getElementById('btn-join').addEventListener('click', () => {
   Sound.unlock();
-  const name = document.getElementById('name-input').value.trim() || 'Hero';
-  socket.emit('join', { name, characterClass: selectedClass });
+  joinedName = document.getElementById('name-input').value.trim() || 'Hero';
+  socket.emit('join', { name: joinedName, characterClass: selectedClass });
 });
 
 // ─── Socket Events ──────────────────────────────────────────────
@@ -66,10 +67,11 @@ socket.on('connect', () => {
   const overlay = document.getElementById('reconnect-overlay');
   if (overlay && !overlay.classList.contains('hidden')) {
     overlay.classList.add('hidden');
-    // Re-join automatically if we had an active session
-    if (playerId) {
-      const name = document.getElementById('name-input').value.trim() || 'Hero';
-      socket.emit('join', { name, characterClass: selectedClass });
+    // Re-join automatically if we had an active session.
+    // Use joinedName (cached at join time) — NOT the input field, which may
+    // have been cleared or may show the join screen placeholder.
+    if (playerId && joinedName) {
+      socket.emit('join', { name: joinedName, characterClass: selectedClass });
     }
   }
 });

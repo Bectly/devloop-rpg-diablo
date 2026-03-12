@@ -751,15 +751,16 @@ exports.handleChestOpen = (socket, data, { players, world, gameNs, io }) => {
 };
 
 // ── Disconnect ──
-exports.handleDisconnect = (socket, data, { players, inventories, controllerSockets, gameNs, gameDb }) => {
+exports.handleDisconnect = (socket, data, { players, inventories, controllerSockets, gameNs, gameDb, world }) => {
   const player = players.get(socket.id);
   if (player) {
-    // Save character to DB before removing
+    // Save character to DB before removing (include current floor)
     if (gameDb) {
       try {
         const inv = inventories.get(player.id);
-        gameDb.saveCharacter(player, inv);
-        console.log(`[DB] Saved ${player.name} on disconnect`);
+        const currentFloor = world ? world.currentFloor : 0;
+        gameDb.saveCharacter(player, inv, currentFloor);
+        console.log(`[DB] Saved ${player.name} on disconnect (floor ${currentFloor})`);
       } catch (err) {
         console.error(`[DB] Failed to save ${player.name} on disconnect:`, err.message);
       }

@@ -85,8 +85,9 @@ class GameDatabase {
    * Save a player + inventory to DB.
    * @param {Player} player
    * @param {Inventory} inventory
+   * @param {number} [floor=0] Current dungeon floor number
    */
-  saveCharacter(player, inventory) {
+  saveCharacter(player, inventory, floor = 0) {
     const invItems = inventory ? inventory.getAllItems() : [];
 
     this._stmtSave.run({
@@ -98,7 +99,7 @@ class GameDatabase {
       equipment: JSON.stringify(player.equipment),
       inventory: JSON.stringify(invItems),
       gold: player.gold,
-      floor: 0, // current floor set by caller
+      floor,
       kills: player.kills,
       health_potions: player.healthPotions,
       mana_potions: player.manaPotions,
@@ -115,14 +116,31 @@ class GameDatabase {
     const row = this._stmtLoad.get(name);
     if (!row) return null;
 
+    let stats, equipment, inventory;
+    try {
+      stats = JSON.parse(row.stats);
+    } catch (_) {
+      stats = {};
+    }
+    try {
+      equipment = JSON.parse(row.equipment);
+    } catch (_) {
+      equipment = {};
+    }
+    try {
+      inventory = JSON.parse(row.inventory);
+    } catch (_) {
+      inventory = [];
+    }
+
     return {
       name: row.name,
       characterClass: row.class,
       level: row.level,
       xp: row.xp,
-      stats: JSON.parse(row.stats),
-      equipment: JSON.parse(row.equipment),
-      inventory: JSON.parse(row.inventory),
+      stats,
+      equipment,
+      inventory,
       gold: row.gold,
       floor: row.floor,
       kills: row.kills,

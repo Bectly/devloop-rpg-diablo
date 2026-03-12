@@ -32,40 +32,21 @@
 - [x] `loadCharacter(name)` — returns parsed object or null
 - [x] WAL mode, prepared statements, auto-create data dir
 
-### 5.2 Wire persistence into server [DONE — Bolt, Cycle #37]
-**Files to change:** `server/index.js`, `server/socket-handlers.js`, `server/game/player.js`
+### 5.2 Wire persistence into server [DONE — Bolt, Cycle #37 / Rune review Cycle #39]
+**Files changed:** `server/index.js`, `server/socket-handlers.js`, `server/game/player.js`, `server/game/database.js`, `client/phone/controller.js`
 
-**Step A: Init DB in index.js**
-```js
-const { GameDatabase } = require('./game/database');
-const gameDb = new GameDatabase();
-// Pass gameDb in ctx: { players, inventories, ..., gameDb }
-```
+- [x] **Step A:** DB init in index.js + gameDb in ctx
+- [x] **Step B:** `Player.restoreFrom(savedData)` — restores level, xp, stats, equipment, gold, kills, potions, freeStatPoints; calls `recalcEquipBonuses()`
+- [x] **Step C:** `handleJoin` DB lookup — restores or creates new character
+- [x] **Step D:** Auto-save triggers — floor transition, 60s interval, disconnect, victory
+- [x] **Step E:** Graceful shutdown — SIGINT/SIGTERM save + db.close()
 
-**Step B: Player.restoreFrom(savedData)**
-Add static method or extend constructor in `player.js`:
-- Accept saved data object from `db.loadCharacter()`
-- Restore: level, xp, stats, equipment, gold, kills, potions, freeStatPoints
-- Call `recalcEquipBonuses()` after restoring equipment
-- Keep new UUID (don't restore old ID)
-
-**Step C: handleJoin — check DB first**
-In `socket-handlers.js` `handleJoin()`:
-- Before creating new Player, try `gameDb.loadCharacter(data.name)`
-- If found → create Player, call `player.restoreFrom(saved)`, restore inventory items
-- If not found → new player as before
-- Emit `notification` "Character loaded!" or "New character created!"
-
-**Step D: Auto-save triggers**
-1. Floor transition (index.js ~line 469): after `world.generateFloor(nextFloor)`, save all players
-2. 60-second interval in game loop: `if (tickCount % (TICK_RATE * 60) === 0) saveAllPlayers()`
-3. Disconnect handler: save before removing player
-4. Victory: save final stats before emitting victory
-
-**Step E: Graceful shutdown**
-```js
-process.on('SIGINT', () => { saveAllPlayers(); gameDb.close(); process.exit(0); });
-```
+**Bugs fixed in Rune review (Cycle #39):**
+- `saveCharacter()` hardcoded `floor: 0` — added `floor` param (default 0)
+- `saveAllPlayers()` bypassed public API via `gameDb._stmtSave` directly — now uses `gameDb.saveCharacter(player, inv, currentFloor)`
+- `handleDisconnect` saved floor as 0 — now passes `world.currentFloor`
+- `loadCharacter()` called `JSON.parse()` on stats/equipment/inventory with no try/catch — each field now wrapped in individual try/catch with safe fallback
+- Reconnect flow (`controller.js`) re-read `name-input` DOM value instead of cached name — introduced `joinedName` variable set at join time, used on reconnect
 
 ### 5.3 Session reconnection [PRIORITY: AFTER 5.2]
 - On disconnect → keep player in `disconnectedPlayers` Map for 30s (grace period)
@@ -85,14 +66,14 @@ process.on('SIGINT', () => { saveAllPlayers(); gameDb.close(); process.exit(0); 
 
 ---
 
-## Architecture Notes (Updated Cycle #32)
-**Current LOC:** ~11,600 source + 3,800 tests = 15,400 total (22 source files, 12 test suites, 393 tests)
-**Split DONE:** game.js 1553 → 1057 LOC. New sprites.js at 549 LOC.
-**Watch:** `controller.js` at ~900 (grew with victory screen), `socket-handlers.js` at 736 — both approaching threshold.
-**Persistence:** `database.js` created (Cycle #36). Wiring into server is next (5.2).
+## Architecture Notes (Updated Cycle #39)
+**Current LOC:** ~13,642 source JS (22 source files). Largest: hud.js 1284, game.js 1073, controller.js 1002, socket-handlers.js 775.
+**Split DONE:** game.js 1553 → 1057 LOC. New sprites.js at 548 LOC.
+**Watch:** `controller.js` now at 1002 — over threshold (was ~900). `hud.js` at 1284 — candidate for next split.
+**Persistence:** `database.js` (155 LOC) + wiring complete (Cycles #36-39). Public API (`saveCharacter(player, inv, floor)`) used consistently.
 
 ## Open Bugs
-None. All bugs resolved through Cycle #35.
+None. All bugs resolved through Cycle #39.
 
 ### Fixed (Cycle #35)
 - [x] ~~[BUG/HIGH] sprites.js:88-89 — Missing null guards on partial player cleanup~~ FIXED
