@@ -524,6 +524,75 @@ html, body {
   to { opacity: 0; transform: translateX(-50%) translateY(-10px); }
 }
 
+/* ─── Save Toast — subtle bottom-right confirmation ────── */
+.toast-save {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(40, 40, 60, 0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 80;
+  pointer-events: none;
+  animation: save-in 0.3s ease, save-out 0.4s ease 1.4s forwards;
+}
+
+@keyframes save-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes save-out {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+/* ─── Reconnect Overlay ────────────────────────────────── */
+#reconnect-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 6, 14, 0.88);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#reconnect-overlay.hidden { display: none !important; }
+
+.reconnect-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.reconnect-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: reconnect-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes reconnect-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); box-shadow: 0 0 0 rgba(255, 136, 0, 0); }
+  50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 20px rgba(255, 136, 0, 0.5); }
+}
+
+.reconnect-text {
+  font-size: 15px;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
 /* ─── Inventory Screen ─────────────────────────────────────── */
 #inventory-screen {
   position: fixed;

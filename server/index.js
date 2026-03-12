@@ -578,6 +578,10 @@ function gameLoop() {
   tickCount++;
   if (tickCount % (TICK_RATE * 60) === 0) {
     saveAllPlayers();
+    // Notify phones that progress was saved
+    if (players.size > 0) {
+      controllerNs.emit('notification', { text: '\uD83D\uDCBE Progress saved', type: 'save' });
+    }
   }
 
   // ── Broadcast state to TV ──

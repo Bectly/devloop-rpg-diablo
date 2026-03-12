@@ -61,6 +61,17 @@ document.getElementById('btn-join').addEventListener('click', () => {
 // ─── Socket Events ──────────────────────────────────────────────
 socket.on('connect', () => {
   console.log('[Phone] Connected');
+
+  // Hide reconnect overlay if it was showing
+  const overlay = document.getElementById('reconnect-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) {
+    overlay.classList.add('hidden');
+    // Re-join automatically if we had an active session
+    if (playerId) {
+      const name = document.getElementById('name-input').value.trim() || 'Hero';
+      socket.emit('join', { name, characterClass: selectedClass });
+    }
+  }
 });
 
 socket.on('joined', (data) => {
@@ -99,6 +110,10 @@ socket.on('inventory:update', (data) => {
 });
 
 socket.on('notification', (data) => {
+  if (data.type === 'save') {
+    showSaveToast(data.text);
+    return;
+  }
   if (data.type === 'quest') Sound.questComplete();
   else if (data.type === 'levelup') Sound.levelUp();
   else if (data.type === 'gold' || (data.text && data.text.toLowerCase().includes('gold'))) Sound.gold();
@@ -233,9 +248,16 @@ socket.on('game:restarted', () => {
   hideVictoryScreen();
 });
 
+// ─── Reconnect Overlay ───────────────────────────────────────
+const _reconnectOverlay = document.createElement('div');
+_reconnectOverlay.id = 'reconnect-overlay';
+_reconnectOverlay.className = 'hidden';
+_reconnectOverlay.innerHTML = '<div class="reconnect-content"><div class="reconnect-dot"></div><div class="reconnect-text">Pripojuji se...</div></div>';
+document.body.appendChild(_reconnectOverlay);
+
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');
-  showNotification('Disconnected from server', 'error');
+  _reconnectOverlay.classList.remove('hidden');
 });
 
 // ─── Floor Display ──────────────────────────────────────────────
@@ -609,6 +631,15 @@ function showNotification(text, type = 'info') {
   setTimeout(() => toast.remove(), 2500);
 }
 window.showNotification = showNotification;
+
+// ─── Save Toast — Subtle, bottom-right, short-lived ─────────
+function showSaveToast(text) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-save';
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
 
 // ─── Inventory ──────────────────────────────────────────────────
 function openInventory() {
