@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const { QuestManager } = require('./quests');
 
 const CLASS_BONUSES = {
   warrior: { str: 3, dex: 0, int: 0, vit: 2 },
@@ -123,6 +124,9 @@ class Player {
 
     // Gold
     this.gold = 0;
+
+    // Quests
+    this.questManager = new QuestManager();
 
     // Damage flash tracking
     this.lastDamageTaken = 0;
@@ -445,6 +449,7 @@ class Player {
       })),
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
       lastDamageTaken: this.lastDamageTaken,
+      quests: this.questManager.getActiveQuests(),
     };
   }
 }

@@ -106,6 +106,9 @@ controllerNs.on('connection', (socket) => {
     inventories.set(player.id, inv);
     controllerSockets.set(socket.id, player.id);
 
+    // Generate initial quests for this floor
+    player.questManager.generateForFloor(world.currentFloor);
+
     console.log(`[Game] ${name} (${characterClass}) joined. Players: ${players.size}`);
 
     // Confirm to phone
@@ -115,6 +118,7 @@ controllerNs.on('connection', (socket) => {
       inventory: inv.serialize(),
       floor: world.currentFloor,
       floorName: world.floorName,
+      quests: player.questManager.getActiveQuests(),
     });
 
     // Notify TV
@@ -194,6 +198,10 @@ controllerNs.on('connection', (socket) => {
     // Gold goes directly
     if (item.type === 'currency') {
       player.gold += item.quantity;
+      const goldChanged = player.questManager.check('collect_gold', { amount: item.quantity });
+      if (goldChanged.length > 0) {
+        socket.emit('quest:update', player.questManager.getActiveQuests());
+      }
       socket.emit('notification', { text: `+${item.quantity} gold`, type: 'gold' });
       socket.emit('stats:update', player.serializeForPhone());
       return;
@@ -251,6 +259,10 @@ controllerNs.on('connection', (socket) => {
 
       if (item.type === 'currency') {
         player.gold += item.quantity;
+        const goldChanged = player.questManager.check('collect_gold', { amount: item.quantity });
+        if (goldChanged.length > 0) {
+          socket.emit('quest:update', player.questManager.getActiveQuests());
+        }
         socket.emit('notification', { text: `+${item.quantity} gold`, type: 'gold' });
         socket.emit('stats:update', player.serializeForPhone());
         return;
@@ -388,6 +400,10 @@ controllerNs.on('connection', (socket) => {
       room.shrineUsed = true;
       player.hp = player.maxHp;
       player.mp = player.maxMp;
+      const shrineChanged = player.questManager.check('use_shrine', {});
+      if (shrineChanged.length > 0) {
+        socket.emit('quest:update', player.questManager.getActiveQuests());
+      }
       socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
       socket.emit('stats:update', player.serializeForPhone());
       gameNs.emit('shrine:used', {
@@ -512,6 +528,10 @@ controllerNs.on('connection', (socket) => {
     if (item.subType === 'health_potion') {
       player.gold -= item.shopPrice;
       player.healthPotions += item.quantity;
+      const buyChanged = player.questManager.check('buy_item', {});
+      if (buyChanged.length > 0) {
+        socket.emit('quest:update', player.questManager.getActiveQuests());
+      }
       socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: 'info' });
       socket.emit('stats:update', player.serializeForPhone());
       // Re-send shop inventory with updated gold
@@ -521,6 +541,10 @@ controllerNs.on('connection', (socket) => {
     if (item.subType === 'mana_potion') {
       player.gold -= item.shopPrice;
       player.manaPotions += item.quantity;
+      const buyChanged = player.questManager.check('buy_item', {});
+      if (buyChanged.length > 0) {
+        socket.emit('quest:update', player.questManager.getActiveQuests());
+      }
       socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: 'info' });
       socket.emit('stats:update', player.serializeForPhone());
       socket.emit('shop:inventory', { items: shopNpc.inventory, playerGold: player.gold });
@@ -536,6 +560,10 @@ controllerNs.on('connection', (socket) => {
       return;
     }
     player.gold -= item.shopPrice;
+    const buyChanged = player.questManager.check('buy_item', {});
+    if (buyChanged.length > 0) {
+      socket.emit('quest:update', player.questManager.getActiveQuests());
+    }
     socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: item.rarity || 'common' });
     socket.emit('stats:update', player.serializeForPhone());
     socket.emit('inventory:update', inv.serialize());
@@ -573,6 +601,10 @@ controllerNs.on('connection', (socket) => {
     room.shrineUsed = true;
     player.hp = player.maxHp;
     player.mp = player.maxMp;
+    const shrineChanged = player.questManager.check('use_shrine', {});
+    if (shrineChanged.length > 0) {
+      socket.emit('quest:update', player.questManager.getActiveQuests());
+    }
     socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
     socket.emit('stats:update', player.serializeForPhone());
     gameNs.emit('shrine:used', {
@@ -580,6 +612,35 @@ controllerNs.on('connection', (socket) => {
       x: (room.x + room.w / 2) * TILE_SIZE,
       y: (room.y + room.h / 2) * TILE_SIZE,
     });
+  });
+
+  // ── Quest Claim ──
+  socket.on('quest:claim', (data) => {
+    const player = players.get(socket.id);
+    if (!player || !player.alive) return;
+    if (!data || typeof data.questId !== 'string') return;
+
+    const reward = player.questManager.claimReward(data.questId);
+    if (!reward) return;
+
+    // Grant gold
+    player.gold += reward.gold;
+    socket.emit('notification', { text: `+${reward.gold} gold!`, type: 'gold' });
+
+    // Grant item if present
+    if (reward.item) {
+      const inv = inventories.get(player.id);
+      if (inv) {
+        const added = inv.addItem(reward.item);
+        if (added.success) {
+          socket.emit('notification', { text: `Received ${reward.item.name}!`, type: reward.item.rarity || 'common' });
+          socket.emit('inventory:update', inv.serialize());
+        }
+      }
+    }
+
+    socket.emit('stats:update', player.serializeForPhone());
+    socket.emit('quest:update', player.questManager.getActiveQuests());
   });
 
   // ── Disconnect ──
@@ -671,6 +732,14 @@ function gameLoop() {
     if (waveResult.type === 'room:cleared') {
       gameNs.emit('room:cleared', waveResult);
       controllerNs.emit('notification', { text: `${waveResult.roomName} cleared!`, type: 'quest' });
+      // Quest progress — room cleared
+      for (const [pid, p] of players) {
+        const changed = p.questManager.check('clear_room', {});
+        if (changed.length > 0) {
+          const sock = controllerNs.sockets.get(pid);
+          if (sock) sock.emit('quest:update', p.questManager.getActiveQuests());
+        }
+      }
       if (waveResult.exitUnlocked) {
         gameNs.emit('exit:unlocked', {});
         controllerNs.emit('notification', { text: 'Exit unlocked! Find the stairs!', type: 'quest' });
@@ -708,6 +777,23 @@ function gameLoop() {
             for (const p of allPlayers) {
               p.gainXp(qr.rewards.xp);
               p.gold += qr.rewards.gold || 0;
+            }
+          }
+        }
+
+        // Quest progress — notify all players who participated
+        for (const [pid, p] of players) {
+          if (!p.alive) continue;
+          const changed = p.questManager.check('kill', { type: deadMonster.type, isBoss: deadMonster.isBoss });
+          if (changed.length > 0) {
+            const sock = controllerNs.sockets.get(pid);
+            if (sock) {
+              sock.emit('quest:update', p.questManager.getActiveQuests());
+              for (const q of changed) {
+                if (q.completed) {
+                  sock.emit('notification', { text: `Quest complete: ${q.title}!`, type: 'quest' });
+                }
+              }
             }
           }
         }
@@ -824,6 +910,21 @@ function gameLoop() {
             floorName: world.floorName,
           });
           controllerNs.emit('notification', { text: `Floor ${world.currentFloor + 1}: ${world.floorName}`, type: 'quest' });
+
+          // Quest progress — floor change + generate new quests
+          for (const [pid, p] of players) {
+            let changed = p.questManager.check('reach_floor', { floor: world.currentFloor });
+            const newQuests = p.questManager.generateForFloor(world.currentFloor);
+            if (newQuests.length > 0 || changed.length > 0) {
+              const sock = controllerNs.sockets.get(pid);
+              if (sock) {
+                sock.emit('quest:update', p.questManager.getActiveQuests());
+                if (newQuests.length > 0) {
+                  sock.emit('notification', { text: `${newQuests.length} new quests!`, type: 'quest' });
+                }
+              }
+            }
+          }
 
           // Update phone stats
           for (const [sid, p] of players) {

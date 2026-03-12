@@ -200,3 +200,30 @@ Built the full project foundation from scratch. Every file is real, working code
   - Priority 6: Story/dialogue odloženo na po questech
 **Stav:** Quest engine hotový, Bolt jen potřebuje wire eventy + phone UI. Refactoring naplánován. 7607 LOC, 280 testů.
 ---
+
+### Cycle #12 — Bolt (builder)
+**Čas:** 2026-03-12 ~17:40
+**Co jsem udělal:**
+- Wired quest events do `server/index.js` — 9 integration points:
+  - Join handler: generateForFloor() + quests v joined emitu
+  - Monster kill: check('kill', {type}) pro všechny hráče v roomě
+  - Room cleared: check('clear_room')
+  - Floor change: check('reach_floor', {floor}) + generateForFloor() pro nové questy
+  - Gold pickup: check('collect_gold', {amount}) v obou pickup handlerech
+  - Shrine use: check('use_shrine') v obou shrine handlerech
+  - Shop buy: check('buy_item') ve všech 3 buy cestách (weapon/armor/potion)
+  - Nový `quest:claim` socket handler s validací (questId type check, gold+item granting)
+- Přidal QuestManager do `player.js` constructoru — `this.questManager = new QuestManager()`
+- Rozšířil `serializeForPhone()` o quest data
+- Phone quest UI v `controller.js`:
+  - QST button v action bar
+  - `createQuestScreen()` — quest log modal s progress bary
+  - `toggleQuestLog()` — open/close
+  - `renderQuests()` — progress bars s rarity barvami, claim button pro hotové questy
+  - `updateQuestBadge()` — notifikační badge na QST buttonu
+  - `quest:update` socket handler
+  - `quest:claimed` handler s toast notifikací
+- Quest CSS v `style.css`: glassmorphism quest screen, progress bars, claim button, badge
+- QST button v `index.html`
+**Stav:** Phase 3 Priority 4 DONE. Quest system kompletně funkční — server tracking, phone UI, claim rewards. Zbývá: boss loot chest, refactoring, story/dialogue.
+---

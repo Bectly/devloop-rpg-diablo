@@ -20,6 +20,7 @@ let buttonsInitialized = false;
 let notificationCount = 0;
 let shopData = null;
 let shopTab = 'buy'; // 'buy' or 'sell'
+let questData = [];
 
 // ─── DOM Elements ───────────────────────────────────────────────
 const joinScreen = document.getElementById('join-screen');
@@ -65,6 +66,7 @@ socket.on('joined', (data) => {
   inventoryData = data.inventory;
   currentFloor = data.floor || 0;
   currentFloorName = data.floorName || '';
+  questData = data.quests || [];
 
   joinScreen.classList.add('hidden');
   controller.classList.remove('hidden');
@@ -121,6 +123,16 @@ socket.on('player:respawn', (data) => {
 socket.on('shop:inventory', (data) => {
   shopData = data;
   openShop();
+});
+
+socket.on('quest:update', (quests) => {
+  questData = quests;
+  // If quest screen is visible, re-render
+  const screen = document.getElementById('quest-screen');
+  if (screen && !screen.classList.contains('hidden')) {
+    renderQuests();
+  }
+  updateQuestBadge();
 });
 
 socket.on('disconnect', () => {
@@ -348,6 +360,16 @@ function initButtons() {
   document.getElementById('btn-inventory').addEventListener('touchstart', (e) => {
     e.preventDefault();
     openInventory();
+  });
+
+  // Quests
+  document.getElementById('btn-quests').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    toggleQuestLog();
+  });
+  document.getElementById('btn-quests').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleQuestLog();
   });
 }
 
@@ -798,6 +820,111 @@ function estimateSellPrice(item) {
   const mult = rarityMult[item.rarity] || 1;
   const bonusCount = item.bonuses ? Object.keys(item.bonuses).length : 0;
   return Math.max(1, Math.floor(base * mult * (1 + bonusCount * 0.3) * 0.4));
+}
+
+// ─── Quest Log ──────────────────────────────────────────────────
+function createQuestScreen() {
+  if (document.getElementById('quest-screen')) return;
+
+  const screen = document.createElement('div');
+  screen.id = 'quest-screen';
+  screen.className = 'hidden';
+  screen.innerHTML = `
+    <div class="quest-header">
+      <span class="quest-title">QUESTS</span>
+      <button class="quest-close" id="quest-close">&times;</button>
+    </div>
+    <div class="quest-list" id="quest-list"></div>
+  `;
+  document.body.appendChild(screen);
+
+  document.getElementById('quest-close').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    toggleQuestLog();
+  });
+  document.getElementById('quest-close').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleQuestLog();
+  });
+}
+
+function toggleQuestLog() {
+  createQuestScreen();
+  const screen = document.getElementById('quest-screen');
+  screen.classList.toggle('hidden');
+  if (!screen.classList.contains('hidden')) {
+    renderQuests();
+  }
+}
+
+function renderQuests() {
+  const container = document.getElementById('quest-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!questData || questData.length === 0) {
+    container.innerHTML = '<div class="quest-empty">No active quests. Explore deeper!</div>';
+    return;
+  }
+
+  // Sort: uncompleted first, then completed unclaimed, then claimed
+  const sorted = [...questData].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return 0;
+  });
+
+  for (const quest of sorted) {
+    const pct = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+    const el = document.createElement('div');
+    el.className = 'quest-item' + (quest.completed ? ' completed' : '');
+
+    el.innerHTML = `
+      <div class="quest-item-header">
+        <span class="quest-item-title">${quest.title}</span>
+        <span class="quest-item-progress">${quest.progress}/${quest.target}</span>
+      </div>
+      <div class="quest-item-desc">${quest.description}</div>
+      <div class="quest-progress-bar">
+        <div class="quest-progress-fill" style="width: ${pct}%"></div>
+      </div>
+      <div class="quest-reward">
+        <span class="quest-reward-gold">${quest.reward.gold}g</span>
+        ${quest.reward.item ? `<span class="quest-reward-item">${quest.reward.item.name}</span>` : ''}
+      </div>
+      ${quest.completed ? `<button class="quest-claim-btn" data-quest-id="${quest.id}">CLAIM</button>` : ''}
+    `;
+
+    container.appendChild(el);
+  }
+
+  // Attach claim handlers
+  container.querySelectorAll('.quest-claim-btn').forEach(btn => {
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      socket.emit('quest:claim', { questId: btn.dataset.questId });
+    });
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      socket.emit('quest:claim', { questId: btn.dataset.questId });
+    });
+  });
+}
+
+function updateQuestBadge() {
+  const btn = document.getElementById('btn-quests');
+  if (!btn) return;
+  const unclaimedCount = questData.filter(q => q.completed).length;
+  let badge = btn.querySelector('.quest-badge');
+  if (unclaimedCount > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'quest-badge';
+      btn.appendChild(badge);
+    }
+    badge.textContent = unclaimedCount;
+  } else if (badge) {
+    badge.remove();
+  }
 }
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────

@@ -41,26 +41,11 @@
 - [x] Boss HP bar at bottom of TV (phase indicator, color transitions) — **Sage (Cycle #8)**
 - [ ] Boss loot chest after kill (gold fountain + rare item) — **Bolt**
 
-### 🔥 Priority 4: Quest system — BOLT CYCLE #12 FOCUS
-Architecture: `server/game/quests.js` (NEW module)
-
-**Bolt must implement:**
-- [ ] `server/game/quests.js` — Quest engine with QuestManager class:
-  - Quest types: `kill_count` (kill N monsters), `kill_type` (kill N of specific type), `reach_floor` (reach floor N), `clear_rooms` (clear N rooms), `collect_gold` (collect N gold)
-  - Each quest: `{ id, type, title, description, target, progress, reward: { gold, item? }, completed, claimed }`
-  - `QuestManager.check(event, data)` — called on kills, floor changes, room clears, gold pickups
-  - `QuestManager.getActiveQuests()` — returns array for phone display
-  - `QuestManager.claimReward(questId)` — grants reward, marks claimed
-  - 3-5 quests active per floor, auto-generated on floor entry
-- [ ] Wire quest events in `server/index.js`:
-  - On monster kill → `questMgr.check('kill', { type, isBoss })`
-  - On room clear → `questMgr.check('clear_room', {})`
-  - On floor change → `questMgr.check('reach_floor', { floor })` + generate new quests
-  - On gold pickup → `questMgr.check('collect_gold', { amount })`
-  - Emit `quest:update` to phone when quest progress changes
-  - Add `quest:claim` socket handler
-- [ ] Phone: `quest:update` handler + quest log UI (collapsible list, progress bars)
-- [ ] Quest rewards: gold + chance for rare item on claim
+### Priority 4: Quest system ✅
+- [x] `server/game/quests.js` — QuestManager class (7 quest types, floor scaling, rewards) — **Aria (Cycle #11)**
+- [x] Wire quest events in `server/index.js` (9 integration points: kill, clear_room, reach_floor, collect_gold, use_shrine, buy_item) — **Bolt (Cycle #12)**
+- [x] Phone: quest log UI (QST button, collapsible list, progress bars, claim button, badge) — **Bolt (Cycle #12)**
+- [x] Quest rewards: gold + chance for rare item on claim — **Bolt (Cycle #12)**
 
 ### Priority 5: Refactoring — BOLT should do BEFORE quest system
 - [ ] Extract `server/socket-handlers.js` from `server/index.js` (864→~400+400)
