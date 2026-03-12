@@ -63,7 +63,12 @@ document.getElementById('btn-join').addEventListener('click', () => {
 socket.on('connect', () => {
   console.log('[Phone] Connected');
 
-  // Hide reconnect overlay if it was showing
+  // Stop countdown and hide reconnect overlay if it was showing
+  if (_reconnectCountdownInterval) {
+    clearInterval(_reconnectCountdownInterval);
+    _reconnectCountdownInterval = null;
+  }
+
   const overlay = document.getElementById('reconnect-overlay');
   if (overlay && !overlay.classList.contains('hidden')) {
     overlay.classList.add('hidden');
@@ -119,6 +124,7 @@ socket.on('notification', (data) => {
   if (data.type === 'quest') Sound.questComplete();
   else if (data.type === 'levelup') Sound.levelUp();
   else if (data.type === 'gold' || (data.text && data.text.toLowerCase().includes('gold'))) Sound.gold();
+  // welcome_back comes from server after reconnect grace-period restore
   showNotification(data.text, data.type);
 });
 
@@ -254,12 +260,34 @@ socket.on('game:restarted', () => {
 const _reconnectOverlay = document.createElement('div');
 _reconnectOverlay.id = 'reconnect-overlay';
 _reconnectOverlay.className = 'hidden';
-_reconnectOverlay.innerHTML = '<div class="reconnect-content"><div class="reconnect-dot"></div><div class="reconnect-text">Pripojuji se...</div></div>';
+_reconnectOverlay.innerHTML = `
+  <div class="reconnect-content">
+    <div class="reconnect-dot"></div>
+    <div class="reconnect-text">Pripojuji se...</div>
+    <div class="reconnect-countdown" id="reconnect-countdown">30</div>
+  </div>`;
 document.body.appendChild(_reconnectOverlay);
+
+let _reconnectCountdownInterval = null;
 
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');
   _reconnectOverlay.classList.remove('hidden');
+
+  // Start visual 30s countdown (cosmetic — real grace period is server-side)
+  if (_reconnectCountdownInterval) clearInterval(_reconnectCountdownInterval);
+  let _reconnectSecsLeft = 30;
+  const _countdownEl = document.getElementById('reconnect-countdown');
+  if (_countdownEl) _countdownEl.textContent = _reconnectSecsLeft;
+
+  _reconnectCountdownInterval = setInterval(() => {
+    _reconnectSecsLeft--;
+    if (_countdownEl) _countdownEl.textContent = Math.max(0, _reconnectSecsLeft);
+    if (_reconnectSecsLeft <= 0) {
+      clearInterval(_reconnectCountdownInterval);
+      _reconnectCountdownInterval = null;
+    }
+  }, 1000);
 });
 
 // ─── Floor Display ──────────────────────────────────────────────

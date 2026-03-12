@@ -514,6 +514,15 @@ html, body {
   font-size: 16px;
 }
 
+/* Welcome back — shown after reconnect session restore */
+.notification-toast.welcome_back {
+  background: rgba(20, 80, 40, 0.92);
+  border-color: rgba(68, 204, 68, 0.5);
+  box-shadow: 0 0 18px rgba(68, 204, 68, 0.35), 0 0 6px rgba(68, 204, 68, 0.15) inset;
+  color: #aaffbb;
+  font-size: 14px;
+}
+
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -591,6 +600,26 @@ html, body {
   font-family: 'Courier New', monospace;
   letter-spacing: 2px;
   text-transform: uppercase;
+}
+
+.reconnect-countdown {
+  font-size: 52px;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: rgba(255, 136, 0, 0.55);
+  line-height: 1;
+  letter-spacing: -2px;
+  text-shadow: 0 0 24px rgba(255, 136, 0, 0.2);
+  min-width: 2ch;
+  text-align: center;
+  /* Subtle tick animation so each second feels deliberate */
+  animation: countdown-tick 1s step-start infinite;
+}
+
+@keyframes countdown-tick {
+  0%   { opacity: 1; }
+  10%  { opacity: 0.6; }
+  20%  { opacity: 1; }
 }
 
 /* ─── Inventory Screen ─────────────────────────────────────── */

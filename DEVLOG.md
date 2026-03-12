@@ -789,3 +789,86 @@ Built the full project foundation from scratch. Every file is real, working code
 **Tag:** `v0.1.0-alpha`
 **Stav:** 0 bugs, 393 tests, ~11,600 LOC, 22 source files. Phases 1-4 complete. Phase 5 (persistence) planned.
 ---
+
+## 🔄 Loop restartován — Phase 5: Persistence & Scale
+
+### Cycle #36 — Aria (architect)
+**Čas:** 2026-03-13 ~00:30
+**Co jsem udělal/a:**
+- Naplánovala Phase 5 (SQLite persistence): schema, API, save triggers
+- Vytvořila TODO.md sekce 5.1-5.3
+**Stav:** Plan ready, Bolt next.
+---
+
+### Cycle #37 — Bolt (builder)
+**Čas:** 2026-03-13 ~00:50
+**Co jsem udělal/a:**
+- `server/game/database.js` — GameDatabase class (better-sqlite3, WAL, prepared statements)
+- Schema: characters table (name PK, class, level, xp, stats/equipment/inventory JSON, gold, floor, kills, potions)
+- `saveCharacter()`, `loadCharacter()`, `deleteCharacter()`, `listCharacters()`
+**Stav:** 5.1 DONE. Wiring next.
+---
+
+### Cycle #38 — Bolt (builder)
+**Čas:** 2026-03-13 ~01:10
+**Co jsem udělal/a:**
+- Wired persistence into server: DB init in index.js, gameDb in ctx
+- `Player.restoreFrom(savedData)` — restores all character state
+- `handleJoin` DB lookup — restore or create new
+- Auto-save: floor transition, 60s interval, disconnect, victory
+- Graceful shutdown (SIGINT/SIGTERM): save all + db.close()
+**Stav:** 5.2 DONE.
+---
+
+### Cycle #39 — Trace (tester)
+**Čas:** 2026-03-13 ~01:30
+**Co jsem udělal/a:**
+- 17 nových testů: 10 database, 7 player.restoreFrom
+- 414/414 testů PASS
+**Stav:** All tests green.
+---
+
+### Cycle #40 — Rune (reviewer)
+**Čas:** 2026-03-13 ~01:50
+**Co jsem udělal/a:**
+- Fixed 5 persistence bugs:
+  1. saveCharacter() hardcoded floor=0 → added floor param
+  2. saveAllPlayers() bypassed public API → uses saveCharacter()
+  3. handleDisconnect saved floor=0 → passes world.currentFloor
+  4. loadCharacter() JSON.parse no try/catch → individual try/catch per field
+  5. Reconnect re-read DOM name-input → joinedName variable
+**Stav:** 0 bugs. 414 tests PASS.
+---
+
+### Cycle #41 — Aria (architect)
+**Čas:** 2026-03-13 ~02:10
+**Co jsem udělal/a:**
+- Naplánovala 5.3 Session Reconnection (grace period, ghost sprite, reconnect flow)
+- Updated TODO.md with detailed sub-tasks
+**Stav:** Plan ready for Bolt.
+---
+
+### Cycle #42 — Bolt (builder)
+**Čas:** 2026-03-13 ~02:35
+**Co jsem udělal/a:**
+- Full session reconnection implementation:
+  - disconnectedPlayers Map + 30s grace period
+  - handleDisconnect: save to DB, move to grace Map, player.disconnected = true
+  - handleJoin: checks grace Map first → restore, then DB, then new
+  - Game loop: disconnected players freeze input, still take damage, excluded from floor exit
+  - TV ghost sprite: alpha 0.4 with pulse, red "DC" label
+  - Player cap counts only non-disconnected
+  - gracefulShutdown saves + clears grace Map
+**Stav:** 5.3 DONE. Full persistence phase complete.
+---
+
+### Cycle #43 — Sage (stylist)
+**Čas:** 2026-03-13 ~02:55
+**Co jsem udělal/a:**
+- Reconnect overlay countdown timer (30s visual countdown on phone disconnect)
+  - 52px monospace orange number with tick animation
+  - clearInterval on reconnect (socket connect event)
+- Welcome back notification style (`.notification-toast.welcome_back`)
+  - Green background/border/glow for reconnect success toast
+**Stav:** Phase 5 fully polished. Trace next for testing.
+---
