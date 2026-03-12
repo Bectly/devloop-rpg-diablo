@@ -58,22 +58,85 @@
 - [x] **Step E:** Export `disconnectedPlayers` from socket-handlers; gracefulShutdown saves + clears grace Map; player.serialize() includes `disconnected` field
 - [x] **Edge case:** `players.size >= 2` cap now counts only non-disconnected players
 
-### Future (not this cycle)
+---
+
+## 🔥 NEXT PRIORITIES (Phase 6: Monster Affixes & Refactoring)
+
+### 6.0 Refactoring: hud.js split [Bolt]
+**Why:** hud.js at 1284 LOC, controller.js at 1032 LOC — both over 1000 threshold.
+- [ ] Extract `hud.js` victory screen code → `client/tv/victory.js` (~200 LOC)
+- [ ] Extract `hud.js` dialogue/NPC HUD → `client/tv/dialogue-hud.js` (~150 LOC)
+- [ ] Extract `controller.js` reconnect overlay + save toast → `client/phone/reconnect.js` (~100 LOC)
+- [ ] Verify all 450 tests still pass after split
+
+### 6.1 Monster Affix System — Server [Bolt]
+**New file:** `server/game/affixes.js`
+Affixes are random modifiers applied to elite/champion monsters (Diablo-style "blue" and "yellow" packs).
+
+- [ ] **Affix definitions** — 8 affixes:
+  | Affix | Effect | Visual (color tint) |
+  |-------|--------|---------------------|
+  | Fast | +50% speed | Yellow tint |
+  | Extra Strong | +60% damage | Red tint |
+  | Fire Enchanted | Deals fire DoT on hit, explodes on death | Orange glow |
+  | Cold Enchanted | Slows player 30% on hit for 3s | Blue tint |
+  | Teleporter | Blinks to random nearby position every 5s | Purple flash |
+  | Vampiric | Heals 15% of damage dealt | Green tint |
+  | Shielding | Immune to damage for 3s every 10s | White pulse |
+  | Extra Health | +100% HP | Larger size |
+
+- [ ] **Elite spawn rules:**
+  - Floor 1-2: no elites
+  - Floor 3-4: 15% chance per monster → "Champion" (1 affix, blue name)
+  - Floor 5-6: 25% chance → "Champion" (1-2 affixes)
+  - Floor 7: 30% chance → "Rare" (2-3 affixes, yellow name)
+  - Boss never gets affixes
+
+- [ ] **Affix application** in `Monster` constructor or a `Monster.applyAffixes(affixList)` method:
+  - Modifies monster stats (hp, damage, speed)
+  - Stores `monster.affixes = ['fast', 'vampiric']`
+  - Stores `monster.isElite = true`, `monster.eliteRank = 'champion'|'rare'`
+
+- [ ] **Affix behavior hooks** in combat.js / world.js update loop:
+  - `onMonsterHit(monster, player)` — fire DoT, cold slow
+  - `onMonsterDeath(monster)` — fire explosion
+  - `onMonsterUpdate(monster, dt)` — teleporter blink, shielding cycle
+  - `onMonsterDealDamage(monster, player, damage)` — vampiric heal
+
+### 6.2 Monster Affix System — Client TV [Sage]
+- [ ] **Elite name colors** in sprites.js: Champion = blue (#4488ff), Rare = yellow (#ffcc00)
+- [ ] **Affix label** below monster name (small text, e.g. "Fast Vampiric")
+- [ ] **Visual effects per affix:**
+  - Fire: orange particle ring
+  - Cold: blue tint overlay
+  - Shielding: white dome pulse when active
+  - Teleporter: purple flash on blink
+- [ ] **Elite death effect** — bigger explosion, screen shake for rare elites
+
+### 6.3 Monster Affix System — Client Phone [Sage]
+- [ ] **Monster tooltip on damage** — show affix icons/names when hit by elite
+- [ ] **Notification** on elite encounter: "⚡ Champion Skeleton — Fast, Vampiric"
+
+### 6.4 Loot bonus for elites [Bolt]
+- [ ] Champions: +1 loot tier, guaranteed uncommon+
+- [ ] Rares: +2 loot tier, guaranteed rare+, 2x gold
+- [ ] XP bonus: Champion ×1.5, Rare ×2.5
+
+### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)
 - [ ] Damage types (fire/ice/physical/poison) + resistances
 - [ ] Set bonuses (3-4 item sets with 2/3/5-piece bonuses)
 - [ ] Unique legendary item effects (special procs)
-- [ ] Monster affixes (Fast, Extra Strong, Fire Enchanted)
 - [ ] Leaderboard / stats tracking
 - [ ] Sprite assets via ComfyUI generation
 
 ---
 
-## Architecture Notes (Updated Cycle #39)
-**Current LOC:** ~13,642 source JS (22 source files). Largest: hud.js 1284, game.js 1073, controller.js 1002, socket-handlers.js 775.
-**Split DONE:** game.js 1553 → 1057 LOC. New sprites.js at 548 LOC.
-**Watch:** `controller.js` now at 1002 — over threshold (was ~900). `hud.js` at 1284 — candidate for next split.
-**Persistence:** `database.js` (155 LOC) + wiring complete (Cycles #36-39). Public API (`saveCharacter(player, inv, floor)`) used consistently.
+## Architecture Notes (Updated Cycle #46)
+**Current LOC:** ~15,249 source JS (test + source). Largest: hud.js 1284, game.js 1073, controller.js 1032, socket-handlers.js 878.
+**Tests:** 450/450 PASS, 15 suites (14 test files).
+**Split needed:** hud.js 1284 → split victory + dialogue. controller.js 1032 → split reconnect.
+**Persistence:** database.js + wiring + session reconnection complete (Cycles #36-45). 0 open bugs.
 
 ## Open Bugs
 

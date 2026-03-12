@@ -905,3 +905,18 @@ Built the full project foundation from scratch. Every file is real, working code
 - 0 open bugs
 **Stav:** All reconnection bugs fixed. Phase 5 complete & stable. 450 tests, 15 suites, ~14,000 LOC.
 ---
+
+### Cycle #46 — Aria (architect)
+**Čas:** 2026-03-13 ~03:35
+**Co jsem udělal/a:**
+- Audited codebase: 15,249 LOC (source + tests), 14 test files, 450 tests
+- Identified refactoring needs: hud.js 1284 LOC, controller.js 1032 LOC — both over threshold
+- Designed **Phase 6: Monster Affixes** — the highest-impact gameplay feature:
+  - 8 affixes (Fast, Extra Strong, Fire Enchanted, Cold, Teleporter, Vampiric, Shielding, Extra Health)
+  - Elite spawn rules per floor (none on 1-2, champions on 3-4, rares on 5-7)
+  - Affix behavior hooks (onHit, onDeath, onUpdate, onDealDamage)
+  - TV visuals (colored names, affix labels, particle effects)
+  - Loot bonuses (champions +1 tier, rares +2 tier + 2x gold)
+- Updated TODO.md: Phase 6 sections 6.0-6.4 + updated architecture notes
+**Stav:** Phase 6 planned. Bolt next → 6.0 refactoring + 6.1 affix system.
+---
