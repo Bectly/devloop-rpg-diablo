@@ -1158,6 +1158,17 @@ socket.on('dungeon:enter', (data) => {
       }
       scene.shrineSprites.clear();
 
+      // Clean up loot chest sprites
+      if (HUD._chests) {
+        for (const id in HUD._chests) {
+          const c = HUD._chests[id];
+          [c.chest, c.lid, c.gem, c.glow, c.label].forEach(obj => {
+            if (obj && obj.destroy) obj.destroy();
+          });
+        }
+        HUD._chests = {};
+      }
+
       // Reset boss tracking for new floor
       scene.discoveredRooms.clear();
       HUD.hideBossBar();
@@ -1254,6 +1265,24 @@ socket.on('player:left', (data) => {
 
 socket.on('dialogue:start', (data) => {
   console.log(`[TV] Dialogue with ${data.npcName}: ${data.text}`);
+});
+
+socket.on('boss:chest', (data) => {
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.showBossChest(scene, data.x, data.y, data.id);
+    }
+  }
+});
+
+socket.on('chest:opened', (data) => {
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.showChestOpened(scene, data.id, data.x, data.y, data.gold);
+    }
+  }
 });
 
 socket.on('disconnect', () => {

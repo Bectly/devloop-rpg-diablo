@@ -621,6 +621,183 @@ window.HUD = {
     });
   },
 
+  // ── Dialogue overlay (TV side) ──
+  _dialogueObjects: null,
+
+  showDialogue(scene, npcName, text) {
+    // Clean up previous dialogue
+    HUD.hideDialogue(scene);
+
+    const cam = scene.cameras.main;
+    const w = cam.width;
+    const h = cam.height;
+    const y = cam.scrollY + h - 80;
+    const x = cam.scrollX + w / 2;
+
+    // Dark backdrop at bottom
+    const bg = scene.add.rectangle(x, y + 10, w - 40, 60, 0x000000, 0.75);
+    bg.setStrokeStyle(1, 0xffaa33, 0.4);
+    bg.setDepth(900);
+    bg.setScrollFactor(0);
+
+    // NPC name
+    const nameText = scene.add.text(x - (w / 2) + 40, y - 12, npcName, {
+      fontSize: '11px',
+      fontFamily: 'Courier New, monospace',
+      color: '#ffaa33',
+      fontStyle: 'bold',
+      stroke: '#000',
+      strokeThickness: 2,
+    });
+    nameText.setDepth(901);
+    nameText.setScrollFactor(0);
+
+    // Dialogue text
+    const dialogueText = scene.add.text(x - (w / 2) + 40, y + 4, text, {
+      fontSize: '10px',
+      fontFamily: 'Courier New, monospace',
+      color: '#ffffff',
+      stroke: '#000',
+      strokeThickness: 1,
+      wordWrap: { width: w - 100 },
+    });
+    dialogueText.setDepth(901);
+    dialogueText.setScrollFactor(0);
+
+    // Slide up animation
+    [bg, nameText, dialogueText].forEach(obj => {
+      obj.setAlpha(0);
+      scene.tweens.add({
+        targets: obj,
+        alpha: 1,
+        y: obj.y - 10,
+        duration: 250,
+        ease: 'Cubic.easeOut',
+      });
+    });
+
+    HUD._dialogueObjects = [bg, nameText, dialogueText];
+  },
+
+  hideDialogue(scene) {
+    if (HUD._dialogueObjects) {
+      HUD._dialogueObjects.forEach(obj => {
+        if (obj && obj.destroy) obj.destroy();
+      });
+      HUD._dialogueObjects = null;
+    }
+  },
+
+  // ── Boss Loot Chest (spawned at boss death position) ──
+  showBossChest(scene, x, y, id) {
+    // Gold chest sprite — rectangle with gold fill
+    const chest = scene.add.rectangle(x, y, 24, 18, 0xdaa520, 1);
+    chest.setStrokeStyle(2, 0xffd700, 1);
+    chest.setDepth(50);
+
+    // Lid
+    const lid = scene.add.rectangle(x, y - 11, 26, 6, 0xb8860b, 1);
+    lid.setStrokeStyle(1, 0xffd700, 1);
+    lid.setDepth(51);
+
+    // Lock/gem in center
+    const gem = scene.add.circle(x, y - 2, 3, 0xff0000, 1);
+    gem.setDepth(52);
+
+    // Glow pulse
+    const glow = scene.add.circle(x, y, 30, 0xffd700, 0.15);
+    glow.setDepth(49);
+    scene.tweens.add({
+      targets: glow,
+      alpha: { from: 0.1, to: 0.3 },
+      scaleX: { from: 1, to: 1.3 },
+      scaleY: { from: 1, to: 1.3 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // "LOOT" label
+    const label = scene.add.text(x, y - 24, 'LOOT', {
+      fontSize: '8px',
+      fontFamily: 'Courier New, monospace',
+      color: '#ffd700',
+      fontStyle: 'bold',
+      stroke: '#000',
+      strokeThickness: 2,
+    });
+    label.setOrigin(0.5);
+    label.setDepth(52);
+
+    // Store reference for cleanup
+    if (!HUD._chests) HUD._chests = {};
+    HUD._chests[id] = { chest, lid, gem, glow, label };
+  },
+
+  // ── Chest Opened Effect (gold fountain particles) ──
+  showChestOpened(scene, id, x, y, gold) {
+    // Remove chest sprite
+    if (HUD._chests && HUD._chests[id]) {
+      const c = HUD._chests[id];
+      [c.chest, c.lid, c.gem, c.glow, c.label].forEach(obj => obj.destroy());
+      delete HUD._chests[id];
+    }
+
+    // Gold fountain — 15-20 circles spraying upward
+    const count = 15 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < count; i++) {
+      const coin = scene.add.circle(x, y, 3, 0xffd700, 0.9);
+      coin.setDepth(200);
+
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2; // mostly upward
+      const speed = 80 + Math.random() * 120;
+      const targetX = x + Math.cos(angle) * speed;
+      const targetY = y + Math.sin(angle) * speed;
+
+      scene.tweens.add({
+        targets: coin,
+        x: targetX,
+        y: targetY - 20, // arc up
+        duration: 400 + Math.random() * 300,
+        delay: i * 30,
+        ease: 'Cubic.easeOut',
+        onComplete: () => {
+          // Fall down
+          scene.tweens.add({
+            targets: coin,
+            y: targetY + 40,
+            alpha: 0,
+            duration: 500,
+            ease: 'Bounce.easeOut',
+            onComplete: () => coin.destroy(),
+          });
+        },
+      });
+    }
+
+    // Gold amount text
+    const goldText = scene.add.text(x, y - 40, `+${gold}g`, {
+      fontSize: '16px',
+      fontFamily: 'Courier New, monospace',
+      color: '#ffd700',
+      fontStyle: 'bold',
+      stroke: '#000',
+      strokeThickness: 3,
+    });
+    goldText.setOrigin(0.5);
+    goldText.setDepth(201);
+
+    scene.tweens.add({
+      targets: goldText,
+      y: y - 80,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Cubic.easeOut',
+      onComplete: () => goldText.destroy(),
+    });
+  },
+
   // ── Cleanup on scene shutdown ──
   shutdown() {
     for (const obj of this._activeBannerObjs) {
@@ -629,6 +806,23 @@ window.HUD = {
     this._activeBannerObjs = [];
     this.questAnnouncementQueue = [];
     this.questAnnouncementActive = false;
+    // Clean up any active dialogue overlay
+    if (this._dialogueObjects) {
+      this._dialogueObjects.forEach(obj => {
+        if (obj && obj.destroy) obj.destroy();
+      });
+      this._dialogueObjects = null;
+    }
+    // Clean up any active loot chests
+    if (HUD._chests) {
+      for (const id in HUD._chests) {
+        const c = HUD._chests[id];
+        [c.chest, c.lid, c.gem, c.glow, c.label].forEach(obj => {
+          if (obj && obj.destroy) obj.destroy();
+        });
+      }
+      HUD._chests = {};
+    }
   },
 
   // ── Hide boss bar (used on floor transitions) ──

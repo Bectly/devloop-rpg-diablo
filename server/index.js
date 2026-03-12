@@ -8,7 +8,7 @@ const { World, TILE, TILE_SIZE } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
-const { generateConsumable, generateLoot } = require('./game/items');
+const { generateConsumable, generateLoot, generateWeapon, generateArmor } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
@@ -99,6 +99,7 @@ controllerNs.on('connection', (socket) => {
   socket.on('shop:sell', (data) => handlers.handleShopSell(socket, data, ctx));
   socket.on('shrine:use', () => handlers.handleShrineUse(socket, null, ctx));
   socket.on('quest:claim', (data) => handlers.handleQuestClaim(socket, data, ctx));
+  socket.on('chest:open', (data) => handlers.handleChestOpen(socket, data, ctx));
   socket.on('disconnect', () => handlers.handleDisconnect(socket, null, ctx));
 });
 
@@ -252,6 +253,41 @@ function gameLoop() {
           for (const lootItem of event.loot) {
             world.addGroundItem(lootItem, lootItem.worldX, lootItem.worldY);
           }
+        }
+
+        // Boss loot chest
+        if (deadMonster.isBoss || deadMonster.type === 'boss_knight') {
+          const chest = {
+            id: uuid.v4(),
+            type: 'loot_chest',
+            x: deadMonster.x,
+            y: deadMonster.y,
+            items: [],
+            gold: 50 + world.currentFloor * 30 + Math.floor(Math.random() * 100),
+            opened: false,
+          };
+
+          // Generate 3-5 items with higher rarity bias
+          const itemCount = 3 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < itemCount; i++) {
+            const item = Math.random() < 0.5
+              ? generateWeapon(world.currentFloor + 2)
+              : generateArmor(world.currentFloor + 2);
+            chest.items.push(item);
+          }
+
+          // Store chest on world
+          if (!world.lootChests) world.lootChests = [];
+          world.lootChests.push(chest);
+
+          // Emit to TV for rendering
+          gameNs.emit('boss:chest', {
+            x: chest.x,
+            y: chest.y,
+            id: chest.id,
+            gold: chest.gold,
+            itemCount: chest.items.length,
+          });
         }
 
         // Slime split mechanic

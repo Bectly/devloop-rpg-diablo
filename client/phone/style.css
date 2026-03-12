@@ -705,42 +705,68 @@ html, body {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* ─── Dialogue Screen ──────────────────────────────────────── */
+/* ===== Dialogue Screen ===== */
 #dialogue-screen {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
   z-index: 250;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+  font-family: 'Courier New', monospace;
 }
 
+#dialogue-screen.hidden { display: none !important; }
+
 #dialogue-box {
-  background: rgba(26, 26, 46, 0.95);
-  backdrop-filter: blur(12px);
-  border: 2px solid rgba(204, 170, 68, 0.4);
-  border-radius: 12px;
-  padding: 16px;
   width: 100%;
   max-width: 500px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  animation: dialogue-slide-up 0.3s ease-out;
+}
+
+@keyframes dialogue-slide-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 #dialogue-npc-name {
-  color: var(--gold);
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+  text-transform: uppercase;
   margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 136, 0, 0.2);
 }
 
 #dialogue-text {
+  font-size: 13px;
   color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   margin-bottom: 12px;
+  min-height: 40px;
+}
+
+/* Typewriter effect class — added by JS */
+#dialogue-text.typing::after {
+  content: '\25CC';
+  animation: blink-cursor 0.8s infinite;
+  color: var(--accent);
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 #dialogue-choices {
@@ -751,21 +777,74 @@ html, body {
 
 .dialogue-choice {
   padding: 10px 14px;
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-primary);
-  font-size: 13px;
   font-family: 'Courier New', monospace;
-  cursor: pointer;
+  font-size: 12px;
   text-align: left;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  position: relative;
+  padding-left: 28px;
+}
+
+.dialogue-choice::before {
+  content: '\25B6';
+  position: absolute;
+  left: 10px;
+  color: var(--accent);
+  font-size: 10px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
 }
 
 .dialogue-choice:active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(204, 170, 68, 0.4);
+  background: rgba(255, 136, 0, 0.15);
+  border-color: var(--accent);
+  transform: scale(0.98);
 }
+
+.dialogue-choice:active::before {
+  opacity: 1;
+}
+
+/* Two-player sync indicator */
+.dialogue-sync {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dialogue-sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+
+.dialogue-sync-dot.voted {
+  background: var(--hp-high);
+  box-shadow: 0 0 4px rgba(68, 204, 68, 0.5);
+}
+
+.dialogue-sync-timer {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* NPC type colors — set via data-npc-type attribute on dialogue-box */
+#dialogue-box[data-npc-type="shop"] #dialogue-npc-name { color: var(--gold); }
+#dialogue-box[data-npc-type="shrine"] #dialogue-npc-name { color: var(--hp-high); }
+#dialogue-box[data-npc-type="boss"] #dialogue-npc-name { color: #ff4444; }
+#dialogue-box[data-npc-type="lore"] #dialogue-npc-name { color: #aa88ff; }
 
 /* ─── Damage Flash Overlay ────────────────────────────────────── */
 #damage-overlay {

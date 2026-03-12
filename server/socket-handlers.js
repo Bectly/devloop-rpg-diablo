@@ -4,7 +4,7 @@
  */
 
 const { Inventory } = require('./game/inventory');
-const { generateConsumable } = require('./game/items');
+const { generateConsumable, generateWeapon, generateArmor } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
 const { TILE_SIZE } = require('./game/world');
 const uuid = require('uuid');
@@ -604,6 +604,42 @@ exports.handleQuestClaim = (socket, data, { players, inventories, world, gameNs 
 
   socket.emit('stats:update', player.serializeForPhone());
   socket.emit('quest:update', player.questManager.getActiveQuests());
+};
+
+// ── Chest Open ──
+exports.handleChestOpen = (socket, data, { players, world, gameNs }) => {
+  const player = players.get(socket.id);
+  if (!player || !player.alive) return;
+
+  if (!world.lootChests) return;
+  const chest = world.lootChests.find(c => c.id === data.chestId && !c.opened);
+  if (!chest) return;
+
+  // Proximity check
+  const dx = player.x - chest.x;
+  const dy = player.y - chest.y;
+  if (Math.sqrt(dx * dx + dy * dy) > 80) return;
+
+  chest.opened = true;
+
+  // Grant gold to all players
+  const goldShare = Math.floor(chest.gold / players.size);
+  for (const [sid, p] of players) {
+    p.gold += goldShare;
+    const sock = gameNs.server.of('/controller').sockets.get(sid);
+    if (sock) {
+      sock.emit('notification', { text: `+${goldShare}g from chest!`, type: 'gold' });
+      sock.emit('stats:update', p.serializeForPhone());
+    }
+  }
+
+  // Drop items on ground
+  for (const item of chest.items) {
+    world.addGroundItem(item, chest.x + (Math.random() - 0.5) * 40, chest.y + (Math.random() - 0.5) * 40);
+  }
+
+  // Emit chest open to TV
+  gameNs.emit('chest:opened', { id: chest.id, x: chest.x, y: chest.y, gold: chest.gold });
 };
 
 // ── Disconnect ──

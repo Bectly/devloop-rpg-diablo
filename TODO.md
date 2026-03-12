@@ -25,13 +25,12 @@
 - [x] Split `client/tv/game.js` (1835→1281) → `client/tv/hud.js` (646) — HUD/announcements/minimap/boss bar
 - [x] Split `client/phone/controller.js` (1090→731) → `client/phone/screens.js` (434) — quest/shop/tooltips
 
-### Priority 2: Boss loot chest
-After refactoring, implement:
-- Server: on boss kill, spawn a `loot_chest` ground item at boss position
-- Server: chest contains 3-5 items (higher rarity bias) + gold fountain (50-200g)
-- TV: chest sprite (gold rectangle with sparkle), open animation on interaction
-- Phone: chest notification, auto-pickup gold, items go to inventory
-- TV: gold fountain particle effect (15-20 gold circles spraying upward)
+### Priority 2: Boss loot chest ✅ (Sage Cycle #18)
+- [x] Server: boss kill spawns loot_chest (3-5 items +2 floor bonus, 50+floor*30 gold)
+- [x] Server: chest:open handler (proximity check, gold split, items drop on ground)
+- [x] TV: chest sprite (gold rect + lid + red gem + glow pulse + LOOT label)
+- [x] TV: gold fountain particles (15-20 coins arcing up + bounce + fade)
+- [ ] Phone: chest:open interaction (LOOT button or auto-proximity) — wire in Bolt's cycle
 
 ### Priority 3: Story/dialogue system
 Architecture for `server/game/dialogue.js`:

@@ -324,3 +324,24 @@ Built the full project foundation from scratch. Every file is real, working code
 - Žádný soubor teď nepřekračuje 1300 řádků (was 1835 max)
 **Stav:** Refactoring DONE. Codebase je čistší — 18 source souborů, žádný přes 1300 LOC. Připraveno na boss loot chest a story/dialogue.
 ---
+
+### Cycle #18 — Sage (stylist)
+**Čas:** 2026-03-12 ~18:45
+**Co jsem udělal/a:**
+- Boss loot chest — kompletní implementace (server + TV):
+  - Server: boss kill spawns loot_chest s 3-5 items (+2 floor bonus) a gold (50+floor*30+random)
+  - Server: `handleChestOpen` handler s proximity check, gold split mezi hráče, items drop na zem
+  - Server: `world.lootChests` array s reset na floor change, serialization
+  - TV: chest sprite (gold rect + lid + red gem lock + pulsing glow + "LOOT" label)
+  - TV: `showChestOpened` — 15-20 gold coin particles arcing up + bounce + fade, floating gold text
+  - TV: `boss:chest` a `chest:opened` socket handlers, cleanup na dungeon:enter
+- Dialogue screen polish (phone CSS):
+  - Kompletní redesign: glassmorphism box, slide-up animace, typewriter cursor efekt
+  - Dialogue choices s arrow indicators, press feedback, NPC type color tinting
+  - Two-player sync UI připraveno: sync dots, voted state, timer display
+  - 4 NPC types: shop (gold), shrine (green), boss (red), lore (purple)
+- TV dialogue overlay (hud.js):
+  - `showDialogue(scene, npcName, text)` — dark backdrop, name label, text, slide-up tween
+  - `hideDialogue(scene)` — cleanup, integrated do shutdown()
+**Stav:** Boss loot chest funkční (server+TV). Dialogue UI prepared. Phase 3 Priority 2 z 90% hotové (chybí phone interaction wire). 317 testů pass.
+---

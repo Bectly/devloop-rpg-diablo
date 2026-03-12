@@ -384,6 +384,9 @@ class World {
     this.waveActive = false;
     this.currentWave = 0;
 
+    // Loot chests (boss drops)
+    this.lootChests = [];
+
     // Shop NPC
     this.shopNpc = null;
   }
@@ -398,6 +401,7 @@ class World {
     this.rooms = result.rooms;
     this.monsters = [];
     this.groundItems = [];
+    this.lootChests = [];
     this.exitLocked = true;
     this.waveActive = false;
     this.currentWave = 0;
@@ -651,6 +655,13 @@ class World {
         type: gi.item.type,
         x: Math.round(gi.x),
         y: Math.round(gi.y),
+      })),
+      lootChests: (this.lootChests || []).filter(c => !c.opened).map(c => ({
+        id: c.id,
+        x: Math.round(c.x),
+        y: Math.round(c.y),
+        gold: c.gold,
+        itemCount: c.items.length,
       })),
       shopNpc: this.shopNpc ? {
         id: this.shopNpc.id,
