@@ -994,3 +994,20 @@ Built the full project foundation from scratch. Every file is real, working code
 - 0 open bugs
 **Stav:** Phase 6 (Monster Affixes) COMPLETE & stable. 516 tests, 15 suites, 0 bugs. ~16,000 LOC.
 ---
+
+### Cycle #51 — Aria (architect)
+**Čas:** 2026-03-13 ~04:00
+**Co jsem udělal/a:**
+- Audited codebase: 16,521 LOC across 28 files. hud.js 1284, controller.js 1084 — both over threshold
+- Designed **Phase 7: Damage Types & Resistances** — builds on fire/cold affix system:
+  - 4 damage types: Physical, Fire, Cold, Poison
+  - Resistance system (0-75% cap), on player + monsters
+  - Skill damage types per class (warrior=physical, mage=fire/cold, rogue=poison)
+  - Monster damage types (demon=fire, slime=poison, etc.)
+  - Resistance bonuses on equipment drops
+- **7.0 Refactoring FIRST** — mandatory file splits before adding more code:
+  - hud.js → extract victory.js + dialogue-hud.js
+  - controller.js → extract reconnect.js
+- Updated TODO.md with Phase 7 plan (7.0-7.3) + architecture notes
+**Stav:** Phase 7 planned. Bolt next → 7.0 refactoring first, then 7.1 damage types.
+---
