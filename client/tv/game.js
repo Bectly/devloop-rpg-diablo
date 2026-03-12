@@ -2,21 +2,10 @@
 
 const GAME_W = 1280;
 const GAME_H = 720;
-const TILE_SIZE = 32;
+// TILE_SIZE and FLOOR_THEMES are defined in hud.js (loaded first)
 
 // Tile type constants (match server TILE enum)
 const TILE = { VOID: -1, FLOOR: 0, WALL: 1, DOOR: 2, CORRIDOR: 3, SPAWN: 4, EXIT: 5, CHEST: 6 };
-
-// Floor theme colors
-const FLOOR_THEMES = [
-  { floor: 0x2a2a3a, wall: 0x444466, wallLight: 0x555577, corridor: 0x222233 },   // Dusty Catacombs
-  { floor: 0x1a2a2a, wall: 0x335555, wallLight: 0x446666, corridor: 0x152525 },   // Sunken Crypts
-  { floor: 0x2a2a2a, wall: 0x554433, wallLight: 0x665544, corridor: 0x222222 },   // Bone Gallery
-  { floor: 0x3a2020, wall: 0x664422, wallLight: 0x885533, corridor: 0x2a1515 },   // Burning Depths
-  { floor: 0x1a1a2e, wall: 0x333355, wallLight: 0x444466, corridor: 0x111128 },   // Shadow Halls
-  { floor: 0x150a20, wall: 0x442255, wallLight: 0x553366, corridor: 0x100818 },   // Abyssal Core
-  { floor: 0x2a1a1a, wall: 0x553333, wallLight: 0x664444, corridor: 0x201010 },   // Throne of Ruin
-];
 
 // Floor theme names for transition display
 const FLOOR_NAMES = [

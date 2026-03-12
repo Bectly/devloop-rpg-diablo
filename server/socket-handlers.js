@@ -174,7 +174,7 @@ exports.handleLootPickup = (socket, data, { players, inventories, world, gameNs 
 };
 
 // ── Pickup nearest ──
-exports.handleLootPickupNearest = (socket, data, { players, inventories, world, gameNs }) => {
+exports.handleLootPickupNearest = (socket, data, { players, inventories, world, gameNs, io }) => {
   const player = players.get(socket.id);
   if (!player || !player.alive || player.isDying) return;
 
@@ -232,6 +232,20 @@ exports.handleLootPickupNearest = (socket, data, { players, inventories, world, 
     } else {
       world.addGroundItem(item, player.x, player.y);
       socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    }
+  }
+
+  // Also check for loot chests
+  if (!nearest && world.lootChests) {
+    for (const chest of world.lootChests) {
+      if (chest.opened) continue;
+      const dx = player.x - chest.x;
+      const dy = player.y - chest.y;
+      if (Math.sqrt(dx * dx + dy * dy) <= 80) {
+        // Open the chest using the existing handler
+        exports.handleChestOpen(socket, { chestId: chest.id }, { players, inventories, world, gameNs, io });
+        break;
+      }
     }
   }
 };
@@ -607,7 +621,8 @@ exports.handleQuestClaim = (socket, data, { players, inventories, world, gameNs 
 };
 
 // ── Chest Open ──
-exports.handleChestOpen = (socket, data, { players, world, gameNs }) => {
+exports.handleChestOpen = (socket, data, { players, world, gameNs, io }) => {
+  if (!data || typeof data.chestId !== 'string') return;
   const player = players.get(socket.id);
   if (!player || !player.alive) return;
 
@@ -623,10 +638,11 @@ exports.handleChestOpen = (socket, data, { players, world, gameNs }) => {
   chest.opened = true;
 
   // Grant gold to all players
+  const controllerNs = io.of('/controller');
   const goldShare = Math.floor(chest.gold / players.size);
   for (const [sid, p] of players) {
     p.gold += goldShare;
-    const sock = gameNs.server.of('/controller').sockets.get(sid);
+    const sock = controllerNs.sockets.get(sid);
     if (sock) {
       sock.emit('notification', { text: `+${goldShare}g from chest!`, type: 'gold' });
       sock.emit('stats:update', p.serializeForPhone());

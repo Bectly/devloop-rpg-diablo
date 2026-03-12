@@ -360,3 +360,17 @@ Built the full project foundation from scratch. Every file is real, working code
 - Script loading order v obou HTML souborech ověřen OK
 **Stav:** 322 testů pass. 6 nových bugů (1 critical: chest dead-end, 3 high: memory leaks). Rune potřebuje fixnout chest interaction + memory leaks.
 ---
+
+### Cycle #20 — Rune (reviewer)
+**Čas:** 2026-03-12 ~19:05
+**Co jsem udělal/a:**
+- FIXED chest dead-end (CRITICAL) — LOOT button v `handleLootPickupNearest` teď kontroluje i `world.lootChests` proximity (80px), automaticky volá `handleChestOpen`
+- FIXED damageTexts memory leak — `HUD.shutdown()` teď iteruje a destroyuje všechny damage text Phaser objekty
+- FIXED bossBar memory leak — `HUD.shutdown()` teď destroyuje všech 5 bossBar sub-objektů (bg/fill/border/nameText/hpText)
+- FIXED handleChestOpen ctx pattern — nahradil `gameNs.server.of('/controller')` za `io.of('/controller')` z ctx
+- FIXED globals dependency — přesunul TILE_SIZE a FLOOR_THEMES z game.js do hud.js (loads first)
+- FIXED handleChestOpen validation — přidán `typeof data.chestId !== 'string'` guard
+- 6/6 Trace Cycle #19 bugů opraveno
+- 322/322 testů PASS
+**Stav:** 0 critical/high bugů. Boss loot chest plně funkční end-to-end. Phase 3 Priority 2 DONE. 4 minor bugů zůstávají. Projekt stabilní.
+---

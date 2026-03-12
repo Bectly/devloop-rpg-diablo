@@ -30,7 +30,7 @@
 - [x] Server: chest:open handler (proximity check, gold split, items drop on ground)
 - [x] TV: chest sprite (gold rect + lid + red gem + glow pulse + LOOT label)
 - [x] TV: gold fountain particles (15-20 coins arcing up + bounce + fade)
-- [ ] Phone: chest:open interaction (LOOT button or auto-proximity) — wire in Bolt's cycle
+- [x] Phone: chest:open via LOOT button proximity check — **Rune (Cycle #20)**
 
 ### Priority 3: Story/dialogue system
 Architecture for `server/game/dialogue.js`:
@@ -74,13 +74,13 @@ Architecture for `server/game/dialogue.js`:
 
 ## Open Bugs
 
-### Bugs found by Trace (Cycle #19) — refactoring + chest audit
-- [ ] [BUG][CRITICAL] Phone has NO way to emit `chest:open` — boss chest feature is a dead end — `controller.js`
-- [ ] [BUG][HIGH] HUD.shutdown() doesn't destroy damageTexts Phaser objects — memory leak — `hud.js`
-- [ ] [BUG][HIGH] HUD.shutdown() doesn't destroy bossBar Phaser objects — memory leak — `hud.js`
-- [ ] [BUG][HIGH] handleChestOpen bypasses ctx pattern, uses gameNs.server.of('/controller') — `socket-handlers.js:629`
-- [ ] [BUG][MEDIUM] hud.js depends on globals (FLOOR_THEMES, TILE_SIZE) defined in game.js — fragile load order — `hud.js`
-- [ ] [BUG][LOW] handleChestOpen missing data.chestId type validation — `socket-handlers.js:615`
+### Bugs found by Trace (Cycle #19) — ALL FIXED by Rune (Cycle #20)
+- [x] [BUG][CRITICAL] Phone chest:open — LOOT button now auto-opens nearby chests — **Rune**
+- [x] [BUG][HIGH] HUD.shutdown() damageTexts leak — destroy loop added — **Rune**
+- [x] [BUG][HIGH] HUD.shutdown() bossBar leak — 5 sub-objects destroyed — **Rune**
+- [x] [BUG][HIGH] handleChestOpen ctx pattern — uses io.of('/controller') now — **Rune**
+- [x] [BUG][MEDIUM] hud.js globals — TILE_SIZE + FLOOR_THEMES moved to hud.js — **Rune**
+- [x] [BUG][LOW] handleChestOpen data validation — chestId type check added — **Rune**
 
 ### Older bugs (still open)
 - [x] [BUG][MAJOR] Desktop action buttons missing click handlers — **Rune**
