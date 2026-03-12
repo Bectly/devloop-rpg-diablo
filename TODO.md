@@ -3,6 +3,7 @@
 ## Phase 1: Foundation ✅ COMPLETE
 ## Phase 2: Gameplay Loop ✅ COMPLETE
 ## Phase 3: Content ✅ COMPLETE
+## Phase 4: Polish ✅ COMPLETE (sound, particles, minimap, damage numbers, health bars, camera, haptics, floor transitions, loot sparkles, dialogue sync)
 
 ### Completed ✅
 - Skills fully wired + visible (phone cooldowns, TV effects, tooltips)
@@ -13,118 +14,105 @@
 - Boss loot chest (server spawn, TV visuals, phone LOOT interaction)
 - Dialogue system wired end-to-end (phone + TV, typewriter effect, NPC type colors)
 - Story NPCs (Old Sage, Shrine Guardian, Dying Adventurer) with distinct sprites + "!" markers
-- 5/5 Trace bugs fixed (dialogue cleanup, tween orphans, typing class)
+- Sound effects system (13 procedural Web Audio sounds, TV + phone wired)
+- Two-player dialogue sync (vote collection, timeout, majority wins)
+- All bugs fixed through Cycle #30 (sprite null guards, sound bufSize, TV audio unlock)
 
 ---
 
-## 🔥 BOLT CYCLE #27 PRIORITIES
+## 🔥 BOLT CYCLE #32 PRIORITIES
 
-### Priority 1: Sound effects system (Web Audio API)
-Sound is the single biggest missing game feel element. No external files needed — generate tones procedurally.
+### Priority 1: URGENT — Split game.js (1553 LOC, over 1500 threshold)
 
-**1A. Sound engine module** — `client/shared/sound.js`
-Create a shared sound module (loaded by both TV and phone):
-```javascript
-window.Sound = {
-  ctx: null,          // AudioContext (lazy-init on first interaction)
-  masterVol: 0.3,     // Master volume
+**1A. Extract `client/tv/sprites.js`** — all sprite creation/update/cleanup
+Move these out of game.js into a `window.Sprites` global:
+- `createPlayerSprite()`, `updatePlayerSprite()`, player sprite cleanup
+- `createMonsterSprite()`, `updateMonsterSprite()`, monster sprite cleanup (including null guards)
+- `createItemSprite()`, item sprite cleanup
+- Story NPC sprite creation (triangular sage, armored guardian, hunched herald), glow rings, "!" markers
+- NPC sprite cleanup (both in-update and dungeon:enter paths)
+- All `killTweensOf()` calls for sprite sub-objects
 
-  init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+Target: game.js drops to ~1000 LOC, sprites.js ~550 LOC.
 
-  // Procedural sound generators (no audio files needed):
-  hit(intensity)     // Short noise burst + pitch drop. intensity 0-1 controls volume.
-  critHit()          // Like hit() but higher pitch + ring
-  playerHurt()       // Low thud
-  monsterDie()       // Descending tone
-  loot()             // Ascending chime (3 quick notes)
-  gold()             // Single coin clink
-  levelUp()          // Major chord arpeggio (C-E-G-C ascending)
-  questComplete()    // Fanfare (2-note, like quest-complete jingle)
-  bossSpawn()        // Deep rumble + crescendo
-  shrineUse()        // Ethereal pad (filtered noise + sine)
-  uiClick()          // Tiny click for phone button presses
-  dialogueOpen()     // Soft whoosh
-  floorTransition()  // Low sweep + reverb
-};
+Script load order in tv/index.html: `phaser → socket.io → sound.js → sprites.js → hud.js → game.js`
+
+### Priority 2: Victory condition + endgame (CRITICAL gameplay gap)
+
+The game has 7 named floors but NO end state. Players can generate floors infinitely.
+
+**2A. Floor 7 boss = final boss** — `server/game/world.js`
+- After floor 7 boss dies → emit `game:victory` event instead of spawning exit
+- Victory data: `{ players: [{name, class, level, kills, gold}], floors: 7, time: elapsed }`
+
+**2B. TV victory screen** — `client/tv/game.js` (or hud.js)
+- On `game:victory`: fade to gold overlay, "DUNGEON CONQUERED" title with particle celebration
+- Show player stats (class, level, kills, gold collected)
+- "Play Again?" prompt
+
+**2C. Phone victory screen** — `client/phone/controller.js`
+- On `game:victory`: show victory panel with stats + "NEW GAME" button
+- Haptic burst (200ms vibrate)
+
+**2D. Server reset** — `server/index.js`
+- On "new game" from both players → `world.generateFloor(0)`, reset player stats to level 1
+- OR: keep levels, restart dungeon (NG+ lite)
+
+### Priority 3: Procedural loot names (quick win, big flavor)
+
+Current items are "Worn Sword", "Mythic Plate Helmet" — generic prefix + type.
+
+**3A. Name generator** — `server/game/items.js`
+Add procedural name parts:
 ```
-Each function = oscillator + gain + short envelope. Use `OscillatorNode`, `GainNode`, `BiquadFilterNode`. No samples, no fetch, no external dependencies.
-
-**1B. Wire sounds to TV events** — `client/tv/game.js`
-In GameScene.update() and socket handlers, trigger sounds:
-- `monster killed` → `Sound.monsterDie()`
-- `boss:chest` → `Sound.loot()`
-- `wave:start` with boss → `Sound.bossSpawn()`
-- `shrine:used` → `Sound.shrineUse()`
-- `dungeon:enter` → `Sound.floorTransition()`
-- `quest:complete` → `Sound.questComplete()`
-- `player:joined` → `Sound.levelUp()` (reuse as join fanfare)
-
-**1C. Wire sounds to phone events** — `client/phone/controller.js`
-- Action button touchstart → `Sound.uiClick()`
-- `damage:taken` → `Sound.playerHurt()`
-- `notification` with type 'quest' → `Sound.questComplete()`
-- `notification` with type 'levelup' → `Sound.levelUp()`
-- `dialogue:prompt` → `Sound.dialogueOpen()`
-- Shop buy/sell → `Sound.gold()`
-- Loot pickup → `Sound.loot()`
-
-**1D. Ambient background** — Optional low-priority sub-task
-Looping filtered noise as dungeon ambience. Very soft. Can be skipped if time-constrained.
-
-### ~~Priority 2: Two-player dialogue sync~~ ✅ DONE (Cycle #34)
-CSS already exists (`.dialogue-sync`, `.dialogue-sync-dot.voted`). Server logic needed:
-
-**2A. Server: Vote collection in `socket-handlers.js`**
-Modify `handleDialogueChoose`:
-```javascript
-// Instead of immediately processing choice:
-// 1. Store vote: dialogueVotes[npcId] = { votes: {playerId: choiceIndex}, timeout: null }
-// 2. If both players voted (or 1 player game) → resolve immediately
-// 3. If only 1 voted → start 10s timeout, emit 'dialogue:sync' to both phones
-// 4. On timeout or both voted → majority wins (tie = first voter wins)
-// 5. Execute the winning choice's actions
+Prefixes by rarity: Rusty, Sturdy, Gleaming, Infernal, Godforged
+Suffixes: "of the Bear" (+STR), "of the Fox" (+DEX), "of Wisdom" (+INT), "of Vitality" (+VIT)
+Legendary names: handcrafted pool of 15-20 unique names ("Shadowfang", "Dawnbreaker", etc.)
 ```
-
-**2B. Phone: Sync UI in `controller.js`**
-- Listen for `dialogue:sync` event: `{ votedPlayers: ['name1'], totalPlayers: 2, timeout: 10 }`
-- Show `.dialogue-sync` div with player dots and countdown
-- Update when second player votes or timeout resolves
-
-### Priority 3: Fix 4 minor bugs (quick wins)
-- `stats.alive` → verify field name in updateHUD, fix if needed
-- Add missing TV handlers: `room:discovered`, `monster:split`, `player:respawn`
-- Remove dead variables `initialized`, `currentFloor` from game.js
-- Clear player sprites on `dungeon:enter`
+Result: "Gleaming Axe of the Bear" (rare, +STR) or "Shadowfang" (legendary).
 
 ---
-
-## Phase 4: Polish — mostly done
-- [x] Sound effects system (13 procedural Web Audio sounds, TV + phone wired)
-- [ ] Sprite assets via ComfyUI generation
-- [x] Particle effects, minimap, damage numbers, health bars, camera, haptics, floor transitions, loot sparkles
 
 ## Phase 5: Persistence & Scale
-- [ ] SQLite character save/load
-- [ ] Multiple dungeon zones
-- [ ] Procedural loot name generation
-- [ ] Leaderboard / stats tracking
-- [ ] Session reconnection handling
 
-## Architecture Notes (Updated Cycle #26)
+### Priority 4: SQLite character save/load (Phase 5 foundation)
+- `better-sqlite3` already in package.json but unused
+- Schema: `characters` table (name, class, level, xp, stats, equipment JSON, inventory JSON, gold, floor)
+- Auto-save on floor transition + every 60s
+- Load on reconnect (match by player name)
+- New file: `server/game/database.js`
+
+### Priority 5: Session reconnection
+- On disconnect → keep player alive for 30s (grace period)
+- On reconnect within grace → restore full state
+- On reconnect after grace → load from SQLite
+- Phone shows "Reconnecting..." overlay
+
+### Future (not this cycle)
+- [ ] Multiple dungeon zones (different tilesets, monster pools)
+- [ ] Damage types (fire/ice/physical/poison) + resistances
+- [ ] Set bonuses (3-4 item sets with 2/3/5-piece bonuses)
+- [ ] Unique legendary item effects (special procs)
+- [ ] Monster affixes (Fast, Extra Strong, Fire Enchanted)
+- [ ] Leaderboard / stats tracking
+- [ ] Sprite assets via ComfyUI generation
+
+---
+
+## Architecture Notes (Updated Cycle #31)
 **Current LOC:** ~10,650 source + 3,500 tests = 14,150 total (21 source files, 10 test suites, 365 tests)
-**Watch:** `game.js` at 1499 lines — approaching split threshold (~1500). If Bolt adds TV sound wiring, may need to extract sound event handlers into a separate `sound-events.js`.
-**No urgent splits needed.** style.css at 1425 is large but CSS doesn't need splitting.
+**URGENT SPLIT:** `game.js` at 1553 lines — OVER 1500 threshold. Extract sprite logic into `sprites.js`.
+**Watch:** `controller.js` at 873, `socket-handlers.js` at 736 — both under threshold but growing.
+**No persistence yet.** `better-sqlite3` in package.json, not imported anywhere.
 
 ## Open Bugs
-- [x] ~~[BUG] stats.alive — verified correct~~ Cycle #27
-- [x] ~~[BUG] Missing TV handlers~~ FIXED Cycle #27
-- [x] ~~[BUG] Dead variables initialized/currentFloor~~ FIXED Cycle #27
-- [x] ~~[BUG] Player sprites not cleared on dungeon:enter~~ FIXED Cycle #27
-- [x] ~~[BUG/MEDIUM] Monster sprite cleanup in dungeon:enter lacks null guards on nameText/hpBar~~ FIXED Cycle #30
-- [x] ~~[BUG/MEDIUM] Item sprite cleanup in dungeon:enter lacks null guard on nameText~~ FIXED Cycle #30
+None. All bugs resolved through Cycle #30.
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
 - Phones send inputs, receive feedback — never compute game state
 - TV renders state snapshots — no game logic in client
 - Sound module shared between TV + phone (client/shared/sound.js)
+- 7 floors defined (Dusty Catacombs → Throne of Ruin), floor 7 = final
+- Boss Knight has 3-phase AI (melee → charge → aoe_frenzy)
+- 3 classes × 3 skills = 9 total skills with cooldowns

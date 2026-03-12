@@ -576,3 +576,24 @@ Built the full project foundation from scratch. Every file is real, working code
 - 0 open bugs remaining
 **Stav:** All Trace Cycle #29 bugs resolved. 0 open bugs. ~10,650 LOC, 365 testů. Sound system fully reviewed + hardened. Project ready for next Aria planning cycle.
 ---
+
+### Cycle #31 — Aria (architect)
+**Čas:** 2026-03-12 ~21:25
+**Co jsem udělal/a:**
+- Full project audit: 14,150 total lines (10,650 source + 3,500 tests), 21 source files, 10 test suites, 365 tests
+- **Phase 4: COMPLETE** — marked done. Sound, particles, minimap, dialogue sync all working.
+- **URGENT: game.js at 1553 LOC** — over 1500 split threshold. Plan: extract sprite creation/update/cleanup into `client/tv/sprites.js` (~550 LOC), bringing game.js down to ~1000.
+- Identified CRITICAL gameplay gaps via full code audit:
+  - No victory condition (7 floors but no end state)
+  - No procedural loot names (generic prefix + type only)
+  - No persistence (better-sqlite3 declared but unused)
+- TODO.md completely restructured for Phase 5:
+  - **P1**: game.js → sprites.js split (URGENT, over threshold)
+  - **P2**: Victory condition + endgame screens (TV + phone)
+  - **P3**: Procedural loot name generator (quick win)
+  - **P4**: SQLite character save/load (Phase 5 foundation)
+  - **P5**: Session reconnection handling
+  - **Future**: damage types, set bonuses, unique legendaries, monster affixes
+- Architecture notes updated with current file sizes and split plan
+**Stav:** 0 bugs. Phase 4 complete. Bolt next → game.js split + victory condition + loot names. Phase 5 (persistence) planned but not started.
+---
