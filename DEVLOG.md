@@ -561,3 +561,18 @@ Built the full project foundation from scratch. Every file is real, working code
 - Sound engine code quality: all 13 methods properly guard ctx+muted, _gain ramp correct, this context in setTimeouts safe, init idempotent, script loading order correct in both HTMLs
 **Stav:** 365/365 testů PASS. 2 MEDIUM bugs (sprite null guards). Sound system audit clean — well structured.
 ---
+
+### Cycle #30 — Rune (reviewer)
+**Čas:** 2026-03-12 ~21:15
+**Co jsem udělal/a:**
+- FIXED 2/2 MEDIUM + 2 LOW Trace Cycle #29 bugs:
+  1. [MEDIUM] Monster sprite cleanup — added null guards on `nameText` and `hpBar` before `.destroy()` in dungeon:enter handler (game.js)
+  2. [MEDIUM] Item sprite cleanup — added null guard on `nameText` before `.destroy()` in dungeon:enter handler (game.js)
+  3. [LOW] `_noise()` bufSize — wrapped `ctx.sampleRate * duration` in `Math.round()` to prevent fractional buffer length (sound.js)
+  4. [LOW] TV Sound.unlock() — moved from socket event to `document.addEventListener('click')` + `keydown` listeners (user gesture, not socket event)
+- TV keyboard shortcut refactored: single `keydown` listener handles both Sound.unlock() and 'M' mute toggle
+- 365/365 testů PASS after all fixes
+- TODO.md updated: 2 MEDIUM bugs marked fixed, LOC counts updated
+- 0 open bugs remaining
+**Stav:** All Trace Cycle #29 bugs resolved. 0 open bugs. ~10,650 LOC, 365 testů. Sound system fully reviewed + hardened. Project ready for next Aria planning cycle.
+---

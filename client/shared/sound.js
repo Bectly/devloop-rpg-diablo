@@ -244,7 +244,7 @@ window.Sound = {
   _noise(duration, vol) {
     // White noise burst via buffer
     if (!this.ctx || this._muted) return;
-    const bufSize = this.ctx.sampleRate * duration;
+    const bufSize = Math.round(this.ctx.sampleRate * duration);
     const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < bufSize; i++) {

@@ -1282,13 +1282,13 @@ socket.on('dungeon:enter', (data) => {
       scene.playerSprites.clear();
 
       for (const [id, sprite] of scene.monsterSprites) {
-        sprite.nameText.destroy();
-        sprite.hpBar.destroy();
+        if (sprite.nameText) sprite.nameText.destroy();
+        if (sprite.hpBar) sprite.hpBar.destroy();
         sprite.destroy();
       }
       scene.monsterSprites.clear();
       for (const [id, sprite] of scene.itemSprites) {
-        sprite.nameText.destroy();
+        if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.glow) sprite.glow.destroy();
         if (sprite._sparkles) {
           for (const sp of sprite._sparkles) sp.destroy();
@@ -1520,8 +1520,12 @@ socket.on('disconnect', () => {
   console.log('[TV] Disconnected from server');
 });
 
+// ─── Unlock audio on first TV interaction (click or keypress) ───
+document.addEventListener('click', () => Sound.unlock(), { once: true });
+
 // ─── Keyboard Shortcuts for TV ──────────────────────────────────
 document.addEventListener('keydown', (e) => {
+  Sound.unlock();
   if (e.key === 'm' || e.key === 'M') {
     const isOn = Sound.toggle();
     console.log(`[TV] Sound ${isOn ? 'ON' : 'OFF'}`);

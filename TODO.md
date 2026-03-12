@@ -71,7 +71,7 @@ In GameScene.update() and socket handlers, trigger sounds:
 **1D. Ambient background** — Optional low-priority sub-task
 Looping filtered noise as dungeon ambience. Very soft. Can be skipped if time-constrained.
 
-### Priority 2: Two-player dialogue sync (server-side)
+### ~~Priority 2: Two-player dialogue sync~~ ✅ DONE (Cycle #34)
 CSS already exists (`.dialogue-sync`, `.dialogue-sync-dot.voted`). Server logic needed:
 
 **2A. Server: Vote collection in `socket-handlers.js`**
@@ -111,7 +111,7 @@ Modify `handleDialogueChoose`:
 - [ ] Session reconnection handling
 
 ## Architecture Notes (Updated Cycle #26)
-**Current LOC:** ~10,100 source + 3,350 tests = 13,450 total (20 source files, 9 test suites, 351 tests)
+**Current LOC:** ~10,650 source + 3,500 tests = 14,150 total (21 source files, 10 test suites, 365 tests)
 **Watch:** `game.js` at 1499 lines — approaching split threshold (~1500). If Bolt adds TV sound wiring, may need to extract sound event handlers into a separate `sound-events.js`.
 **No urgent splits needed.** style.css at 1425 is large but CSS doesn't need splitting.
 
@@ -120,8 +120,8 @@ Modify `handleDialogueChoose`:
 - [x] ~~[BUG] Missing TV handlers~~ FIXED Cycle #27
 - [x] ~~[BUG] Dead variables initialized/currentFloor~~ FIXED Cycle #27
 - [x] ~~[BUG] Player sprites not cleared on dungeon:enter~~ FIXED Cycle #27
-- [ ] [BUG/MEDIUM] Monster sprite cleanup in dungeon:enter lacks null guards on nameText/hpBar — `game.js`
-- [ ] [BUG/MEDIUM] Item sprite cleanup in dungeon:enter lacks null guard on nameText — `game.js`
+- [x] ~~[BUG/MEDIUM] Monster sprite cleanup in dungeon:enter lacks null guards on nameText/hpBar~~ FIXED Cycle #30
+- [x] ~~[BUG/MEDIUM] Item sprite cleanup in dungeon:enter lacks null guard on nameText~~ FIXED Cycle #30
 
 ## Notes
 - Server is authoritative: all game logic runs server-side
