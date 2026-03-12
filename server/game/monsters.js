@@ -462,6 +462,7 @@ class Monster {
 
   takeDamage(amount) {
     if (!this.alive) return 0;
+    if (amount <= 0) return 0;
     const reduced = Math.max(1, Math.floor(amount - this.armor * 0.4));
     this.hp -= reduced;
     if (this.hp <= 0) {

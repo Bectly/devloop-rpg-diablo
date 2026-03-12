@@ -175,7 +175,7 @@ class CombatSystem {
             if (!monster.alive) {
               player.kills = (player.kills || 0) + 1;
               const loot = generateLoot(monster.lootTier, monster.type);
-              results.push({
+              const deathEvent = {
                 type: 'combat:death',
                 entityId: monster.id,
                 entityName: monster.name,
@@ -187,7 +187,13 @@ class CombatSystem {
                   worldY: monster.y + (Math.random() - 0.5) * 40,
                 })),
                 xpReward: monster.xpReward,
-              });
+              };
+              if (monster.isElite) {
+                deathEvent.isElite = true;
+                deathEvent.eliteRank = monster.eliteRank;
+                deathEvent.affixEvents = processAffixOnDeath(monster);
+              }
+              results.push(deathEvent);
               const levelResult = player.gainXp(monster.xpReward);
               if (levelResult) {
                 results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
@@ -229,7 +235,7 @@ class CombatSystem {
           if (!nearest.alive) {
             player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(nearest.lootTier, nearest.type);
-            results.push({
+            const deathEvent = {
               type: 'combat:death',
               entityId: nearest.id,
               killedBy: player.id,
@@ -240,7 +246,13 @@ class CombatSystem {
                 worldY: nearest.y + (Math.random() - 0.5) * 40,
               })),
               xpReward: nearest.xpReward,
-            });
+            };
+            if (nearest.isElite) {
+              deathEvent.isElite = true;
+              deathEvent.eliteRank = nearest.eliteRank;
+              deathEvent.affixEvents = processAffixOnDeath(nearest);
+            }
+            results.push(deathEvent);
             const levelResult = player.gainXp(nearest.xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
@@ -279,7 +291,7 @@ class CombatSystem {
           if (!t.alive) {
             player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(t.lootTier, t.type);
-            results.push({
+            const deathEvent = {
               type: 'combat:death',
               entityId: t.id,
               killedBy: player.id,
@@ -290,7 +302,13 @@ class CombatSystem {
                 worldY: t.y + (Math.random() - 0.5) * 40,
               })),
               xpReward: t.xpReward,
-            });
+            };
+            if (t.isElite) {
+              deathEvent.isElite = true;
+              deathEvent.eliteRank = t.eliteRank;
+              deathEvent.affixEvents = processAffixOnDeath(t);
+            }
+            results.push(deathEvent);
             const levelResult = player.gainXp(t.xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
@@ -334,7 +352,7 @@ class CombatSystem {
           if (!nearest.alive) {
             player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(nearest.lootTier, nearest.type);
-            results.push({
+            const deathEvent = {
               type: 'combat:death',
               entityId: nearest.id,
               killedBy: player.id,
@@ -345,7 +363,13 @@ class CombatSystem {
                 worldY: nearest.y + (Math.random() - 0.5) * 40,
               })),
               xpReward: nearest.xpReward,
-            });
+            };
+            if (nearest.isElite) {
+              deathEvent.isElite = true;
+              deathEvent.eliteRank = nearest.eliteRank;
+              deathEvent.affixEvents = processAffixOnDeath(nearest);
+            }
+            results.push(deathEvent);
             const levelResult = player.gainXp(nearest.xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
@@ -423,11 +447,8 @@ class CombatSystem {
     if (monster && monster.affixes && dealt > 0 && dealt !== -1) {
       processAffixOnHitPlayer(monster, target);
 
-      // Vampiric healing
-      const healAmount = processAffixOnDealDamage(monster, dealt);
-      if (healAmount > 0) {
-        monster.hp = Math.min(monster.maxHp, monster.hp + healAmount);
-      }
+      // Vampiric healing (affix handles hp update internally)
+      processAffixOnDealDamage(monster, dealt);
     }
 
     // Poison DoT setup

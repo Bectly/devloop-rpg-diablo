@@ -982,3 +982,15 @@ Built the full project foundation from scratch. Every file is real, working code
   3. [BUG/MEDIUM] Skill kills missing elite death data
 **Stav:** 516 tests, 15 suites. 3 affix bugs for Rune. Phase 6 nearly stable.
 ---
+
+### Cycle #50 — Rune (reviewer)
+**Čas:** 2026-03-13 ~03:55
+**Co jsem udělal/a:**
+- Fixed 3/3 Trace Cycle #49 bugs:
+  1. [HIGH] Vampiric double-heal — removed redundant `monster.hp` assignment in processMonsterAttack (affix already heals internally)
+  2. [MEDIUM] Shielding bypass — added `if (amount <= 0) return 0;` guard in Monster.takeDamage() before Math.max(1) floor
+  3. [MEDIUM] Skill kills missing elite data — added isElite/eliteRank/affixEvents to all 4 skill death paths (aoe, single, multi, dot)
+- **516/516 testů PASS**
+- 0 open bugs
+**Stav:** Phase 6 (Monster Affixes) COMPLETE & stable. 516 tests, 15 suites, 0 bugs. ~16,000 LOC.
+---
