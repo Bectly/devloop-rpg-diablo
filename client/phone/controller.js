@@ -47,11 +47,13 @@ document.querySelectorAll('.class-card').forEach(card => {
 
 document.getElementById('btn-join').addEventListener('touchstart', (e) => {
   e.preventDefault();
+  Sound.unlock();
   const name = document.getElementById('name-input').value.trim() || 'Hero';
   socket.emit('join', { name, characterClass: selectedClass });
 });
 // Fallback for desktop testing
 document.getElementById('btn-join').addEventListener('click', () => {
+  Sound.unlock();
   const name = document.getElementById('name-input').value.trim() || 'Hero';
   socket.emit('join', { name, characterClass: selectedClass });
 });
@@ -97,6 +99,9 @@ socket.on('inventory:update', (data) => {
 });
 
 socket.on('notification', (data) => {
+  if (data.type === 'quest') Sound.questComplete();
+  else if (data.type === 'levelup') Sound.levelUp();
+  else if (data.type === 'gold' || (data.text && data.text.toLowerCase().includes('gold'))) Sound.gold();
   showNotification(data.text, data.type);
 });
 
@@ -124,6 +129,7 @@ socket.on('floor:change', (data) => {
 });
 
 socket.on('damage:taken', (data) => {
+  Sound.playerHurt();
   flashDamage();
 });
 
@@ -357,11 +363,13 @@ function initButtons() {
   document.getElementById('btn-attack').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (isDead) return;
+    Sound.hit(0.3);
     socket.emit('attack');
     hapticFeedback();
   });
   document.getElementById('btn-attack').addEventListener('click', () => {
     if (isDead) return;
+    Sound.hit(0.3);
     socket.emit('attack');
   });
 
@@ -405,10 +413,12 @@ function initButtons() {
   document.getElementById('btn-pickup').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (isDead) return;
+    Sound.uiClick();
     socket.emit('loot:pickup_nearest');
   });
   document.getElementById('btn-pickup').addEventListener('click', () => {
     if (isDead) return;
+    Sound.uiClick();
     socket.emit('loot:pickup_nearest');
   });
 
@@ -646,6 +656,7 @@ window.dropItem = function(itemId) {
 
 // ─── Dialogue ───────────────────────────────────────────────────
 function showDialogue(data) {
+  Sound.dialogueOpen();
   currentDialogue = data;
   dialogueScreen.classList.remove('hidden');
 
@@ -690,6 +701,7 @@ function showDialogue(data) {
     btn.classList.add('dialogue-choice', 'dialogue-choice-hidden');
     btn.textContent = choice.text;
     const dialogueHandler = () => {
+      Sound.uiClick();
       if (navigator.vibrate) navigator.vibrate(15);
       socket.emit('dialogue:choose', {
         npcId: data.npcId,

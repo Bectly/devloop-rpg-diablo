@@ -98,8 +98,8 @@ Modify `handleDialogueChoose`:
 
 ---
 
-## Phase 4: Polish — partially done
-- [ ] Sound effects system (Priority 1 above)
+## Phase 4: Polish — mostly done
+- [x] Sound effects system (13 procedural Web Audio sounds, TV + phone wired)
 - [ ] Sprite assets via ComfyUI generation
 - [x] Particle effects, minimap, damage numbers, health bars, camera, haptics, floor transitions, loot sparkles
 
@@ -115,11 +115,11 @@ Modify `handleDialogueChoose`:
 **Watch:** `game.js` at 1499 lines — approaching split threshold (~1500). If Bolt adds TV sound wiring, may need to extract sound event handlers into a separate `sound-events.js`.
 **No urgent splits needed.** style.css at 1425 is large but CSS doesn't need splitting.
 
-## Open Bugs (4 minor)
-- [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
-- [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn
-- [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
-- [ ] [BUG] Player sprites not cleared on dungeon:enter
+## Open Bugs
+- [x] ~~[BUG] stats.alive — verified correct~~ Cycle #27
+- [x] ~~[BUG] Missing TV handlers~~ FIXED Cycle #27 (room:discovered, monster:split, player:respawn added)
+- [x] ~~[BUG] Dead variables initialized/currentFloor~~ FIXED Cycle #27 (removed)
+- [x] ~~[BUG] Player sprites not cleared on dungeon:enter~~ FIXED Cycle #27
 
 ## Notes
 - Server is authoritative: all game logic runs server-side

@@ -29,8 +29,6 @@ let gameState = {
   world: { monsters: [], groundItems: [], tiles: null, roomName: '', rooms: [] },
   events: [],
 };
-let initialized = false;
-let currentFloor = 0;
 
 // ─── Phaser Scenes ──────────────────────────────────────────────
 
@@ -1260,8 +1258,6 @@ socket.on('connect', () => {
 
 socket.on('init', (data) => {
   console.log('[TV] Init received', data);
-  initialized = true;
-  currentFloor = data.floor || 0;
 });
 
 socket.on('state', (data) => {
@@ -1270,13 +1266,21 @@ socket.on('state', (data) => {
 
 socket.on('dungeon:enter', (data) => {
   console.log('[TV] Entering floor:', data.floorName || data.room.roomName);
-  currentFloor = data.floor || 0;
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
       scene.tileSprites.forEach(s => s.destroy());
       scene.tileSprites = [];
       scene.tilesDirty = true;
+
+      // Clear player sprites for fresh floor
+      for (const [id, sprite] of scene.playerSprites) {
+        if (sprite.nameText) sprite.nameText.destroy();
+        if (sprite.hpBar) sprite.hpBar.destroy();
+        sprite.destroy();
+      }
+      scene.playerSprites.clear();
+
       for (const [id, sprite] of scene.monsterSprites) {
         sprite.nameText.destroy();
         sprite.hpBar.destroy();
@@ -1351,6 +1355,7 @@ socket.on('dungeon:enter', (data) => {
       HUD.showRoomDiscovery(scene);
 
       // Floor transition effect
+      Sound.floorTransition();
       const floorIdx = data.floor || 0;
       const floorName = data.floorName || FLOOR_NAMES[floorIdx % FLOOR_NAMES.length] || `Floor ${floorIdx + 1}`;
       HUD.playFloorTransition(scene, floorIdx, floorName);
@@ -1366,6 +1371,7 @@ socket.on('wave:start', (data) => {
       // Trigger boss announcement if this is a boss room wave
       if (data.roomType === 'boss' && data.bossName) {
         HUD.showBossAnnouncement(scene, data.bossName);
+        Sound.bossSpawn();
       }
     }
   }
@@ -1402,6 +1408,7 @@ socket.on('shrine:used', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
+      Sound.shrineUse();
       HUD.showWaveAnnouncement(scene, 'SHRINE ACTIVATED!', '#44ffaa');
       scene.time.delayedCall(2600, () => {
         HUD.setWaveTextColor('#ff4444');
@@ -1425,12 +1432,15 @@ socket.on('quest:complete', (data) => {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene && scene.scene.isActive()) {
       HUD.showQuestComplete(scene, data.title);
+      Sound.questComplete();
     }
   }
 });
 
 socket.on('player:joined', (data) => {
   console.log(`[TV] Player joined: ${data.name} (${data.characterClass})`);
+  Sound.unlock();
+  Sound.levelUp();
 });
 
 socket.on('player:left', (data) => {
@@ -1461,6 +1471,7 @@ socket.on('boss:chest', (data) => {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene && scene.scene.isActive()) {
       HUD.showBossChest(scene, data.x, data.y, data.id);
+      Sound.loot();
     }
   }
 });
@@ -1470,6 +1481,37 @@ socket.on('chest:opened', (data) => {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene && scene.scene.isActive()) {
       HUD.showChestOpened(scene, data.id, data.x, data.y, data.gold);
+    }
+  }
+});
+
+socket.on('room:discovered', (data) => {
+  console.log(`[TV] Room discovered: ${data.roomName} (${data.roomType})`);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.showRoomDiscovery(scene);
+    }
+  }
+});
+
+socket.on('monster:split', (data) => {
+  console.log(`[TV] Monster split: ${data.parentId} → ${data.childIds?.length || '?'} children`);
+});
+
+socket.on('player:respawn', (data) => {
+  console.log(`[TV] Player respawned: ${data.playerId || data.name || 'unknown'}`);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      // Brief white flash for respawn
+      const flash = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0xffffff, 0.3).setDepth(999);
+      scene.tweens.add({
+        targets: flash,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => flash.destroy(),
+      });
     }
   }
 });

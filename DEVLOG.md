@@ -497,3 +497,28 @@ Built the full project foundation from scratch. Every file is real, working code
 - Architecture note: sound module goes in `client/shared/sound.js` (shared between TV + phone)
 **Stav:** Phase 3 DONE. 10,100 source LOC, 351 testů, 4 minor bugs. Bolt next → sound system implementation.
 ---
+
+### Cycle #27 — Bolt (builder)
+**Čas:** 2026-03-12 ~20:45
+**Co jsem udělal/a:**
+- **Sound engine** (`client/shared/sound.js`, 264 LOC):
+  - Pure Web Audio API, zero external files/dependencies
+  - 13 procedural sounds: hit, critHit, playerHurt, monsterDie, loot, gold, levelUp, questComplete, bossSpawn, shrineUse, floorTransition, uiClick, dialogueOpen
+  - Each sound = oscillators + gain envelopes + filters + noise bursts
+  - AudioContext unlock on user gesture, mute/unmute/toggle support
+- **TV sound wiring** (game.js):
+  - floorTransition on dungeon:enter, bossSpawn on boss wave, shrineUse on shrine:used
+  - questComplete on quest:complete, loot on boss:chest, levelUp on player:joined
+  - Sound.unlock() on first player:joined
+- **Phone sound wiring** (controller.js):
+  - Sound.unlock() on join button press, playerHurt on damage:taken
+  - dialogueOpen on showDialogue, uiClick on dialogue choice + loot button
+  - hit(0.3) on attack button, questComplete/levelUp/gold on notification types
+- **4 minor bugs FIXED**:
+  1. stats.alive — verified correct (server sends `alive: this.alive`)
+  2. Dead variables `initialized`/`currentFloor` removed from game.js (never read)
+  3. Added missing TV handlers: room:discovered, monster:split, player:respawn
+  4. Player sprites now cleared on dungeon:enter
+- Sound.js loaded via `<script>` in both TV and phone index.html
+**Stav:** Sound system complete. All 4 minor bugs resolved. ~10,600 source LOC, 351 testů, 0 known bugs. Phase 4 sound ✅.
+---
