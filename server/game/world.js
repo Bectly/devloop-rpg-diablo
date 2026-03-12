@@ -1,5 +1,6 @@
 const { createMonster } = require('./monsters');
 const { generateConsumable } = require('./items');
+const { generateBSPDungeon, generateMonsterSpawns } = require('./dungeon');
 
 // Simple room layout for the dungeon
 // 0 = floor, 1 = wall, 2 = door
@@ -133,11 +134,18 @@ class World {
     this.monsters = [];
     this.groundItems = []; // items on the ground { item, x, y, id }
     this.roomName = '';
+    this.dungeonFloor = 0;         // which procedural floor we're on
+    this.dungeonData = null;       // { tiles, rooms, width, height, startRoom, exitRoom }
+    this.useProcedural = false;    // toggle: false = legacy templates, true = BSP
   }
 
+  /**
+   * Load a legacy fixed room template (used for Phase 1 testing).
+   */
   loadRoom(index) {
     if (index < 0 || index >= this.rooms.length) index = 0;
     this.currentRoom = index;
+    this.useProcedural = false;
 
     const template = this.rooms[index];
     this.tiles = template.generate.call(template);
@@ -161,6 +169,58 @@ class World {
       pixelWidth: template.width * TILE_SIZE,
       pixelHeight: template.height * TILE_SIZE,
     };
+  }
+
+  /**
+   * Generate and load a fresh BSP dungeon floor.
+   * @param {number} floor  — floor number (affects difficulty + dungeon size)
+   * @param {number} seed   — optional seed for reproducibility
+   */
+  loadDungeon(floor = 0, seed) {
+    this.dungeonFloor = floor;
+    this.useProcedural = true;
+
+    // Dungeons grow slightly on deeper floors.
+    const width  = Math.min(120, 80 + floor * 5);
+    const height = Math.min(80,  50 + floor * 3);
+
+    this.dungeonData = generateBSPDungeon({ width, height, seed });
+    this.tiles = this.dungeonData.tiles;
+    this.roomName = `Floor ${floor + 1}`;
+
+    // Monster spawns scale with floor.
+    const spawns = generateMonsterSpawns(
+      this.dungeonData.rooms,
+      TILE_SIZE,
+      floor + 1,
+    );
+
+    this.monsters = [];
+    for (const spot of spawns) {
+      this.monsters.push(createMonster(spot.type, spot.x, spot.y));
+    }
+
+    this.groundItems = [];
+
+    return {
+      name: this.roomName,
+      tiles: this.tiles,
+      tileSize: TILE_SIZE,
+      width:      this.dungeonData.width,
+      height:     this.dungeonData.height,
+      pixelWidth:  this.dungeonData.width  * TILE_SIZE,
+      pixelHeight: this.dungeonData.height * TILE_SIZE,
+      startRoom: this.dungeonData.startRoom,
+      exitRoom:  this.dungeonData.exitRoom,
+      roomCount: this.dungeonData.rooms.length,
+    };
+  }
+
+  /**
+   * Advance to next floor (procedural).
+   */
+  nextFloor() {
+    return this.loadDungeon(this.dungeonFloor + 1);
   }
 
   addGroundItem(item, x, y) {
@@ -213,10 +273,8 @@ class World {
   }
 
   serialize() {
-    return {
+    const base = {
       roomName: this.roomName,
-      currentRoom: this.currentRoom,
-      totalRooms: this.rooms.length,
       tiles: this.tiles,
       tileSize: TILE_SIZE,
       monsters: this.monsters.map(m => m.serialize()),
@@ -230,6 +288,21 @@ class World {
         y: Math.round(gi.y),
       })),
     };
+
+    if (this.useProcedural) {
+      base.procedural = true;
+      base.dungeonFloor = this.dungeonFloor;
+      base.roomCount = this.dungeonData ? this.dungeonData.rooms.length : 0;
+      base.exitRoom  = this.dungeonData ? this.dungeonData.exitRoom  : null;
+      base.startRoom = this.dungeonData ? this.dungeonData.startRoom : null;
+      base.width  = this.dungeonData ? this.dungeonData.width  : 0;
+      base.height = this.dungeonData ? this.dungeonData.height : 0;
+    } else {
+      base.currentRoom = this.currentRoom;
+      base.totalRooms  = this.rooms.length;
+    }
+
+    return base;
   }
 }
 

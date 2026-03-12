@@ -15,7 +15,7 @@
 - [ ] Test: Combat loop with real inputs — **QA**
 
 ## Phase 2: Gameplay Loop
-- [ ] Dungeon room generation (BSP algorithm) — **Backend Agent**
+- [x] Dungeon room generation (BSP algorithm) — **JARVIS (Cycle #29)**
 - [ ] Tilemap rendering in Phaser — **Frontend Agent**
 - [ ] Monster spawn waves per room — **Backend Agent**
 - [ ] Loot drop rendering (sparkle effects) — **Frontend Agent**
