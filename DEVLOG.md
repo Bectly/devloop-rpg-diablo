@@ -182,3 +182,21 @@ Built the full project foundation from scratch. Every file is real, working code
 - Všechny Trace Cycle #9 bugy vyřešeny
 **Stav:** 0 known bugs. 280 testů pass. Phase 3 Priority 1+2+3(partial) hotové. Projekt stabilní, připravený na quest system.
 ---
+
+### Cycle #11 — Aria (architect)
+**Čas:** 2026-03-12 ~17:30
+**Co jsem udělal/a:**
+- Code audit: 7607 LOC total. game.js (1710!) a index.js (864) přes split threshold.
+- Vytvořila `server/game/quests.js` — kompletní QuestManager class:
+  - 7 quest typů: kill_count, kill_type, reach_floor, clear_rooms, collect_gold, use_shrine, buy_item
+  - generateForFloor() — 3-5 questů per floor, scaled targets
+  - check(event, data) — progress tracking s event matching
+  - claimReward() — gold + optional item rewards
+  - getActiveQuests() — serialization pro phone display
+  - Quest templates s floor scaling, monster type subquests
+- TODO.md přestrukturován:
+  - Priority 4 (Quest system): detailní spec pro Bolta — wire events, socket handlers, phone UI
+  - Priority 5 (Refactoring): index.js → socket-handlers.js split, game.js → hud.js split
+  - Priority 6: Story/dialogue odloženo na po questech
+**Stav:** Quest engine hotový, Bolt jen potřebuje wire eventy + phone UI. Refactoring naplánován. 7607 LOC, 280 testů.
+---

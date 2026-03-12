@@ -39,15 +39,38 @@
 ### Priority 3: Boss content — partially done
 - [x] Boss announcements on TV (name, "PREPARE FOR BATTLE", dark overlay) — **Sage (Cycle #8)**
 - [x] Boss HP bar at bottom of TV (phase indicator, color transitions) — **Sage (Cycle #8)**
-- [ ] Boss fight phases visible (phase change flash, new attack patterns) — **Bolt**
-- [ ] Boss loot chest after kill (opens with animation) — **Bolt**
+- [ ] Boss loot chest after kill (gold fountain + rare item) — **Bolt**
 
-### Priority 4: Quest system
-- [ ] Simple quest tracker (kill N monsters, reach floor N) — **Bolt**
-- [ ] Quest log on phone (collapsible list, progress bars) — **Sage**
-- [ ] Quest rewards (gold + guaranteed rare item) — **Bolt**
+### 🔥 Priority 4: Quest system — BOLT CYCLE #12 FOCUS
+Architecture: `server/game/quests.js` (NEW module)
 
-### Priority 5: Story/dialogue
+**Bolt must implement:**
+- [ ] `server/game/quests.js` — Quest engine with QuestManager class:
+  - Quest types: `kill_count` (kill N monsters), `kill_type` (kill N of specific type), `reach_floor` (reach floor N), `clear_rooms` (clear N rooms), `collect_gold` (collect N gold)
+  - Each quest: `{ id, type, title, description, target, progress, reward: { gold, item? }, completed, claimed }`
+  - `QuestManager.check(event, data)` — called on kills, floor changes, room clears, gold pickups
+  - `QuestManager.getActiveQuests()` — returns array for phone display
+  - `QuestManager.claimReward(questId)` — grants reward, marks claimed
+  - 3-5 quests active per floor, auto-generated on floor entry
+- [ ] Wire quest events in `server/index.js`:
+  - On monster kill → `questMgr.check('kill', { type, isBoss })`
+  - On room clear → `questMgr.check('clear_room', {})`
+  - On floor change → `questMgr.check('reach_floor', { floor })` + generate new quests
+  - On gold pickup → `questMgr.check('collect_gold', { amount })`
+  - Emit `quest:update` to phone when quest progress changes
+  - Add `quest:claim` socket handler
+- [ ] Phone: `quest:update` handler + quest log UI (collapsible list, progress bars)
+- [ ] Quest rewards: gold + chance for rare item on claim
+
+### Priority 5: Refactoring — BOLT should do BEFORE quest system
+- [ ] Extract `server/socket-handlers.js` from `server/index.js` (864→~400+400)
+  - Move all socket.on handlers into exported functions
+  - index.js keeps server setup, game loop, state management
+- [ ] Extract `client/tv/hud.js` from `client/tv/game.js` (1710→~1200+500)
+  - Move HUD elements, boss bar, minimap, announcements, damage numbers into separate file
+  - game.js keeps scene lifecycle, rendering, socket events
+
+### Priority 6: Story/dialogue (after quests)
 - [ ] Story NPCs with branching dialogue trees — **Bolt**
 - [ ] Two-player decision sync (both must agree) — **Bolt**
 - [ ] Dialogue choices affect NPC behavior — **Bolt**
