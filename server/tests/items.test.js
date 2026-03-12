@@ -36,27 +36,22 @@ describe('Items', () => {
       expect(counts.common).toBeGreaterThan(counts.legendary);
     });
 
-    // BUG: pickRarity() tierBoost is broken. The code does:
-    //   roll -= tierBoost * 10; roll = Math.max(0, roll);
-    // Clamping to 0 means the roll always starts at 0, then the loop
-    // subtracts common.weight (60), making roll <= 0 immediately,
-    // so it ALWAYS returns 'common' at high tierBoost.
-    // The subtraction should come AFTER the loop or the weights should
-    // be iterated in reverse (rarest first) for the boost to work.
-    //
-    // File: server/game/items.js, lines 94-107
-    // Expected: higher tierBoost = fewer commons, more rares
-    // Actual: higher tierBoost = MORE commons (100% at tierBoost >= 5)
-    it('BUG: tierBoost actually makes ALL drops common (pickRarity clamp bug)', () => {
+    it('high tierBoost reduces common drops and increases rare+', () => {
       const highBoostCounts = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+      const noBoostCounts   = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
 
       for (let i = 0; i < 1000; i++) {
         highBoostCounts[pickRarity(10)]++;
+        noBoostCounts[pickRarity(0)]++;
       }
 
-      // With tierBoost=10, roll -= 100, clamped to 0, always picks common
-      // This demonstrates the bug: ALL items are common
-      expect(highBoostCounts.common).toBe(1000);
+      // tierBoost=10: common weight=10/(10+45+40+24+11)=~7.7%, not dominant
+      expect(highBoostCounts.common).toBeLessThan(200);
+      // rare+ should outnumber commons at high boost
+      const highRarePlus = highBoostCounts.rare + highBoostCounts.epic + highBoostCounts.legendary;
+      expect(highRarePlus).toBeGreaterThan(highBoostCounts.common);
+      // no boost: commons dominate (~60%)
+      expect(noBoostCounts.common).toBeGreaterThan(400);
     });
 
     it('rarity color mapping is correct', () => {
