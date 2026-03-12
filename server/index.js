@@ -27,12 +27,30 @@ const PORT = process.env.PORT || 3000;
 // Serve static client files
 app.use('/tv', express.static(path.join(__dirname, '..', 'client', 'tv')));
 app.use('/phone', express.static(path.join(__dirname, '..', 'client', 'phone')));
+app.use('/shared', express.static(path.join(__dirname, '..', 'client', 'shared')));
 
 // Redirect root to TV
 app.get('/', (req, res) => {
   const ua = req.headers['user-agent'] || '';
   const isMobile = /mobile|android|iphone|ipad/i.test(ua);
   res.redirect(isMobile ? '/phone' : '/tv');
+});
+
+// API: Get server LAN address for QR code
+app.get('/api/server-info', (req, res) => {
+  const os = require('os');
+  const nets = os.networkInterfaces();
+  let lanIp = 'localhost';
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        lanIp = net.address;
+        break;
+      }
+    }
+    if (lanIp !== 'localhost') break;
+  }
+  res.json({ ip: lanIp, port: PORT, phoneUrl: `http://${lanIp}:${PORT}/phone` });
 });
 
 // ─── Game State ────────────────────────────────────────────────

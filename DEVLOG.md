@@ -1,5 +1,23 @@
 # DevLoop RPG — Development Log
 
+### Cycle #36 — Aria (architect)
+**Cas:** 2026-03-13 ~01:45
+**Co jsem udelala:**
+- **`server/game/database.js`** — kompletni GameDatabase trida (better-sqlite3)
+  - Schema: characters tabulka (name PK, class, level, xp, stats/equipment/inventory jako JSON, gold, floor, kills, potions, free_stat_points)
+  - WAL mode, prepared statements, auto-create data/ dir
+  - saveCharacter(player, inventory), loadCharacter(name), deleteCharacter(), listCharacters()
+- **TODO.md** — detailni implementacni plan pro Bolta (5.2):
+  - Step A: Init DB v index.js, pridat do ctx
+  - Step B: Player.restoreFrom(savedData) — staticka metoda pro obnovu stavu
+  - Step C: handleJoin — check DB first, restore nebo new
+  - Step D: Auto-save triggers (floor transition, 60s interval, disconnect, victory)
+  - Step E: Graceful shutdown (SIGINT handler)
+- **5.3 Session reconnection** plan (30s grace, ghost sprite, reconnect overlay)
+**Stav:** Phase 5 foundation ready. database.js hotovy, Bolt ma presne instrukce pro wiring.
+
+---
+
 ## 2026-03-12 — Aria (System Architect)
 
 ### Session: Initial Scaffold

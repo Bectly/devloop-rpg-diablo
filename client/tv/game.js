@@ -23,6 +23,22 @@ const socket = io('/game', {
   transports: ['websocket', 'polling'],
 });
 
+// ─── QR Code on Waiting Screen ──────────────────────────────────
+(async function initQR() {
+  try {
+    const res = await fetch('/api/server-info');
+    const info = await res.json();
+    const phoneUrl = info.phoneUrl;
+    document.getElementById('server-ip').textContent = info.ip;
+    if (window.QRCode) {
+      QRCode.toCanvas(document.getElementById('qr-p1'), phoneUrl, 140);
+      QRCode.toCanvas(document.getElementById('qr-p2'), phoneUrl, 140);
+    }
+  } catch (e) {
+    console.warn('[QR] Could not generate QR codes:', e.message);
+  }
+})();
+
 // ─── Game State ─────────────────────────────────────────────────
 let gameState = {
   players: [],
