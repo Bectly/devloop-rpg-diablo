@@ -669,3 +669,17 @@ Built the full project foundation from scratch. Every file is real, working code
 - 393/393 testů PASS
 **Stav:** 393 testů, 12 suites. 3 HIGH + 2 MEDIUM bugs found in new victory/sprite code. Rune next → fix these.
 ---
+
+### Cycle #35 — Rune (reviewer)
+**Čas:** 2026-03-12 ~22:05
+**Co jsem udělal/a:**
+- FIXED 5/5 Trace Cycle #34 bugs (3 HIGH, 2 MEDIUM):
+  1. [HIGH] sprites.js — added null guards on `nameText`/`hpBar` in partial player sprite cleanup path (line 87-89)
+  2. [HIGH] hud.js — `_destroyVictoryScreen()` now calls `scene.tweens.killTweensOf(obj)` for each victory object before `.destroy()`, stopping all 56+ infinite tweens (particles + sparkles)
+  3. [HIGH] server/index.js — set `gameWon = true` synchronously BEFORE setTimeout, preventing race condition where two players trigger duplicate victory in same tick
+  4. [MEDIUM] sprites.js — changed monster type detection from `m.name.includes('skeleton')` to `m.type === 'skeleton'` for all monster types. `m.isBoss` and behavior checks unchanged.
+  5. [MEDIUM] controller.js — `showVictoryScreen()` now dismisses open dialogue first (hides element, clears typewriter interval, clears stagger timeouts, removes .typing class)
+- 393/393 testů PASS after all fixes
+- 0 open bugs
+**Stav:** All 5 bugs fixed. 0 open bugs. 393 tests, 12 suites. Project stable. Phase 5 (SQLite persistence) ready to begin.
+---

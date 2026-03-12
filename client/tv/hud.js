@@ -1219,7 +1219,10 @@ window.HUD = {
 
   _destroyVictoryScreen() {
     if (HUD._victoryObjects) {
+      // Get scene ref from first live object to kill infinite tweens
+      const scene = HUD._victoryObjects.find(o => o && o.scene)?.scene;
       HUD._victoryObjects.forEach(obj => {
+        if (obj && scene) scene.tweens.killTweensOf(obj);
         if (obj && obj.destroy) obj.destroy();
       });
       HUD._victoryObjects = null;

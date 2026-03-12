@@ -73,12 +73,15 @@
 **Watch:** `controller.js` at ~900 (grew with victory screen), `socket-handlers.js` at 736 — both approaching threshold.
 **No persistence yet.** `better-sqlite3` in package.json, not imported anywhere.
 
-## Open Bugs (Cycle #34 audit)
-- [ ] [BUG/HIGH] sprites.js:88-89 — Missing null guards on nameText/hpBar in partial player sprite cleanup path
-- [ ] [BUG/HIGH] hud.js — _destroyVictoryScreen() doesn't kill 56+ infinite tweens (particles, sparkles) → memory/CPU leak
-- [ ] [BUG/HIGH] server/index.js — Race condition: two players hitting exit in same tick on final floor → duplicate victory emit
-- [ ] [BUG/MEDIUM] sprites.js — Monster type detection uses `m.name` string matching instead of `m.type` field
-- [ ] [BUG/MEDIUM] controller.js — showVictoryScreen() can overlay on open dialogue → soft-lock
+## Open Bugs
+None. All bugs resolved through Cycle #35.
+
+### Fixed (Cycle #35)
+- [x] ~~[BUG/HIGH] sprites.js:88-89 — Missing null guards on partial player cleanup~~ FIXED
+- [x] ~~[BUG/HIGH] hud.js — _destroyVictoryScreen() infinite tween leak~~ FIXED (killTweensOf)
+- [x] ~~[BUG/HIGH] server/index.js — Victory race condition~~ FIXED (synchronous gameWon flag)
+- [x] ~~[BUG/MEDIUM] sprites.js — Monster type string matching~~ FIXED (uses m.type field now)
+- [x] ~~[BUG/MEDIUM] controller.js — Victory/dialogue overlay~~ FIXED (dismisses dialogue first)
 
 ## Notes
 - Server is authoritative: all game logic runs server-side

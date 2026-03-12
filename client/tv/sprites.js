@@ -85,8 +85,8 @@ window.Sprites = {
     }
     for (const [id, sprite] of scene.playerSprites) {
       if (!seenPlayers.has(id)) {
-        sprite.nameText.destroy();
-        sprite.hpBar.destroy();
+        if (sprite.nameText) sprite.nameText.destroy();
+        if (sprite.hpBar) sprite.hpBar.destroy();
         sprite.destroy();
         scene.playerSprites.delete(id);
       }
@@ -142,8 +142,7 @@ window.Sprites = {
       g.fillCircle(s - 3, s - 1, 2);
       g.fillCircle(s + 3, s - 1, 2);
     } else {
-      const mName = (m.name || '').toLowerCase();
-      if (mName.includes('skeleton') || mName.includes('skel')) {
+      if (m.type === 'skeleton') {
         g.fillStyle(0xbbbbbb, 1);
         g.fillRect(2, 2, d - 4, d - 4);
         g.fillStyle(0x222222, 1);
@@ -158,7 +157,7 @@ window.Sprites = {
         g.fillCircle(s + 3, s - 3, 2);
         g.lineStyle(1, 0x333333, 0.8);
         g.lineBetween(s - 4, s + 2, s + 4, s + 2);
-      } else if (mName.includes('zombie')) {
+      } else if (m.type === 'zombie') {
         g.fillStyle(0x556633, 1);
         g.fillRect(3, 1, d - 6, d - 2);
         g.fillStyle(0x667744, 1);
@@ -171,7 +170,7 @@ window.Sprites = {
         g.fillCircle(s + 3, 5, 2);
         g.lineStyle(1, 0x445522, 0.6);
         g.lineBetween(s - 2, 9, s + 2, 10);
-      } else if (mName.includes('demon')) {
+      } else if (m.type === 'demon') {
         g.fillStyle(m.color, 1);
         g.fillTriangle(s, 2, d - 2, d - 2, 2, d - 2);
         g.fillStyle(m.color + 0x220000, 1);

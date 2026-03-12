@@ -304,6 +304,21 @@ function hideDeathScreen() {
 
 // ─── Victory Screen ──────────────────────────────────────────────
 function showVictoryScreen(data) {
+  // Dismiss any open dialogue to prevent overlay stacking
+  if (dialogueScreen && !dialogueScreen.classList.contains('hidden')) {
+    dialogueScreen.style.display = 'none';
+    currentDialogue = null;
+    if (typewriterInterval) {
+      clearInterval(typewriterInterval);
+      typewriterInterval = null;
+    }
+    staggerTimeouts.forEach(id => clearTimeout(id));
+    staggerTimeouts = [];
+    const textEl = document.getElementById('dialogue-text');
+    if (textEl) textEl.classList.remove('typing');
+    _hideSyncBar();
+  }
+
   const victoryEl = document.getElementById('victory-overlay');
   if (!victoryEl) return;
   victoryEl.classList.remove('hidden');

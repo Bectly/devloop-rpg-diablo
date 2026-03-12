@@ -417,10 +417,15 @@ function gameLoop() {
         world._advancing = true;
         console.log(`[World] ${player.name} reached the exit! Advancing to floor ${world.currentFloor + 2}...`);
 
+        // ── VICTORY CHECK: set gameWon IMMEDIATELY to prevent race condition ──
+        const isFinal = world.isFinalFloor();
+        if (isFinal) {
+          gameWon = true;
+        }
+
         setTimeout(() => {
-          // ── VICTORY CHECK: If on final floor, emit victory instead of advancing ──
-          if (world.isFinalFloor()) {
-            gameWon = true;
+          // ── VICTORY: If on final floor, emit victory instead of advancing ──
+          if (isFinal) {
             const elapsed = Date.now() - gameStartTime;
             const playerStats = Array.from(players.values()).map(p => ({
               name: p.name,
