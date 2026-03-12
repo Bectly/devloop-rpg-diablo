@@ -20,37 +20,10 @@
 
 ## 🔥 BOLT CYCLE #17 PRIORITIES (in order)
 
-### Priority 1: REFACTORING — CRITICAL, DO FIRST
-Files are dangerously large. Split before adding more features.
-
-**1A. Split `server/index.js` (1000 lines → ~500 + ~500)**
-- Create `server/socket-handlers.js`
-- Move ALL `socket.on(...)` handler bodies into exported functions
-- Each handler function takes `(socket, io, gameNs, players, world, ...)` as params
-- `index.js` keeps: server setup, Express routes, game loop, state management, namespace setup
-- `index.js` calls: `handlers.onJoin(socket, ...)`, `handlers.onMove(socket, ...)`, etc.
-- Pattern:
-  ```javascript
-  // socket-handlers.js
-  exports.onQuestClaim = (socket, player, players, world, gameNs) => {
-    // ... handler body moved here ...
-  };
-
-  // index.js
-  const handlers = require('./socket-handlers');
-  socket.on('quest:claim', (data) => handlers.onQuestClaim(socket, player, players, world, gameNs));
-  ```
-
-**1B. Split `client/tv/game.js` (1835 lines → ~1200 + ~600)**
-- Create `client/tv/hud.js` — loaded via `<script src="hud.js">` before game.js
-- Move to hud.js: drawMinimap, drawHUD, showWaveText, showAnnouncement, showQuestComplete, _showQuestBanner, _processQuestQueue, spawnDamageNumber, spawnCelebrationParticles, boss HP bar logic, room discovery flash
-- hud.js exports functions that GameScene calls: `HUD.drawMinimap(scene, ...)`, `HUD.showAnnouncement(scene, ...)`, etc.
-- game.js keeps: BootScene, GameScene lifecycle (create/update/destroy), rendering, socket events, camera, input
-
-**1C. Split `client/phone/controller.js` (1090 lines → ~700 + ~400)**
-- Create `client/phone/screens.js` — loaded before controller.js
-- Move to screens.js: createQuestScreen, toggleQuestLog, renderQuests, updateQuestBadge, QUEST_ICONS, createShopScreen, toggleShop, renderShopItems, estimateSellPrice, SKILL_DESCRIPTIONS, showSkillTooltip, hideSkillTooltip
-- controller.js keeps: socket connection, join flow, joystick, action buttons, updateHUD, notifications, core event handlers
+### Priority 1: REFACTORING ✅ DONE (Bolt Cycle #17)
+- [x] Split `server/index.js` (1000→417) → `server/socket-handlers.js` (620) — 22 handlers extracted
+- [x] Split `client/tv/game.js` (1835→1281) → `client/tv/hud.js` (646) — HUD/announcements/minimap/boss bar
+- [x] Split `client/phone/controller.js` (1090→731) → `client/phone/screens.js` (434) — quest/shop/tooltips
 
 ### Priority 2: Boss loot chest
 After refactoring, implement:
@@ -84,20 +57,21 @@ Architecture for `server/game/dialogue.js`:
 - [ ] Leaderboard / stats tracking
 - [ ] Session reconnection handling
 
-## Architecture Notes (Aria, Cycle #16)
-**Current LOC:** 8508 total, 317 tests across 8 suites
+## Architecture Notes (Updated Cycle #17)
+**Current LOC:** ~9200 total (18 source files), 317 tests across 8 suites
 | File | Lines | Status |
 |------|-------|--------|
-| `server/index.js` | 1000 | ⚠️ SPLIT NOW |
-| `client/tv/game.js` | 1835 | ⚠️ SPLIT NOW |
-| `client/phone/controller.js` | 1090 | ⚠️ SPLIT NOW |
-| `client/phone/style.css` | 1324 | OK (CSS scales differently) |
+| `client/tv/game.js` | 1281 | ✅ Split done |
+| `client/phone/controller.js` | 731 | ✅ Split done |
+| `client/tv/hud.js` | 646 | NEW — HUD/announcements |
+| `server/socket-handlers.js` | 620 | NEW — 22 socket handlers |
+| `client/phone/screens.js` | 434 | NEW — quest/shop/tooltips |
+| `server/index.js` | 417 | ✅ Split done |
 | `server/game/world.js` | 665 | OK |
 | `server/game/monsters.js` | 523 | OK |
 | `server/game/player.js` | 457 | OK |
 | `server/game/combat.js` | 436 | OK |
-| `server/game/items.js` | 303 | OK |
-| `server/game/quests.js` | 209 | OK |
+| `client/phone/style.css` | 1324 | OK (CSS scales differently) |
 
 ## Open Bugs
 - [x] [BUG][MAJOR] Desktop action buttons missing click handlers — **Rune** — `controller.js`

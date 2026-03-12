@@ -231,7 +231,6 @@ class GameScene extends Phaser.Scene {
     this.playerSprites = new Map();
     this.itemSprites = new Map();
     this.npcSprites = new Map();
-    this.damageTexts = [];
     this.tileSprites = [];
     this.tilesDirty = true;
     this.lastTileFloor = -1;
@@ -243,56 +242,14 @@ class GameScene extends Phaser.Scene {
     // Shrine sprites
     this.shrineSprites = new Map();
 
-    // Boss fight tracking
-    this.bossBar = null;
-    this.lastBossId = null;
     this.discoveredRooms = new Set();
-
-    // Quest announcement queue (prevents overlapping banners)
-    this.questAnnouncementQueue = [];
-    this.questAnnouncementActive = false;
-    this._activeBannerObjs = [];
 
     // Smooth camera tracking position
     this.camTargetX = GAME_W / 2;
     this.camTargetY = GAME_H / 2;
 
-    // HUD (fixed to camera)
-    // ── Room name panel ──
-    this.hudPanel = this.add.graphics().setScrollFactor(0).setDepth(999);
-
-    this.roomText = this.add.text(20, 14, '', {
-      fontSize: '18px', fill: '#ffffff', fontFamily: 'Courier New',
-    }).setScrollFactor(0).setDepth(1000);
-
-    this.floorText = this.add.text(20, 40, '', {
-      fontSize: '14px', fill: '#ffcc44', fontFamily: 'Courier New',
-    }).setScrollFactor(0).setDepth(1000);
-
-    this.waveText = this.add.text(GAME_W / 2, 60, '', {
-      fontSize: '24px', fill: '#ff4444', fontFamily: 'Courier New',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setAlpha(0);
-    this.waveTextTimer = 0;
-
-    // Celebration particles container (for room cleared effect)
-    this.celebrationParticles = [];
-
-    // Floor transition overlay
-    this.transitionOverlay = this.add.graphics().setScrollFactor(0).setDepth(2000);
-    this.transitionOverlay.setAlpha(0);
-    this.transitionText = this.add.text(GAME_W / 2, GAME_H / 2, '', {
-      fontSize: '36px', fill: '#ffffff', fontFamily: 'Courier New',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(2001).setAlpha(0);
-
-    // Minimap container (top-right corner)
-    this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(1002);
-    this.minimapBg = this.add.graphics().setScrollFactor(0).setDepth(1001);
+    // Initialize HUD layer (hud.js)
+    HUD.init(this);
 
     // Camera
     this.cameras.main.setBackgroundColor('#111122');
@@ -324,58 +281,8 @@ class GameScene extends Phaser.Scene {
       this.lastTileFloor = worldFloor;
     }
 
-    // ── HUD ──
-    const exitStatus = state.world.exitLocked ? ' [EXIT LOCKED]' : ' [EXIT OPEN]';
-    const roomLabel = `${state.world.roomName || 'Unknown'}${exitStatus}`;
-    const floorLabel = `Floor ${(state.world.currentFloor || 0) + 1} | Rooms: ${(state.world.rooms || []).length}`;
-    this.roomText.setText(roomLabel);
-    this.floorText.setText(floorLabel);
-
-    // Draw HUD panel background (semi-transparent rounded rect)
-    this.hudPanel.clear();
-    const panelW = Math.max(this.roomText.width, this.floorText.width) + 32;
-    const panelH = 52;
-    this.hudPanel.fillStyle(0x000000, 0.65);
-    this.hudPanel.fillRoundedRect(6, 6, panelW, panelH, 8);
-    this.hudPanel.lineStyle(1, 0x444466, 0.5);
-    this.hudPanel.strokeRoundedRect(6, 6, panelW, panelH, 8);
-
-    // Floor indicator color based on floor theme
-    const floorTheme = FLOOR_THEMES[(state.world.currentFloor || 0) % FLOOR_THEMES.length];
-    const floorTint = floorTheme.wallLight;
-    const floorR = ((floorTint >> 16) & 0xff);
-    const floorG = ((floorTint >> 8) & 0xff);
-    const floorB = (floorTint & 0xff);
-    // Brighten the wall-light color for text readability
-    const brightR = Math.min(255, floorR + 100);
-    const brightG = Math.min(255, floorG + 100);
-    const brightB = Math.min(255, floorB + 100);
-    const floorHex = `#${brightR.toString(16).padStart(2, '0')}${brightG.toString(16).padStart(2, '0')}${brightB.toString(16).padStart(2, '0')}`;
-    this.floorText.setColor(floorHex);
-
-    // Wave text fade
-    if (this.waveTextTimer > 0) {
-      this.waveTextTimer -= 16;
-      this.waveText.setAlpha(Math.min(1, this.waveTextTimer / 500));
-      if (this.waveTextTimer <= 0) {
-        this.waveText.setText('');
-        this.waveText.setAlpha(0);
-      }
-    }
-
-    // ── Update celebration particles ──
-    for (let i = this.celebrationParticles.length - 1; i >= 0; i--) {
-      const cp = this.celebrationParticles[i];
-      cp.life -= 16;
-      cp.gfx.x += cp.vx;
-      cp.gfx.y += cp.vy;
-      cp.vy += 0.05; // gravity
-      cp.gfx.setAlpha(Math.max(0, cp.life / cp.maxLife));
-      if (cp.life <= 0) {
-        cp.gfx.destroy();
-        this.celebrationParticles.splice(i, 1);
-      }
-    }
+    // ── HUD (delegated to hud.js) ──
+    HUD.updateHUD(this, state);
 
     // ── Render players ──
     const seenPlayers = new Set();
@@ -649,42 +556,8 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── Boss HP Bar (bottom of screen, fixed to camera) ──
-    if (!this.bossBar) {
-      this.bossBar = {
-        bg: this.add.rectangle(GAME_W / 2, GAME_H - 30, GAME_W - 100, 24, 0x111122, 0.85).setScrollFactor(0).setDepth(1000),
-        fill: this.add.rectangle(50, GAME_H - 30, 0, 20, 0xcc2222, 1).setScrollFactor(0).setDepth(1001).setOrigin(0, 0.5),
-        border: this.add.rectangle(GAME_W / 2, GAME_H - 30, GAME_W - 100, 24).setScrollFactor(0).setDepth(1002).setStrokeStyle(2, 0x666666).setFillStyle(0, 0),
-        nameText: this.add.text(GAME_W / 2, GAME_H - 52, '', { fontSize: '16px', fontFamily: 'Courier New', color: '#ff4444', fontStyle: 'bold' }).setScrollFactor(0).setDepth(1002).setOrigin(0.5),
-        hpText: this.add.text(GAME_W / 2, GAME_H - 30, '', { fontSize: '11px', fontFamily: 'Courier New', color: '#ffffff', fontStyle: 'bold' }).setScrollFactor(0).setDepth(1003).setOrigin(0.5),
-      };
-      Object.values(this.bossBar).forEach(v => v.setVisible(false));
-    }
-
-    const boss = state.world.monsters ? state.world.monsters.find(m => m.isBoss && m.alive) : null;
-    if (boss) {
-      const pct = boss.hp / boss.maxHp;
-      const barWidth = (GAME_W - 100 - 4) * pct;
-
-      Object.values(this.bossBar).forEach(v => v.setVisible(true));
-      this.bossBar.fill.setSize(barWidth, 20);
-      this.bossBar.fill.setPosition(50 + 2, GAME_H - 30);
-
-      const barColor = pct > 0.5 ? 0xcc2222 : pct > 0.25 ? 0xcc8822 : 0xff4444;
-      this.bossBar.fill.setFillStyle(barColor);
-
-      this.bossBar.nameText.setText(boss.phase ? `${boss.name || 'BOSS'} — Phase ${boss.phase}` : (boss.name || 'BOSS'));
-      this.bossBar.hpText.setText(`${boss.hp} / ${boss.maxHp}`);
-
-      // Boss entrance announcement (first time seeing this boss)
-      if (this.lastBossId !== boss.id) {
-        this.lastBossId = boss.id;
-        this.showBossAnnouncement(boss.name);
-      }
-    } else {
-      Object.values(this.bossBar).forEach(v => v.setVisible(false));
-      this.lastBossId = null;
-    }
+    // ── Boss HP Bar (delegated to hud.js) ──
+    HUD.updateBossBar(this, state);
 
     // ── Render ground items with rarity glow + bobbing + legendary sparkle ──
     const seenItems = new Set();
@@ -808,7 +681,7 @@ class GameScene extends Phaser.Scene {
       for (const room of state.world.rooms) {
         if (room.discovered && !this.discoveredRooms.has(room.id)) {
           this.discoveredRooms.add(room.id);
-          this.showRoomDiscovery();
+          HUD.showRoomDiscovery(this);
         }
       }
     }
@@ -913,7 +786,7 @@ class GameScene extends Phaser.Scene {
           const target = state.world.monsters?.find(m => m.id === ev.targetId)
             || state.players?.find(p => p.id === ev.targetId);
           if (target) {
-            this.spawnDamageText(target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged);
+            HUD.spawnDamageText(this, target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged);
             // Camera shake on crit
             if (ev.isCrit) {
               this.cameras.main.shake(200, 0.003);
@@ -968,25 +841,25 @@ class GameScene extends Phaser.Scene {
         if (ev.type === 'combat:hit' && ev.dodged) {
           const target = state.players?.find(p => p.id === ev.targetId);
           if (target) {
-            this.spawnDamageText(target.x, target.y - 30, 'DODGE', false, true);
+            HUD.spawnDamageText(this, target.x, target.y - 30, 'DODGE', false, true);
           }
         }
         if (ev.type === 'combat:heal') {
           const target = state.players?.find(p => p.id === ev.targetId || p.id === ev.playerId);
           if (target) {
-            this.spawnHealNumber(target.x, target.y - 30, ev.amount || ev.heal || ev.damage);
+            HUD.spawnHealNumber(this, target.x, target.y - 30, ev.amount || ev.heal || ev.damage);
           }
         }
         if (ev.type === 'player:levelup') {
           const p = state.players?.find(p => p.id === ev.playerId);
           if (p) {
-            this.spawnDamageText(p.x, p.y - 50, `LEVEL ${ev.level}!`, false, false, '#ffcc00');
+            HUD.spawnDamageText(this, p.x, p.y - 50, `LEVEL ${ev.level}!`, false, false, '#ffcc00');
           }
         }
         if (ev.type === 'buff:apply') {
           const p = state.players?.find(p => p.id === ev.playerId);
           if (p) {
-            this.spawnDamageText(p.x, p.y - 40, ev.skillName, false, false, '#44ccff');
+            HUD.spawnDamageText(this, p.x, p.y - 40, ev.skillName, false, false, '#44ccff');
             // Buff visual effect
             if (ev.skillName === 'War Cry') {
               this.spawnBuffEffect(p.x, p.y, 0xffcc00);
@@ -1006,27 +879,8 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── Update damage texts ──
-    for (let i = this.damageTexts.length - 1; i >= 0; i--) {
-      const dt = this.damageTexts[i];
-      dt.life -= 16;
-      if (dt.isHeal) {
-        dt.text.y -= 1.0; // healing goes up faster
-      } else {
-        dt.text.y -= 0.8;
-      }
-      dt.text.setAlpha(dt.life / dt.maxLife);
-      // Scale-pop for crits: shrink from 1.5 to 1.0 over first 200ms
-      if (dt.isCrit && dt.maxLife - dt.life < 200) {
-        const popProgress = (dt.maxLife - dt.life) / 200;
-        const popScale = 1.5 - popProgress * 0.5;
-        dt.text.setScale(popScale);
-      }
-      if (dt.life <= 0) {
-        dt.text.destroy();
-        this.damageTexts.splice(i, 1);
-      }
-    }
+    // ── Update damage texts (delegated to hud.js) ──
+    HUD.updateDamageTexts();
 
     // ── Camera follow with lerp ──
     if (state.players.length > 0) {
@@ -1046,8 +900,8 @@ class GameScene extends Phaser.Scene {
       this.cameras.main.centerOn(this.camTargetX, this.camTargetY);
     }
 
-    // ── Minimap ──
-    this.renderMinimap(state);
+    // ── Minimap (delegated to hud.js) ──
+    HUD.renderMinimap(state);
   }
 
   // ── Skill Visual Effects ──────────────────────────────────────
@@ -1232,434 +1086,14 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  renderMinimap(state) {
-    const mmG = this.minimapGfx;
-    const mmBg = this.minimapBg;
-    mmG.clear();
-    mmBg.clear();
-
-    if (!state.world.tiles || !state.world.rooms) return;
-
-    const mmX = GAME_W - 170;
-    const mmY = 10;
-    const mmW = 160;
-    const mmH = 110;
-    const scale = Math.min(mmW / (state.world.gridW || 60), mmH / (state.world.gridH || 40));
-
-    // Background
-    mmBg.fillStyle(0x000000, 0.6);
-    mmBg.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-    mmBg.lineStyle(1, 0x444444, 0.8);
-    mmBg.strokeRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-
-    // Draw rooms
-    for (const room of state.world.rooms) {
-      if (!room.discovered) continue;
-
-      let color;
-      if (room.cleared) color = 0x226622;
-      else if (room.type === 'boss') color = 0x662222;
-      else if (room.type === 'treasure') color = 0x665522;
-      else color = 0x333366;
-
-      mmG.fillStyle(color, 0.8);
-      mmG.fillRect(
-        mmX + room.x * scale,
-        mmY + room.y * scale,
-        room.w * scale,
-        room.h * scale
-      );
-
-      // Room border
-      mmG.lineStyle(1, 0x666666, 0.5);
-      mmG.strokeRect(
-        mmX + room.x * scale,
-        mmY + room.y * scale,
-        room.w * scale,
-        room.h * scale
-      );
-    }
-
-    // Draw players
-    for (const p of state.players) {
-      mmG.fillStyle(p.alive ? 0x44ff44 : 0xff4444, 1);
-      mmG.fillCircle(
-        mmX + (p.x / TILE_SIZE) * scale,
-        mmY + (p.y / TILE_SIZE) * scale,
-        2
-      );
-    }
-
-    // Draw monsters (red dots)
-    if (state.world.monsters) {
-      for (const m of state.world.monsters) {
-        if (!m.alive) continue;
-        mmG.fillStyle(m.isBoss ? 0xff8800 : 0xff2222, 0.8);
-        mmG.fillCircle(
-          mmX + (m.x / TILE_SIZE) * scale,
-          mmY + (m.y / TILE_SIZE) * scale,
-          m.isBoss ? 2 : 1
-        );
-      }
-    }
-  }
-
   parseColor(hex) {
     if (typeof hex === 'number') return hex;
     hex = hex.replace('#', '');
     return parseInt(hex, 16);
   }
 
-  spawnDamageText(x, y, text, isCrit, isDodge, color) {
-    const offset = (Math.random() - 0.5) * 30;
-
-    if (isDodge) {
-      // Dodge: italic, cyan, "DODGE" text
-      const t = this.add.text(x + offset, y, 'DODGE', {
-        fontSize: '14px',
-        fill: '#44ccff',
-        fontFamily: 'Courier New',
-        fontStyle: 'italic',
-        stroke: '#001122',
-        strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(100);
-      this.damageTexts.push({ text: t, life: 800, maxLife: 800, isCrit: false, isHeal: false });
-      return;
-    }
-
-    if (isCrit) {
-      // Crit: large (22px), yellow with orange stroke, scale-pop
-      const t = this.add.text(x + offset, y, String(text), {
-        fontSize: '22px',
-        fill: '#ffdd00',
-        fontFamily: 'Courier New',
-        fontStyle: 'bold',
-        stroke: '#cc6600',
-        strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(100).setScale(1.5);
-      this.damageTexts.push({ text: t, life: 1000, maxLife: 1000, isCrit: true, isHeal: false });
-      return;
-    }
-
-    // Normal damage or special text
-    const col = color || '#ff6655';
-    const size = color ? '16px' : '14px';
-    const style = color ? 'bold' : 'normal';
-
-    const t = this.add.text(x + offset, y, String(text), {
-      fontSize: size,
-      fill: col,
-      fontFamily: 'Courier New',
-      fontStyle: style,
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(100);
-
-    // Subtle pop for normal damage
-    if (!color) {
-      t.setScale(1.15);
-      this.tweens.add({
-        targets: t,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 150,
-        ease: 'Back.easeOut',
-      });
-    }
-
-    this.damageTexts.push({ text: t, life: 800, maxLife: 800, isCrit: false, isHeal: false });
-  }
-
-  spawnHealNumber(x, y, amount) {
-    if (!amount || amount <= 0) return;
-    const offset = (Math.random() - 0.5) * 20;
-    const t = this.add.text(x + offset, y, `+${amount}`, {
-      fontSize: '16px',
-      fill: '#44ff44',
-      fontFamily: 'Courier New',
-      fontStyle: 'bold',
-      stroke: '#003300',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(100);
-
-    this.damageTexts.push({ text: t, life: 900, maxLife: 900, isCrit: false, isHeal: true });
-  }
-
-  // ── Floor Transition Effect ──
-  playFloorTransition(floorIndex, floorName) {
-    // Black overlay fade in
-    this.transitionOverlay.clear();
-    this.transitionOverlay.fillStyle(0x000000, 1);
-    this.transitionOverlay.fillRect(0, 0, GAME_W, GAME_H);
-    this.transitionOverlay.setAlpha(0);
-
-    this.transitionText.setText(floorName || `Floor ${floorIndex + 1}`);
-    this.transitionText.setAlpha(0);
-
-    // Fade in black
-    this.tweens.add({
-      targets: this.transitionOverlay,
-      alpha: 0.85,
-      duration: 300,
-      ease: 'Sine.easeIn',
-      onComplete: () => {
-        // Show floor name
-        this.transitionText.setAlpha(1).setScale(0.5);
-        this.tweens.add({
-          targets: this.transitionText,
-          scaleX: 1,
-          scaleY: 1,
-          duration: 400,
-          ease: 'Back.easeOut',
-        });
-
-        // Hold for 1.5s then fade everything out
-        this.time.delayedCall(1500, () => {
-          this.tweens.add({
-            targets: [this.transitionOverlay, this.transitionText],
-            alpha: 0,
-            duration: 500,
-            ease: 'Sine.easeOut',
-          });
-        });
-      },
-    });
-  }
-
-  // ── Wave Announcement with dramatic entrance ──
-  showWaveAnnouncement(text, fillColor) {
-    this.waveText.setText(text);
-    if (fillColor) this.waveText.setColor(fillColor);
-    this.waveText.setScale(0);
-    this.waveText.setAlpha(1);
-    this.waveTextTimer = 2500;
-
-    // Scale from 0 to 1 with bounce
-    this.tweens.add({
-      targets: this.waveText,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 400,
-      ease: 'Back.easeOut',
-    });
-  }
-
-  // ── Boss Entrance Announcement ──
-  showBossAnnouncement(name) {
-    const overlay = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.7)
-      .setScrollFactor(0).setDepth(2000);
-
-    const nameText = this.add.text(GAME_W / 2, GAME_H / 2 - 20, name || 'BOSS', {
-      fontSize: '32px', fontFamily: 'Courier New', color: '#ff4444', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
-    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
-
-    const subText = this.add.text(GAME_W / 2, GAME_H / 2 + 20, '— PREPARE FOR BATTLE —', {
-      fontSize: '14px', fontFamily: 'Courier New', color: '#cc8844',
-      stroke: '#000000', strokeThickness: 2,
-    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
-
-    this.tweens.add({
-      targets: nameText, alpha: 1, scale: 1,
-      duration: 500, ease: 'Back.easeOut',
-    });
-    this.tweens.add({
-      targets: subText, alpha: 1,
-      duration: 400, delay: 300,
-    });
-
-    this.time.delayedCall(2000, () => {
-      this.tweens.add({
-        targets: [overlay, nameText, subText],
-        alpha: 0, duration: 500,
-        onComplete: () => { overlay.destroy(); nameText.destroy(); subText.destroy(); },
-      });
-    });
-  }
-
-  // ── Room Discovery Flash ──
-  showRoomDiscovery() {
-    const flash = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0xffffff, 0.15)
-      .setScrollFactor(0).setDepth(1999);
-    this.tweens.add({
-      targets: flash, alpha: 0, duration: 300,
-      onComplete: () => flash.destroy(),
-    });
-  }
-
-  // ── Shrine Used Burst Effect ──
-  showShrineUsedBurst(x, y) {
-    // Expanding green circle burst
-    const burst = this.add.circle(x, y, 10, 0x44ffaa, 0.6).setDepth(7);
-    this.tweens.add({
-      targets: burst,
-      scale: 3,
-      alpha: 0,
-      duration: 600,
-      ease: 'Sine.easeOut',
-      onComplete: () => burst.destroy(),
-    });
-    // Secondary ring
-    const ring = this.add.circle(x, y, 8, 0x44ffaa, 0).setDepth(7);
-    ring.setStrokeStyle(2, 0x88ffcc);
-    this.tweens.add({
-      targets: ring,
-      scale: 4,
-      alpha: 0,
-      duration: 800,
-      delay: 100,
-      ease: 'Sine.easeOut',
-      onComplete: () => ring.destroy(),
-    });
-  }
-
-  // ── Room Cleared Celebration Effect ──
-  spawnCelebrationParticles() {
-    const cx = GAME_W / 2;
-    const cy = 90;
-    for (let i = 0; i < 20; i++) {
-      const angle = (Math.PI * 2 / 20) * i + (Math.random() - 0.5) * 0.3;
-      const speed = 1.5 + Math.random() * 2;
-      const gfx = this.add.graphics().setScrollFactor(0).setDepth(1003);
-      const dotSize = 2 + Math.random() * 3;
-      const green = 0x44ff44 + Math.floor(Math.random() * 0x004400);
-      gfx.fillStyle(green, 1);
-      gfx.fillCircle(0, 0, dotSize);
-      gfx.setPosition(cx, cy);
-      this.celebrationParticles.push({
-        gfx,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.5,
-        life: 800 + Math.random() * 400,
-        maxLife: 1200,
-      });
-    }
-  }
-
-  // ── Quest Complete Announcement (queued) ──
-  showQuestComplete(title) {
-    this.questAnnouncementQueue.push(title);
-    if (!this.questAnnouncementActive) {
-      this._processQuestQueue();
-    }
-  }
-
-  _processQuestQueue() {
-    if (this.questAnnouncementQueue.length === 0) {
-      this.questAnnouncementActive = false;
-      return;
-    }
-    this.questAnnouncementActive = true;
-    const title = this.questAnnouncementQueue.shift();
-    this._showQuestBanner(title);
-    // Process next after 3s (2.5s display + 0.5s gap)
-    this.time.delayedCall(3000, () => this._processQuestQueue());
-  }
-
-  _showQuestBanner(title) {
-    const cam = this.cameras.main;
-    const cx = cam.scrollX + cam.width / 2;
-    const cy = cam.scrollY + cam.height * 0.25;
-
-    // Gold banner background
-    const banner = this.add.rectangle(cx, cy, 350, 40, 0x000000, 0.6);
-    this._activeBannerObjs.push(banner);
-    banner.setStrokeStyle(1, 0xffaa33, 0.8);
-    banner.setDepth(1000);
-    banner.setAlpha(0);
-
-    // "QUEST COMPLETE" text
-    const label = this.add.text(cx, cy - 2, '\u2b50 QUEST COMPLETE', {
-      fontSize: '13px',
-      fontFamily: 'Courier New, monospace',
-      color: '#ffcc00',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3,
-      align: 'center',
-    });
-    label.setOrigin(0.5);
-    label.setDepth(1001);
-    label.setAlpha(0);
-    this._activeBannerObjs.push(label);
-
-    // Quest title below
-    const titleText = this.add.text(cx, cy + 14, title, {
-      fontSize: '10px',
-      fontFamily: 'Courier New, monospace',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 2,
-      align: 'center',
-    });
-    titleText.setOrigin(0.5);
-    titleText.setDepth(1001);
-    titleText.setAlpha(0);
-    this._activeBannerObjs.push(titleText);
-
-    // Animate in
-    this.tweens.add({
-      targets: [banner, label, titleText],
-      alpha: 1,
-      duration: 300,
-      ease: 'Back.easeOut',
-    });
-
-    // Scale pop on label
-    label.setScale(0.5);
-    this.tweens.add({
-      targets: label,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 400,
-      ease: 'Back.easeOut',
-    });
-
-    // Gold sparkle particles around banner
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const px = cx + Math.cos(angle) * 180;
-      const py = cy + Math.sin(angle) * 30;
-      const spark = this.add.circle(cx, cy, 2, 0xffcc00, 0.8);
-      spark.setDepth(1002);
-      this.tweens.add({
-        targets: spark,
-        x: px,
-        y: py,
-        alpha: 0,
-        duration: 600,
-        delay: 200 + i * 50,
-        ease: 'Cubic.easeOut',
-        onComplete: () => spark.destroy(),
-      });
-    }
-
-    // Fade out after 2.5s
-    this.time.delayedCall(2500, () => {
-      this.tweens.add({
-        targets: [banner, label, titleText],
-        alpha: 0,
-        y: '-=15',
-        duration: 400,
-        ease: 'Cubic.easeIn',
-        onComplete: () => {
-          banner.destroy();
-          label.destroy();
-          titleText.destroy();
-          this._activeBannerObjs = this._activeBannerObjs.filter(o => o !== banner && o !== label && o !== titleText);
-        },
-      });
-    });
-  }
-
   shutdown() {
-    // Destroy any in-flight quest banner objects (prevents leaks on scene restart)
-    for (const obj of this._activeBannerObjs) {
-      if (obj && obj.active) obj.destroy();
-    }
-    this._activeBannerObjs = [];
-    this.questAnnouncementQueue = [];
-    this.questAnnouncementActive = false;
+    HUD.shutdown();
   }
 }
 
@@ -1725,19 +1159,16 @@ socket.on('dungeon:enter', (data) => {
       scene.shrineSprites.clear();
 
       // Reset boss tracking for new floor
-      scene.lastBossId = null;
       scene.discoveredRooms.clear();
-      if (scene.bossBar) {
-        Object.values(scene.bossBar).forEach(v => v.setVisible(false));
-      }
+      HUD.hideBossBar();
 
       // Room discovery flash
-      scene.showRoomDiscovery();
+      HUD.showRoomDiscovery(scene);
 
       // Floor transition effect
       const floorIdx = data.floor || 0;
       const floorName = data.floorName || FLOOR_NAMES[floorIdx % FLOOR_NAMES.length] || `Floor ${floorIdx + 1}`;
-      scene.playFloorTransition(floorIdx, floorName);
+      HUD.playFloorTransition(scene, floorIdx, floorName);
     }
   }
 });
@@ -1746,10 +1177,10 @@ socket.on('wave:start', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.showWaveAnnouncement(`WAVE ${data.wave}/${data.totalWaves}`, '#ff4444');
+      HUD.showWaveAnnouncement(scene, `WAVE ${data.wave}/${data.totalWaves}`, '#ff4444');
       // Trigger boss announcement if this is a boss room wave
       if (data.roomType === 'boss' && data.bossName) {
-        scene.showBossAnnouncement(data.bossName);
+        HUD.showBossAnnouncement(scene, data.bossName);
       }
     }
   }
@@ -1759,11 +1190,11 @@ socket.on('room:cleared', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.showWaveAnnouncement(`${data.roomName} CLEARED!`, '#44ff44');
-      scene.spawnCelebrationParticles();
+      HUD.showWaveAnnouncement(scene, `${data.roomName} CLEARED!`, '#44ff44');
+      HUD.spawnCelebrationParticles(scene);
       // Reset wave text color after announcement fades
       scene.time.delayedCall(2600, () => {
-        scene.waveText.setColor('#ff4444');
+        HUD.setWaveTextColor('#ff4444');
       });
     }
   }
@@ -1773,10 +1204,10 @@ socket.on('exit:unlocked', () => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.showWaveAnnouncement('EXIT UNLOCKED!', '#ffcc00');
+      HUD.showWaveAnnouncement(scene, 'EXIT UNLOCKED!', '#ffcc00');
       scene.tilesDirty = true; // Re-render exit tile color
       scene.time.delayedCall(3100, () => {
-        scene.waveText.setColor('#ff4444');
+        HUD.setWaveTextColor('#ff4444');
       });
     }
   }
@@ -1786,18 +1217,18 @@ socket.on('shrine:used', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.showWaveAnnouncement('SHRINE ACTIVATED!', '#44ffaa');
+      HUD.showWaveAnnouncement(scene, 'SHRINE ACTIVATED!', '#44ffaa');
       scene.time.delayedCall(2600, () => {
-        scene.waveText.setColor('#ff4444');
+        HUD.setWaveTextColor('#ff4444');
       });
       // Burst effect at shrine location
       if (data && data.x !== undefined && data.y !== undefined) {
-        scene.showShrineUsedBurst(data.x, data.y);
+        HUD.showShrineUsedBurst(scene, data.x, data.y);
       } else if (data && data.roomId) {
         // Find shrine by room ID and burst at its position
         const shrine = scene.shrineSprites.get(data.roomId);
         if (shrine) {
-          scene.showShrineUsedBurst(shrine._baseX, shrine._baseY);
+          HUD.showShrineUsedBurst(scene, shrine._baseX, shrine._baseY);
         }
       }
     }
@@ -1808,7 +1239,7 @@ socket.on('quest:complete', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene && scene.scene.isActive()) {
-      scene.showQuestComplete(data.title);
+      HUD.showQuestComplete(scene, data.title);
     }
   }
 });

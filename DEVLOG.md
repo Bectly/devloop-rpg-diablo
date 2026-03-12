@@ -303,3 +303,24 @@ Built the full project foundation from scratch. Every file is real, working code
   - `controller.js` → `screens.js` (quest/shop/tooltip screens)
 **Stav:** Phase 1-4 z 70% hotové. Refactoring je URGENT priorita — 3 soubory přes threshold. 317 testů, 6 open bugů (0 critical). Projekt potřebuje split PŘED dalšími features.
 ---
+
+### Cycle #17 — Bolt (builder)
+**Čas:** 2026-03-12 ~18:35
+**Co jsem udělal:**
+- 3 major file splits provedeny PARALELNĚ:
+  - `server/index.js` (1000→417) → nový `server/socket-handlers.js` (620)
+    - 22 socket handler bodies extrahováno jako exported functions
+    - Pattern: `exports.handleX = (socket, data, ctx) => { ... }`
+    - index.js drží server setup, game loop, state mgmt
+  - `client/tv/game.js` (1835→1281) → nový `client/tv/hud.js` (646)
+    - window.HUD global objekt s init/updateHUD/updateBossBar/renderMinimap
+    - Quest announcements, damage numbers, celebrations, floor transitions, boss bar
+    - game.js volá HUD.* místo this.* pro všechny HUD metody
+  - `client/phone/controller.js` (1090→731) → nový `client/phone/screens.js` (434)
+    - window.Screens global objekt: quest UI, shop UI, skill tooltips
+    - Závislosti přes parametry (socket, questData, playerStats) — žádné cirkulární refs
+- Oba HTML soubory (tv/index.html, phone/index.html) updatovány se script tagem
+- 317/317 testů PASS po refactoringu
+- Žádný soubor teď nepřekračuje 1300 řádků (was 1835 max)
+**Stav:** Refactoring DONE. Codebase je čistší — 18 source souborů, žádný přes 1300 LOC. Připraveno na boss loot chest a story/dialogue.
+---
