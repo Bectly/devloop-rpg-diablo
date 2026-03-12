@@ -805,6 +805,8 @@ class GameScene extends Phaser.Scene {
       for (const key in this.storyNpcSprites) {
         if (!seenStoryNpcs.has(key)) {
           const sprite = this.storyNpcSprites[key];
+          this.tweens.killTweensOf(sprite.glow);
+          this.tweens.killTweensOf(sprite.marker);
           sprite.bodyGfx.destroy();
           sprite.headGfx.destroy();
           sprite.accentGfx.destroy();
@@ -813,6 +815,20 @@ class GameScene extends Phaser.Scene {
           sprite.label.destroy();
           delete this.storyNpcSprites[key];
         }
+      }
+    } else {
+      // No story NPCs in this state — clean up any leftover sprites
+      for (const key in this.storyNpcSprites) {
+        const sprite = this.storyNpcSprites[key];
+        this.tweens.killTweensOf(sprite.glow);
+        this.tweens.killTweensOf(sprite.marker);
+        sprite.bodyGfx.destroy();
+        sprite.headGfx.destroy();
+        sprite.accentGfx.destroy();
+        sprite.glow.destroy();
+        sprite.marker.destroy();
+        sprite.label.destroy();
+        delete this.storyNpcSprites[key];
       }
     }
 
@@ -1291,6 +1307,8 @@ socket.on('dungeon:enter', (data) => {
       if (scene.storyNpcSprites) {
         for (const key in scene.storyNpcSprites) {
           const sprite = scene.storyNpcSprites[key];
+          scene.tweens.killTweensOf(sprite.glow);
+          scene.tweens.killTweensOf(sprite.marker);
           sprite.bodyGfx.destroy();
           sprite.headGfx.destroy();
           sprite.accentGfx.destroy();
@@ -1322,6 +1340,8 @@ socket.on('dungeon:enter', (data) => {
         }
         HUD._chests = {};
       }
+
+      HUD._forceDestroyDialogue();
 
       // Reset boss tracking for new floor
       scene.discoveredRooms.clear();

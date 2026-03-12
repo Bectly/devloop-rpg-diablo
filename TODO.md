@@ -57,11 +57,11 @@
 **No files over threshold.** Split done in Cycle #17.
 
 ## Open Bugs
-- [ ] [BUG/HIGH] `dungeon:enter` never cleans up HUD dialogue overlay — fade-out tween fires on stale objects — `game.js`
-- [ ] [BUG/HIGH] Stagger setTimeout IDs in dialogue choice reveal not stored/cleared — orphaned timeouts on `dialogue:end` — `controller.js`
-- [ ] [BUG/MEDIUM] Story NPC sprites not cleaned when `state.world.storyNpcs` is absent — `game.js:672`
-- [ ] [BUG/MEDIUM] Orphaned tweens on story NPC glow/marker not killed before destroy — `game.js`
-- [ ] [BUG/MEDIUM] `dialogue:end` doesn't remove `.typing` class from `#dialogue-text` — `controller.js`
+- [x] ~~[BUG/HIGH] `dungeon:enter` never cleans up HUD dialogue overlay~~ FIXED Cycle #25
+- [x] ~~[BUG/HIGH] Stagger setTimeout IDs not stored/cleared~~ FIXED Cycle #25
+- [x] ~~[BUG/MEDIUM] Story NPC sprites not cleaned when storyNpcs absent~~ FIXED Cycle #25
+- [x] ~~[BUG/MEDIUM] Orphaned tweens on NPC glow/marker not killed~~ FIXED Cycle #25
+- [x] ~~[BUG/MEDIUM] dialogue:end doesn't remove .typing class~~ FIXED Cycle #25
 - [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js

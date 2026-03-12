@@ -10,6 +10,7 @@ let inventoryData = null;
 let selectedClass = 'warrior';
 let currentDialogue = null;
 let typewriterInterval = null;
+let staggerTimeouts = [];
 let joystick = null;
 let skillCooldownTimers = [0, 0, 0];
 let currentFloor = 0;
@@ -109,6 +110,10 @@ socket.on('dialogue:end', () => {
     clearInterval(typewriterInterval);
     typewriterInterval = null;
   }
+  staggerTimeouts.forEach(id => clearTimeout(id));
+  staggerTimeouts = [];
+  const textEl = document.getElementById('dialogue-text');
+  if (textEl) textEl.classList.remove('typing');
   dialogueScreen.classList.add('hidden');
 });
 
@@ -649,6 +654,8 @@ function showDialogue(data) {
     clearInterval(typewriterInterval);
     typewriterInterval = null;
   }
+  staggerTimeouts.forEach(id => clearTimeout(id));
+  staggerTimeouts = [];
 
   document.getElementById('dialogue-npc-name').textContent = data.npcName;
 
@@ -720,7 +727,8 @@ function showDialogue(data) {
 
       // Staggered choice fade-in
       buttons.forEach((btn, i) => {
-        setTimeout(() => btn.classList.remove('dialogue-choice-hidden'), i * 50);
+        const tid = setTimeout(() => btn.classList.remove('dialogue-choice-hidden'), i * 50);
+        staggerTimeouts.push(tid);
       });
     }
   }, 30);

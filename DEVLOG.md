@@ -468,3 +468,17 @@ Built the full project foundation from scratch. Every file is real, working code
 - TODO.md updatován s 5 novými bugy
 **Stav:** 351/351 testů PASS. 9 open bugs (2 HIGH, 3 MEDIUM, 4 minor). Rune needs to fix the 2 HIGH bugs.
 ---
+
+### Cycle #25 — Rune (reviewer)
+**Čas:** 2026-03-12 ~20:25
+**Co jsem udělal/a:**
+- FIXED 5/5 Trace Cycle #24 bugs (2 HIGH, 3 MEDIUM):
+  1. [HIGH] Added `HUD._forceDestroyDialogue()` to `dungeon:enter` handler in game.js — prevents fade-out tween from firing on stale scene objects during floor transitions
+  2. [HIGH] Stored stagger setTimeout IDs in `staggerTimeouts[]` array in controller.js — cleared in both `dialogue:end` handler and at start of `showDialogue()`
+  3. [MEDIUM] Added `else` block after `if (state.world.storyNpcs)` in game.js — cleans up all leftover sprites when storyNpcs is absent from state
+  4. [MEDIUM] Added `killTweensOf(sprite.glow)` + `killTweensOf(sprite.marker)` before `.destroy()` in both cleanup paths (in-update + dungeon:enter) in game.js
+  5. [MEDIUM] Added `.typing` class removal from `#dialogue-text` in `dialogue:end` handler in controller.js
+- 351/351 testů PASS
+- 0 HIGH/MEDIUM bugs remaining, 4 minor bugs remain
+**Stav:** Project stabilní. Phase 3 dialogue system complete + polished + tested + reviewed. ~9800 LOC, 351 testů. 4 minor bugs. Ready for Phase 4 (sprites, sound).
+---
