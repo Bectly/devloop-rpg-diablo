@@ -53,7 +53,7 @@ function _resolveDialogue(socket, data, { players, world, story, gameNs, io }) {
 }
 
 // ── Join Game ──
-exports.handleJoin = (socket, data, { players, inventories, controllerSockets, world, gameNs }) => {
+exports.handleJoin = (socket, data, { players, inventories, controllerSockets, world, gameNs, gameDb }) => {
   if (players.size >= 2) {
     socket.emit('notification', { text: 'Game is full (max 2 players)', type: 'error' });
     return;
@@ -76,9 +76,34 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
   // Create inventory
   const inv = new Inventory();
 
-  // Give starting items
-  const startPotion = generateConsumable('health_potion', 3);
-  if (startPotion) inv.addItem(startPotion);
+  // Check DB for saved character
+  let restored = false;
+  if (gameDb) {
+    try {
+      const saved = gameDb.loadCharacter(name);
+      if (saved) {
+        player.restoreFrom(saved);
+
+        // Restore inventory items from saved data
+        if (saved.inventory && Array.isArray(saved.inventory)) {
+          for (const item of saved.inventory) {
+            inv.addItem(item);
+          }
+        }
+
+        restored = true;
+        console.log(`[DB] Restored ${name} — level ${saved.level}, ${saved.gold}g, floor ${saved.floor}`);
+      }
+    } catch (err) {
+      console.error(`[DB] Failed to load ${name}:`, err.message);
+    }
+  }
+
+  // Give starting items only if new character
+  if (!restored) {
+    const startPotion = generateConsumable('health_potion', 3);
+    if (startPotion) inv.addItem(startPotion);
+  }
 
   players.set(socket.id, player);
   inventories.set(player.id, inv);
@@ -106,7 +131,10 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     characterClass: player.characterClass,
   });
 
-  socket.emit('notification', { text: `Welcome, ${name}!`, type: 'info' });
+  socket.emit('notification', {
+    text: restored ? `Welcome back, ${name}! Character loaded.` : `Welcome, ${name}!`,
+    type: restored ? 'quest' : 'info',
+  });
 };
 
 // ── Movement ──
@@ -723,9 +751,20 @@ exports.handleChestOpen = (socket, data, { players, world, gameNs, io }) => {
 };
 
 // ── Disconnect ──
-exports.handleDisconnect = (socket, data, { players, inventories, controllerSockets, gameNs }) => {
+exports.handleDisconnect = (socket, data, { players, inventories, controllerSockets, gameNs, gameDb }) => {
   const player = players.get(socket.id);
   if (player) {
+    // Save character to DB before removing
+    if (gameDb) {
+      try {
+        const inv = inventories.get(player.id);
+        gameDb.saveCharacter(player, inv);
+        console.log(`[DB] Saved ${player.name} on disconnect`);
+      } catch (err) {
+        console.error(`[DB] Failed to save ${player.name} on disconnect:`, err.message);
+      }
+    }
+
     console.log(`[Game] ${player.name} left`);
     inventories.delete(player.id);
     players.delete(socket.id);

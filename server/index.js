@@ -12,6 +12,9 @@ const { generateConsumable, generateLoot, generateWeapon, generateArmor } = requ
 const { getSellPrice } = require('./game/shop');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
+const { GameDatabase } = require('./game/database');
+
+const gameDb = new GameDatabase();
 
 // ─── Server Setup ──────────────────────────────────────────────
 const app = express();
@@ -99,7 +102,7 @@ const controllerNs = io.of('/controller');
 controllerNs.on('connection', (socket) => {
   console.log(`[Phone] Connected: ${socket.id}`);
 
-  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, io };
+  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, io, gameDb };
 
   socket.on('join', (data) => handlers.handleJoin(socket, data, ctx));
   socket.on('move', (data) => handlers.handleMove(socket, data, ctx));
@@ -176,10 +179,43 @@ controllerNs.on('connection', (socket) => {
   socket.on('disconnect', () => handlers.handleDisconnect(socket, null, ctx));
 });
 
+// ─── Persistence helpers ────────────────────────────────────────
+function saveAllPlayers(floor) {
+  const currentFloor = floor !== undefined ? floor : world.currentFloor;
+  for (const [sid, player] of players) {
+    const inv = inventories.get(player.id);
+    try {
+      // Override the default floor=0 with actual floor
+      const invItems = inv ? inv.getAllItems() : [];
+      gameDb._stmtSave.run({
+        name: player.name,
+        class: player.characterClass,
+        level: player.level,
+        xp: player.xp,
+        stats: JSON.stringify(player.stats),
+        equipment: JSON.stringify(player.equipment),
+        inventory: JSON.stringify(invItems),
+        gold: player.gold,
+        floor: currentFloor,
+        kills: player.kills,
+        health_potions: player.healthPotions,
+        mana_potions: player.manaPotions,
+        free_stat_points: player.freeStatPoints,
+      });
+    } catch (err) {
+      console.error(`[DB] Failed to save ${player.name}:`, err.message);
+    }
+  }
+  if (players.size > 0) {
+    console.log(`[DB] Saved ${players.size} player(s) (floor ${currentFloor})`);
+  }
+}
+
 // ─── Game Loop (20 ticks/sec) ──────────────────────────────────
 const TICK_RATE = 20;
 const TICK_MS = 1000 / TICK_RATE;
 let lastTick = Date.now();
+let tickCount = 0;
 
 function gameLoop() {
   const now = Date.now();
@@ -460,6 +496,10 @@ function gameLoop() {
             };
 
             console.log(`[World] VICTORY! Dungeon conquered in ${Math.floor(elapsed / 1000)}s`);
+
+            // Save final stats before emitting victory
+            saveAllPlayers();
+
             gameNs.emit('game:victory', victoryData);
             controllerNs.emit('game:victory', victoryData);
             world._advancing = false;
@@ -469,6 +509,9 @@ function gameLoop() {
           const nextFloor = world.currentFloor + 1;
           world.generateFloor(nextFloor);
           story.placeNpcs(world.storyNpcs || []);
+
+          // Save all players on floor transition
+          saveAllPlayers(nextFloor);
 
           // Reposition all players at new spawn
           let i = 0;
@@ -531,6 +574,12 @@ function gameLoop() {
     }
   }
 
+  // ── Auto-save every 60 seconds ──
+  tickCount++;
+  if (tickCount % (TICK_RATE * 60) === 0) {
+    saveAllPlayers();
+  }
+
   // ── Broadcast state to TV ──
   const state = {
     players: allPlayers.map(p => p.serialize()),
@@ -543,6 +592,18 @@ function gameLoop() {
 }
 
 setInterval(gameLoop, TICK_MS);
+
+// ─── Graceful Shutdown ──────────────────────────────────────────
+function gracefulShutdown(signal) {
+  console.log(`\n[Server] ${signal} received — saving all players...`);
+  saveAllPlayers();
+  gameDb.close();
+  console.log('[Server] Database closed. Goodbye.');
+  process.exit(0);
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // ─── Start ─────────────────────────────────────────────────────
 server.listen(PORT, '0.0.0.0', () => {

@@ -415,6 +415,42 @@ class Player {
     };
   }
 
+  /**
+   * Restore player state from saved DB data.
+   * Keeps the new UUID — only restores progression.
+   * @param {object} savedData — from GameDatabase.loadCharacter()
+   */
+  restoreFrom(savedData) {
+    this.level = savedData.level || 1;
+    this.xp = savedData.xp || 0;
+    this.xpToNext = Math.floor(100 * Math.pow(1.15, this.level));
+    this.freeStatPoints = savedData.freeStatPoints || 0;
+    this.gold = savedData.gold || 0;
+    this.kills = savedData.kills || 0;
+    this.healthPotions = savedData.healthPotions ?? 3;
+    this.manaPotions = savedData.manaPotions ?? 2;
+
+    // Restore base stats
+    if (savedData.stats) {
+      this.stats.str = savedData.stats.str ?? this.stats.str;
+      this.stats.dex = savedData.stats.dex ?? this.stats.dex;
+      this.stats.int = savedData.stats.int ?? this.stats.int;
+      this.stats.vit = savedData.stats.vit ?? this.stats.vit;
+    }
+
+    // Restore equipment
+    if (savedData.equipment) {
+      for (const slot of Object.keys(this.equipment)) {
+        this.equipment[slot] = savedData.equipment[slot] || null;
+      }
+    }
+
+    // Recalc bonuses from restored equipment, then set HP/MP to max
+    this.recalcEquipBonuses();
+    this.hp = this.maxHp;
+    this.mp = this.maxMp;
+  }
+
   serializeForPhone() {
     return {
       id: this.id,
