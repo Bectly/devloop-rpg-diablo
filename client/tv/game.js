@@ -1530,6 +1530,99 @@ class GameScene extends Phaser.Scene {
       });
     }
   }
+
+  // ── Quest Complete Announcement ──
+  showQuestComplete(title) {
+    const cam = this.cameras.main;
+    const cx = cam.scrollX + cam.width / 2;
+    const cy = cam.scrollY + cam.height * 0.25;
+
+    // Gold banner background
+    const banner = this.add.rectangle(cx, cy, 350, 40, 0x000000, 0.6);
+    banner.setStrokeStyle(1, 0xffaa33, 0.8);
+    banner.setDepth(1000);
+    banner.setAlpha(0);
+
+    // "QUEST COMPLETE" text
+    const label = this.add.text(cx, cy - 2, '\u2b50 QUEST COMPLETE', {
+      fontSize: '13px',
+      fontFamily: 'Courier New, monospace',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+    });
+    label.setOrigin(0.5);
+    label.setDepth(1001);
+    label.setAlpha(0);
+
+    // Quest title below
+    const titleText = this.add.text(cx, cy + 14, title, {
+      fontSize: '10px',
+      fontFamily: 'Courier New, monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2,
+      align: 'center',
+    });
+    titleText.setOrigin(0.5);
+    titleText.setDepth(1001);
+    titleText.setAlpha(0);
+
+    // Animate in
+    this.tweens.add({
+      targets: [banner, label, titleText],
+      alpha: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
+
+    // Scale pop on label
+    label.setScale(0.5);
+    this.tweens.add({
+      targets: label,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 400,
+      ease: 'Back.easeOut',
+    });
+
+    // Gold sparkle particles around banner
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const px = cx + Math.cos(angle) * 180;
+      const py = cy + Math.sin(angle) * 30;
+      const spark = this.add.circle(cx, cy, 2, 0xffcc00, 0.8);
+      spark.setDepth(1002);
+      this.tweens.add({
+        targets: spark,
+        x: px,
+        y: py,
+        alpha: 0,
+        duration: 600,
+        delay: 200 + i * 50,
+        ease: 'Cubic.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+
+    // Fade out after 2.5s
+    this.time.delayedCall(2500, () => {
+      this.tweens.add({
+        targets: [banner, label, titleText],
+        alpha: 0,
+        y: '-=15',
+        duration: 400,
+        ease: 'Cubic.easeIn',
+        onComplete: () => {
+          banner.destroy();
+          label.destroy();
+          titleText.destroy();
+        },
+      });
+    });
+  }
 }
 
 // ─── Socket Events ──────────────────────────────────────────────
@@ -1669,6 +1762,15 @@ socket.on('shrine:used', (data) => {
           scene.showShrineUsedBurst(shrine._baseX, shrine._baseY);
         }
       }
+    }
+  }
+});
+
+socket.on('quest:complete', (data) => {
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene) {
+      scene.showQuestComplete(data.title);
     }
   }
 });

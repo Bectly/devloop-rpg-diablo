@@ -201,6 +201,9 @@ controllerNs.on('connection', (socket) => {
       const goldChanged = player.questManager.check('collect_gold', { amount: item.quantity });
       if (goldChanged.length > 0) {
         socket.emit('quest:update', player.questManager.getActiveQuests());
+        for (const cq of goldChanged) {
+          if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+        }
       }
       socket.emit('notification', { text: `+${item.quantity} gold`, type: 'gold' });
       socket.emit('stats:update', player.serializeForPhone());
@@ -262,6 +265,9 @@ controllerNs.on('connection', (socket) => {
         const goldChanged = player.questManager.check('collect_gold', { amount: item.quantity });
         if (goldChanged.length > 0) {
           socket.emit('quest:update', player.questManager.getActiveQuests());
+          for (const cq of goldChanged) {
+            if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+          }
         }
         socket.emit('notification', { text: `+${item.quantity} gold`, type: 'gold' });
         socket.emit('stats:update', player.serializeForPhone());
@@ -403,6 +409,9 @@ controllerNs.on('connection', (socket) => {
       const shrineChanged = player.questManager.check('use_shrine', {});
       if (shrineChanged.length > 0) {
         socket.emit('quest:update', player.questManager.getActiveQuests());
+        for (const cq of shrineChanged) {
+          if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+        }
       }
       socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
       socket.emit('stats:update', player.serializeForPhone());
@@ -531,6 +540,9 @@ controllerNs.on('connection', (socket) => {
       const buyChanged = player.questManager.check('buy_item', {});
       if (buyChanged.length > 0) {
         socket.emit('quest:update', player.questManager.getActiveQuests());
+        for (const cq of buyChanged) {
+          if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+        }
       }
       socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: 'info' });
       socket.emit('stats:update', player.serializeForPhone());
@@ -544,6 +556,9 @@ controllerNs.on('connection', (socket) => {
       const buyChanged = player.questManager.check('buy_item', {});
       if (buyChanged.length > 0) {
         socket.emit('quest:update', player.questManager.getActiveQuests());
+        for (const cq of buyChanged) {
+          if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+        }
       }
       socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: 'info' });
       socket.emit('stats:update', player.serializeForPhone());
@@ -563,6 +578,9 @@ controllerNs.on('connection', (socket) => {
     const buyChanged = player.questManager.check('buy_item', {});
     if (buyChanged.length > 0) {
       socket.emit('quest:update', player.questManager.getActiveQuests());
+      for (const cq of buyChanged) {
+        if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+      }
     }
     socket.emit('notification', { text: `Bought ${item.name} for ${item.shopPrice}g`, type: item.rarity || 'common' });
     socket.emit('stats:update', player.serializeForPhone());
@@ -604,6 +622,9 @@ controllerNs.on('connection', (socket) => {
     const shrineChanged = player.questManager.check('use_shrine', {});
     if (shrineChanged.length > 0) {
       socket.emit('quest:update', player.questManager.getActiveQuests());
+      for (const cq of shrineChanged) {
+        if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
+      }
     }
     socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
     socket.emit('stats:update', player.serializeForPhone());
@@ -738,6 +759,9 @@ function gameLoop() {
         if (changed.length > 0) {
           const sock = controllerNs.sockets.get(pid);
           if (sock) sock.emit('quest:update', p.questManager.getActiveQuests());
+          for (const cq of changed) {
+            if (cq.completed) gameNs.emit('quest:complete', { playerId: p.id, playerName: p.name, title: cq.title });
+          }
         }
       }
       if (waveResult.exitUnlocked) {
@@ -792,6 +816,7 @@ function gameLoop() {
               for (const q of changed) {
                 if (q.completed) {
                   sock.emit('notification', { text: `Quest complete: ${q.title}!`, type: 'quest' });
+                  gameNs.emit('quest:complete', { playerId: p.id, playerName: p.name, title: q.title });
                 }
               }
             }
@@ -922,6 +947,9 @@ function gameLoop() {
                 if (newQuests.length > 0) {
                   sock.emit('notification', { text: `${newQuests.length} new quests!`, type: 'quest' });
                 }
+              }
+              for (const cq of changed) {
+                if (cq.completed) gameNs.emit('quest:complete', { playerId: p.id, playerName: p.name, title: cq.title });
               }
             }
           }

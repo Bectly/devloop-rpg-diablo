@@ -127,11 +127,28 @@ socket.on('shop:inventory', (data) => {
 
 socket.on('quest:update', (quests) => {
   questData = quests;
+  // Check for newly completed quests
+  const newlyCompleted = quests.filter(q => q.completed && !q.claimed);
+  if (newlyCompleted.length > 0) {
+    // Flash the QST button
+    const qstBtn = document.getElementById('btn-quests');
+    if (qstBtn) {
+      qstBtn.classList.add('quest-flash');
+      setTimeout(() => qstBtn.classList.remove('quest-flash'), 1500);
+    }
+  }
   // If quest screen is visible, re-render
   const screen = document.getElementById('quest-screen');
   if (screen && !screen.classList.contains('hidden')) {
     renderQuests();
   }
+  updateQuestBadge();
+});
+
+socket.on('quest:claimed', (data) => {
+  showNotification(`Quest complete! +${data.gold}g${data.item ? ' + ' + data.item.name : ''}`, 'legendary');
+  // Re-render and update badge
+  renderQuests();
   updateQuestBadge();
 });
 
@@ -823,6 +840,16 @@ function estimateSellPrice(item) {
 }
 
 // ─── Quest Log ──────────────────────────────────────────────────
+const QUEST_ICONS = {
+  kill_count: '\u2694\uFE0F',
+  kill_type: '\uD83C\uDFAF',
+  clear_rooms: '\uD83D\uDDFA\uFE0F',
+  collect_gold: '\uD83D\uDCB0',
+  reach_floor: '\u2B07\uFE0F',
+  use_shrine: '\u26EA',
+  buy_item: '\uD83D\uDED2',
+};
+
 function createQuestScreen() {
   if (document.getElementById('quest-screen')) return;
 
@@ -880,7 +907,7 @@ function renderQuests() {
 
     el.innerHTML = `
       <div class="quest-item-header">
-        <span class="quest-item-title">${quest.title}</span>
+        <span class="quest-item-title"><span class="quest-icon">${QUEST_ICONS[quest.type] || '\uD83D\uDCDC'}</span> ${quest.title}</span>
         <span class="quest-item-progress">${quest.progress}/${quest.target}</span>
       </div>
       <div class="quest-item-desc">${quest.description}</div>
@@ -889,7 +916,7 @@ function renderQuests() {
       </div>
       <div class="quest-reward">
         <span class="quest-reward-gold">${quest.reward.gold}g</span>
-        ${quest.reward.item ? `<span class="quest-reward-item">${quest.reward.item.name}</span>` : ''}
+        ${quest.reward.item ? `<span class="quest-reward-item ${quest.reward.item.rarity || ''}">${quest.reward.item.name}</span>` : ''}
       </div>
       ${quest.completed ? `<button class="quest-claim-btn" data-quest-id="${quest.id}">CLAIM</button>` : ''}
     `;

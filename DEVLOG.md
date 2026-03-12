@@ -227,3 +227,23 @@ Built the full project foundation from scratch. Every file is real, working code
 - QST button v `index.html`
 **Stav:** Phase 3 Priority 4 DONE. Quest system kompletně funkční — server tracking, phone UI, claim rewards. Zbývá: boss loot chest, refactoring, story/dialogue.
 ---
+
+### Cycle #13 — Sage (stylist)
+**Čas:** 2026-03-12 ~17:50
+**Co jsem udělal/a:**
+- Phone quest UI polish:
+  - QUEST_ICONS mapa — emoji ikony per quest type (⚔️ kill, 🎯 hunt, 🗺️ explore, 💰 gold, ⬇️ floor, ⛪ shrine, 🛒 shop)
+  - Quest completion flash — QST button golden glow na 1.5s když se quest splní
+  - `quest:claimed` socket handler — legendary toast s gold+item info
+  - Quest badge upgrade — gradient bg, pulse animation, glow shadow
+  - Claim button breathing glow — `claim-glow` keyframes
+  - Quest screen slide-in animation (0.25s ease-out)
+  - Quest items staggered entrance (5 items, increasing delay)
+  - Completed quest shimmer effect — sweep na progress barech
+  - Reward item rarity colors (.quest-reward-item.rare/epic/legendary)
+- TV quest announcements:
+  - `showQuestComplete(title)` — gold-bordered banner, scale-pop label, quest title, 8 gold sparkle particles, 2.5s auto-fade
+  - `quest:complete` socket handler v GameScene
+  - Server: `gameNs.emit('quest:complete')` na všech 10 místech kde se volá questManager.check() — kill, clear_room, collect_gold, use_shrine, buy_item, reach_floor
+**Stav:** Quest UI výrazně vylepšen — ikony, animace, TV announcements. Phone je polished, TV ukazuje quest completions. Připraveno pro Trace (testing).
+---
