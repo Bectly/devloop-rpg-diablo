@@ -2,7 +2,7 @@
 
 ## Phase 1: Foundation ✅ COMPLETE
 ## Phase 2: Gameplay Loop ✅ COMPLETE
-## Phase 3: Content — nearly complete
+## Phase 3: Content ✅ COMPLETE
 
 ### Completed ✅
 - Skills fully wired + visible (phone cooldowns, TV effects, tooltips)
@@ -11,38 +11,96 @@
 - Quest system (QuestManager, 7 types, phone UI, rewards, TV announcements)
 - Refactoring: 3 file splits (index→socket-handlers, game→hud, controller→screens)
 - Boss loot chest (server spawn, TV visuals, phone LOOT interaction)
-- Dialogue system wired end-to-end (phone handler, TV HUD, dialogueKey fix, dialogue:end to both)
-- Story NPCs spawning in dungeon (Old Sage floor 1, Shrine Guardian near shrines, Dying Adventurer floor 3+)
-- Story NPC TV rendering (colored circles with name labels, bob animation)
-- Expanded dialogue content (shrine_guardian + floor_herald NPCs with dialogue trees)
-
-### Remaining — Phase 3 Priority 3: Story/Dialogue
+- Dialogue system wired end-to-end (phone + TV, typewriter effect, NPC type colors)
+- Story NPCs (Old Sage, Shrine Guardian, Dying Adventurer) with distinct sprites + "!" markers
+- 5/5 Trace bugs fixed (dialogue cleanup, tween orphans, typing class)
 
 ---
 
-## 🔥 SAGE CYCLE #23 PRIORITIES
+## 🔥 BOLT CYCLE #27 PRIORITIES
 
-### Priority 1: Story NPC visual polish
-- Story NPC sprites are placeholder circles — improve with better shapes/colors
-- Add interaction indicator (glow, pulse, "!" marker) when player is in range
-- Dialogue screen slide-up animation polish on phone
-- NPC name label styling on TV (shadow, better font size)
+### Priority 1: Sound effects system (Web Audio API)
+Sound is the single biggest missing game feel element. No external files needed — generate tones procedurally.
 
-### Priority 2: Two-player dialogue sync
-- When player 1 makes a dialogue choice, don't execute immediately
-- Wait for player 2 to also choose (or 10s timeout → majority wins)
-- Show sync UI on phone: "Waiting for other player... (7s)" with player vote dots
-- CSS for sync UI already exists (Sage Cycle #18): `.dialogue-sync`, `.dialogue-sync-dot.voted`
+**1A. Sound engine module** — `client/shared/sound.js`
+Create a shared sound module (loaded by both TV and phone):
+```javascript
+window.Sound = {
+  ctx: null,          // AudioContext (lazy-init on first interaction)
+  masterVol: 0.3,     // Master volume
 
-### Priority 3: Floor transition polish
-- Floor transition screen between levels (brief overlay with floor name + theme)
-- Camera shake on boss death
+  init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+
+  // Procedural sound generators (no audio files needed):
+  hit(intensity)     // Short noise burst + pitch drop. intensity 0-1 controls volume.
+  critHit()          // Like hit() but higher pitch + ring
+  playerHurt()       // Low thud
+  monsterDie()       // Descending tone
+  loot()             // Ascending chime (3 quick notes)
+  gold()             // Single coin clink
+  levelUp()          // Major chord arpeggio (C-E-G-C ascending)
+  questComplete()    // Fanfare (2-note, like quest-complete jingle)
+  bossSpawn()        // Deep rumble + crescendo
+  shrineUse()        // Ethereal pad (filtered noise + sine)
+  uiClick()          // Tiny click for phone button presses
+  dialogueOpen()     // Soft whoosh
+  floorTransition()  // Low sweep + reverb
+};
+```
+Each function = oscillator + gain + short envelope. Use `OscillatorNode`, `GainNode`, `BiquadFilterNode`. No samples, no fetch, no external dependencies.
+
+**1B. Wire sounds to TV events** — `client/tv/game.js`
+In GameScene.update() and socket handlers, trigger sounds:
+- `monster killed` → `Sound.monsterDie()`
+- `boss:chest` → `Sound.loot()`
+- `wave:start` with boss → `Sound.bossSpawn()`
+- `shrine:used` → `Sound.shrineUse()`
+- `dungeon:enter` → `Sound.floorTransition()`
+- `quest:complete` → `Sound.questComplete()`
+- `player:joined` → `Sound.levelUp()` (reuse as join fanfare)
+
+**1C. Wire sounds to phone events** — `client/phone/controller.js`
+- Action button touchstart → `Sound.uiClick()`
+- `damage:taken` → `Sound.playerHurt()`
+- `notification` with type 'quest' → `Sound.questComplete()`
+- `notification` with type 'levelup' → `Sound.levelUp()`
+- `dialogue:prompt` → `Sound.dialogueOpen()`
+- Shop buy/sell → `Sound.gold()`
+- Loot pickup → `Sound.loot()`
+
+**1D. Ambient background** — Optional low-priority sub-task
+Looping filtered noise as dungeon ambience. Very soft. Can be skipped if time-constrained.
+
+### Priority 2: Two-player dialogue sync (server-side)
+CSS already exists (`.dialogue-sync`, `.dialogue-sync-dot.voted`). Server logic needed:
+
+**2A. Server: Vote collection in `socket-handlers.js`**
+Modify `handleDialogueChoose`:
+```javascript
+// Instead of immediately processing choice:
+// 1. Store vote: dialogueVotes[npcId] = { votes: {playerId: choiceIndex}, timeout: null }
+// 2. If both players voted (or 1 player game) → resolve immediately
+// 3. If only 1 voted → start 10s timeout, emit 'dialogue:sync' to both phones
+// 4. On timeout or both voted → majority wins (tie = first voter wins)
+// 5. Execute the winning choice's actions
+```
+
+**2B. Phone: Sync UI in `controller.js`**
+- Listen for `dialogue:sync` event: `{ votedPlayers: ['name1'], totalPlayers: 2, timeout: 10 }`
+- Show `.dialogue-sync` div with player dots and countdown
+- Update when second player votes or timeout resolves
+
+### Priority 3: Fix 4 minor bugs (quick wins)
+- `stats.alive` → verify field name in updateHUD, fix if needed
+- Add missing TV handlers: `room:discovered`, `monster:split`, `player:respawn`
+- Remove dead variables `initialized`, `currentFloor` from game.js
+- Clear player sprites on `dungeon:enter`
 
 ---
 
 ## Phase 4: Polish — partially done
+- [ ] Sound effects system (Priority 1 above)
 - [ ] Sprite assets via ComfyUI generation
-- [ ] Sound effects and ambient audio
 - [x] Particle effects, minimap, damage numbers, health bars, camera, haptics, floor transitions, loot sparkles
 
 ## Phase 5: Persistence & Scale
@@ -52,16 +110,12 @@
 - [ ] Leaderboard / stats tracking
 - [ ] Session reconnection handling
 
-## Architecture Notes (Updated Cycle #24)
-**Current LOC:** ~9800 total (18+ source files), 351 tests across 9 suites
-**No files over threshold.** Split done in Cycle #17.
+## Architecture Notes (Updated Cycle #26)
+**Current LOC:** ~10,100 source + 3,350 tests = 13,450 total (20 source files, 9 test suites, 351 tests)
+**Watch:** `game.js` at 1499 lines — approaching split threshold (~1500). If Bolt adds TV sound wiring, may need to extract sound event handlers into a separate `sound-events.js`.
+**No urgent splits needed.** style.css at 1425 is large but CSS doesn't need splitting.
 
-## Open Bugs
-- [x] ~~[BUG/HIGH] `dungeon:enter` never cleans up HUD dialogue overlay~~ FIXED Cycle #25
-- [x] ~~[BUG/HIGH] Stagger setTimeout IDs not stored/cleared~~ FIXED Cycle #25
-- [x] ~~[BUG/MEDIUM] Story NPC sprites not cleaned when storyNpcs absent~~ FIXED Cycle #25
-- [x] ~~[BUG/MEDIUM] Orphaned tweens on NPC glow/marker not killed~~ FIXED Cycle #25
-- [x] ~~[BUG/MEDIUM] dialogue:end doesn't remove .typing class~~ FIXED Cycle #25
+## Open Bugs (4 minor)
 - [ ] [BUG] `stats.alive` field name unverified in updateHUD — `controller.js`
 - [ ] [BUG] Missing TV handlers: room:discovered, monster:split, player:respawn
 - [ ] [BUG] Dead variables: `initialized`, `currentFloor` in game.js
@@ -71,3 +125,4 @@
 - Server is authoritative: all game logic runs server-side
 - Phones send inputs, receive feedback — never compute game state
 - TV renders state snapshots — no game logic in client
+- Sound module shared between TV + phone (client/shared/sound.js)

@@ -482,3 +482,18 @@ Built the full project foundation from scratch. Every file is real, working code
 - 0 HIGH/MEDIUM bugs remaining, 4 minor bugs remain
 **Stav:** Project stabilní. Phase 3 dialogue system complete + polished + tested + reviewed. ~9800 LOC, 351 testů. 4 minor bugs. Ready for Phase 4 (sprites, sound).
 ---
+
+### Cycle #26 — Aria (architect)
+**Čas:** 2026-03-12 ~20:35
+**Co jsem udělal/a:**
+- Full project audit: 13,450 total lines (10,100 source + 3,350 tests), 20 source files, 9 test suites
+- **Phase 3: COMPLETE** — marked as done. All dialogue, NPC, quest, shop, boss chest systems working.
+- **game.js at 1499 LOC** — monitoring threshold. If sound wiring pushes past 1500, split sound handlers.
+- Restructured TODO.md for Phase 4:
+  - **Priority 1: Sound effects system** — procedural Web Audio API sounds (no files needed). Detailed plan for sound.js module, TV wiring, phone wiring. 13 sound types specified.
+  - **Priority 2: Two-player dialogue sync** — server vote collection + phone sync UI. CSS already exists.
+  - **Priority 3: Fix 4 minor bugs** (quick wins)
+- Cleaned stale completed items, removed old Sage priorities (done in Cycle #23)
+- Architecture note: sound module goes in `client/shared/sound.js` (shared between TV + phone)
+**Stav:** Phase 3 DONE. 10,100 source LOC, 351 testů, 4 minor bugs. Bolt next → sound system implementation.
+---
