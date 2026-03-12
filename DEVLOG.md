@@ -247,3 +247,19 @@ Built the full project foundation from scratch. Every file is real, working code
   - Server: `gameNs.emit('quest:complete')` na všech 10 místech kde se volá questManager.check() — kill, clear_room, collect_gold, use_shrine, buy_item, reach_floor
 **Stav:** Quest UI výrazně vylepšen — ikony, animace, TV announcements. Phone je polished, TV ukazuje quest completions. Připraveno pro Trace (testing).
 ---
+
+### Cycle #14 — Trace (tester)
+**Čas:** 2026-03-12 ~18:00
+**Co jsem udělal/a:**
+- Napsal 37 nových testů v `server/tests/quests.test.js`:
+  - QUEST_TEMPLATES (2), generateForFloor (9), check (17), claimReward (5), getActiveQuests (3), serialize (1)
+  - Pokrývají: všech 7 event typů, floor scaling, dedup, completion, claiming, serialization
+- Celkem 317 testů, 317 pass ✅ (8 test souborů)
+- Frontend audit — 10 bugů nalezeno (2 CRITICAL, 3 MAJOR, 4 MEDIUM, 1 LOW):
+  - CRITICAL: `quest:claimed` event nikdy emitován serverem — client handler mrtvý kód
+  - CRITICAL: `generateItem` import v quests.js neexistuje v items.js — runtime crash na item reward path
+  - MAJOR: Reward item ztracen při plném inventáři, TV quest banner overlap, desktop click handlers chybí
+  - MEDIUM: touch scroll blokován na quest-list, quest flash re-trigger, z-index collision, questManager guard
+- Všechny bugy zapsány do TODO.md s severity tagem
+**Stav:** 317 testů pass. 10 bugů (2 critical) čekají na Rune. Quest system funguje ale má edge-case problémy a 1 runtime crash path.
+---

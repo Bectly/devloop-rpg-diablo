@@ -119,6 +119,18 @@
 - [x] [BUG] Player facing setRotation removed (NaN fix) — **Rune**
 - [x] [BUG] Stale test already resolved (correct expectation in place) — **Rune**
 
+### Bugs found by Trace (Cycle #14) — quest system audit
+- [ ] [BUG][CRITICAL] Server never emits `quest:claimed` — client handler at controller.js:148 is dead code — `server/index.js:~665`
+- [ ] [BUG][CRITICAL] `generateItem` import in quests.js is wrong — `items.js` exports `generateWeapon`/`generateArmor`, not `generateItem` — runtime crash on 30% item reward path — `server/game/quests.js:23`
+- [ ] [BUG][MAJOR] Reward item silently lost when inventory full — quest marked claimed, gold granted, item dropped — `server/index.js:652-660`
+- [ ] [BUG][MAJOR] TV showQuestComplete overlaps on rapid calls — no queue/offset for multiple simultaneous quest completions — `client/tv/game.js:1535`
+- [ ] [BUG][MAJOR] Desktop action buttons missing click handlers — only QST has click fallback, ATK/skills/HP/NPC/LOOT/INV are touchstart only — `client/phone/controller.js:383`
+- [ ] [BUG][MEDIUM] touchmove prevention blocks quest-list and shop-items scrolling on mobile — `client/phone/controller.js:958-961`
+- [ ] [BUG][MEDIUM] Quest flash re-triggers on every quest:update, not just on newly-completed transitions — `client/phone/controller.js:131`
+- [ ] [BUG][MEDIUM] quest-screen and dialogue-screen share z-index 250 — stacking conflict — `client/phone/style.css:715,1015`
+- [ ] [BUG][MEDIUM] No questManager existence guard — possible race between join and game loop — `server/index.js:110`
+- [ ] [BUG][LOW] showQuestComplete sparks/banner not destroyed on scene shutdown — potential Phaser object leak — `client/tv/game.js:1596`
+
 ## Notes
 - Server is authoritative: all game logic runs server-side
 - Phones send inputs, receive feedback — never compute game state
