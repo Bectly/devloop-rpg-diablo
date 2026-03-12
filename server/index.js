@@ -3,12 +3,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-const { Player } = require('./game/player');
-const { World } = require('./game/world');
+const { Player, DEATH_GOLD_DROP_PERCENT } = require('./game/player');
+const { World, TILE } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
-const { generateConsumable } = require('./game/items');
+const { generateConsumable, generateLoot } = require('./game/items');
 
 // ─── Server Setup ──────────────────────────────────────────────
 const app = express();
@@ -42,9 +42,9 @@ const world = new World();
 const combat = new CombatSystem();
 const story = new StoryManager();
 
-// Load first room
-const roomInfo = world.loadRoom(0);
-console.log(`[World] Loaded room: ${roomInfo.name}`);
+// Generate first dungeon floor
+world.generateFloor(0);
+console.log(`[World] Loaded floor: ${world.roomName}`);
 
 // ─── Socket.io: TV Namespace ───────────────────────────────────
 const gameNs = io.of('/game');
@@ -58,6 +58,7 @@ gameNs.on('connection', (socket) => {
     room: world.serialize(),
     story: story.serialize(),
     players: Array.from(players.values()).map(p => p.serialize()),
+    floor: world.currentFloor,
   });
 
   socket.on('disconnect', () => {
@@ -86,21 +87,18 @@ controllerNs.on('connection', (socket) => {
 
     const player = new Player(name, characterClass);
 
-    // Spawn position based on player count
-    if (players.size === 0) {
-      player.x = 400;
-      player.y = 500;
-    } else {
-      player.x = 880;
-      player.y = 500;
-    }
+    // Spawn at dungeon start room
+    const spawnPos = world.getSpawnPosition(players.size);
+    player.x = spawnPos.x;
+    player.y = spawnPos.y;
+    player.setRespawnPoint(spawnPos.x, spawnPos.y);
 
     // Create inventory
     const inv = new Inventory();
 
     // Give starting items
-    const startSword = generateConsumable('health_potion', 3);
-    if (startSword) inv.addItem(startSword);
+    const startPotion = generateConsumable('health_potion', 3);
+    if (startPotion) inv.addItem(startPotion);
 
     players.set(socket.id, player);
     inventories.set(player.id, inv);
@@ -113,6 +111,8 @@ controllerNs.on('connection', (socket) => {
       playerId: player.id,
       stats: player.serializeForPhone(),
       inventory: inv.serialize(),
+      floor: world.currentFloor,
+      floorName: world.floorName,
     });
 
     // Notify TV
@@ -128,7 +128,7 @@ controllerNs.on('connection', (socket) => {
   // ── Movement ──
   socket.on('move', (data) => {
     const player = players.get(socket.id);
-    if (!player || !player.alive) return;
+    if (!player || !player.alive || player.isDying) return;
 
     player.inputDx = Math.max(-1, Math.min(1, data.dx || 0));
     player.inputDy = Math.max(-1, Math.min(1, data.dy || 0));
@@ -144,14 +144,14 @@ controllerNs.on('connection', (socket) => {
   // ── Attack ──
   socket.on('attack', () => {
     const player = players.get(socket.id);
-    if (!player || !player.alive) return;
+    if (!player || !player.alive || player.isDying) return;
     combat.playerAttack(player, world.monsters);
   });
 
   // ── Skills ──
   socket.on('skill', (data) => {
     const player = players.get(socket.id);
-    if (!player || !player.alive) return;
+    if (!player || !player.alive || player.isDying) return;
     const allPlayers = Array.from(players.values());
     combat.playerSkill(player, data.skillIndex, world.monsters, allPlayers);
   });
@@ -159,7 +159,7 @@ controllerNs.on('connection', (socket) => {
   // ── Potions ──
   socket.on('use:potion', (data) => {
     const player = players.get(socket.id);
-    if (!player || !player.alive) return;
+    if (!player || !player.alive || player.isDying) return;
 
     let used = false;
     if (data.type === 'health') {
@@ -179,7 +179,7 @@ controllerNs.on('connection', (socket) => {
   // ── Loot Pickup ──
   socket.on('loot:pickup', (data) => {
     const player = players.get(socket.id);
-    if (!player || !player.alive) return;
+    if (!player || !player.alive || player.isDying) return;
 
     const item = world.pickupItem(data.itemId, player.x, player.y);
     if (!item) {
@@ -218,9 +218,64 @@ controllerNs.on('connection', (socket) => {
       socket.emit('notification', { text: `Picked up ${item.name}`, type: item.rarity });
       socket.emit('inventory:update', inv.serialize());
     } else {
-      // Put it back
       world.addGroundItem(item, player.x, player.y);
       socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    }
+  });
+
+  // ── Pickup nearest ──
+  socket.on('loot:pickup_nearest', () => {
+    const player = players.get(socket.id);
+    if (!player || !player.alive || player.isDying) return;
+
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const gi of world.groundItems) {
+      const dx = gi.x - player.x;
+      const dy = gi.y - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < nearestDist && dist <= 80) {
+        nearest = gi;
+        nearestDist = dist;
+      }
+    }
+
+    if (nearest) {
+      // Manually trigger pickup logic inline
+      const item = world.pickupItem(nearest.item.id, player.x, player.y, 80);
+      if (!item) return;
+
+      if (item.type === 'currency') {
+        player.gold += item.quantity;
+        socket.emit('notification', { text: `+${item.quantity} gold`, type: 'gold' });
+        socket.emit('stats:update', player.serializeForPhone());
+        return;
+      }
+
+      if (item.subType === 'health_potion') {
+        player.healthPotions += item.quantity;
+        socket.emit('notification', { text: `+${item.quantity} Health Potion`, type: 'info' });
+        socket.emit('stats:update', player.serializeForPhone());
+        return;
+      }
+      if (item.subType === 'mana_potion') {
+        player.manaPotions += item.quantity;
+        socket.emit('notification', { text: `+${item.quantity} Mana Potion`, type: 'info' });
+        socket.emit('stats:update', player.serializeForPhone());
+        return;
+      }
+
+      const inv = inventories.get(player.id);
+      if (!inv) return;
+
+      const result = inv.addItem(item);
+      if (result.success) {
+        socket.emit('notification', { text: `Picked up ${item.name}`, type: item.rarity });
+        socket.emit('inventory:update', inv.serialize());
+      } else {
+        world.addGroundItem(item, player.x, player.y);
+        socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+      }
     }
   });
 
@@ -230,8 +285,7 @@ controllerNs.on('connection', (socket) => {
     if (!player) return;
     const inv = inventories.get(player.id);
     if (!inv) return;
-
-    const result = inv.moveItem(data.itemId, data.toCol, data.toRow);
+    inv.moveItem(data.itemId, data.toCol, data.toRow);
     socket.emit('inventory:update', inv.serialize());
   });
 
@@ -244,13 +298,11 @@ controllerNs.on('connection', (socket) => {
     const item = inv.getItem(data.itemId);
     if (!item || !item.slot) return;
 
-    // Determine the actual slot
     let slot = item.slot;
     if (item.subType === 'ring') {
       slot = player.equipment.ring1 ? 'ring2' : 'ring1';
     }
 
-    // Unequip current item in that slot
     const current = player.equipment[slot];
     if (current) {
       const result = inv.addItem(current);
@@ -260,7 +312,6 @@ controllerNs.on('connection', (socket) => {
       }
     }
 
-    // Remove from inventory and equip
     inv.removeItem(item.id);
     player.equipment[slot] = item;
     player.recalcEquipBonuses();
@@ -308,9 +359,8 @@ controllerNs.on('connection', (socket) => {
   // ── Interact (NPC) ──
   socket.on('interact', () => {
     const player = players.get(socket.id);
-    if (!player || !player.alive) return;
+    if (!player || !player.alive || player.isDying) return;
 
-    // Find nearest NPC
     const storyData = story.serialize();
     for (const npc of storyData.npcs) {
       const dx = npc.x - player.x;
@@ -378,30 +428,6 @@ controllerNs.on('connection', (socket) => {
     socket.emit('stats:update', player.serializeForPhone());
   });
 
-  // ── Pickup nearest ──
-  socket.on('loot:pickup_nearest', () => {
-    const player = players.get(socket.id);
-    if (!player || !player.alive) return;
-
-    // Find nearest ground item
-    let nearest = null;
-    let nearestDist = Infinity;
-    for (const gi of world.groundItems) {
-      const dx = gi.x - player.x;
-      const dy = gi.y - player.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < nearestDist && dist <= 80) {
-        nearest = gi;
-        nearestDist = dist;
-      }
-    }
-
-    if (nearest) {
-      // Trigger pickup via the same handler
-      socket.emit('loot:auto_pickup', { itemId: nearest.item.id });
-    }
-  });
-
   // ── Disconnect ──
   socket.on('disconnect', () => {
     const player = players.get(socket.id);
@@ -410,7 +436,6 @@ controllerNs.on('connection', (socket) => {
       inventories.delete(player.id);
       players.delete(socket.id);
       controllerSockets.delete(socket.id);
-
       gameNs.emit('player:left', { id: player.id, name: player.name });
     }
     console.log(`[Phone] Disconnected: ${socket.id}`);
@@ -429,19 +454,79 @@ function gameLoop() {
 
   const allPlayers = Array.from(players.values());
 
-  // Update players
+  // Update players (handles death timers and respawns)
   for (const player of allPlayers) {
-    player.update(dt);
+    const result = player.update(dt);
+    if (result && result.type === 'player:respawn') {
+      // Player respawned, notify
+      for (const [sid, p] of players) {
+        if (p.id === result.playerId) {
+          const socket = controllerNs.sockets.get(sid);
+          if (socket) {
+            socket.emit('stats:update', p.serializeForPhone());
+            socket.emit('notification', { text: 'You have been revived!', type: 'info' });
+            socket.emit('player:respawn', { x: result.x, y: result.y });
+          }
+        }
+      }
+      gameNs.emit('player:respawn', result);
+    }
+  }
+
+  // Collision: prevent players from walking through walls
+  for (const player of allPlayers) {
+    if (!player.alive || player.isDying) continue;
+    if (!world.isWalkable(player.x, player.y)) {
+      // Push back to previous walkable position
+      const tryX = world.isWalkable(player.x - player.inputDx * player.moveSpeed * (dt / 1000), player.y);
+      const tryY = world.isWalkable(player.x, player.y - player.inputDy * player.moveSpeed * (dt / 1000));
+      if (!tryX) player.x -= player.inputDx * player.moveSpeed * (dt / 1000);
+      if (!tryY) player.y -= player.inputDy * player.moveSpeed * (dt / 1000);
+      if (!world.isWalkable(player.x, player.y)) {
+        // Still in wall, hard reset
+        const spawn = world.getSpawnPosition(0);
+        player.x = spawn.x;
+        player.y = spawn.y;
+      }
+    }
+  }
+
+  // Room discovery and wave spawning
+  const roomEvents = world.updateRoomDiscovery(allPlayers);
+  for (const ev of roomEvents) {
+    if (ev.type === 'room:discovered') {
+      gameNs.emit('room:discovered', ev);
+      controllerNs.emit('notification', { text: `Discovered: ${ev.roomName}`, type: 'info' });
+    }
+    if (ev.type === 'wave:start') {
+      gameNs.emit('wave:start', ev);
+      controllerNs.emit('notification', { text: `Wave ${ev.wave}/${ev.totalWaves}!`, type: 'warning' });
+    }
+  }
+
+  // Check wave completion
+  const waveResult = world.checkWaveCompletion();
+  if (waveResult) {
+    if (waveResult.type === 'wave:start') {
+      gameNs.emit('wave:start', waveResult);
+      controllerNs.emit('notification', { text: `Wave ${waveResult.wave}/${waveResult.totalWaves}!`, type: 'warning' });
+    }
+    if (waveResult.type === 'room:cleared') {
+      gameNs.emit('room:cleared', waveResult);
+      controllerNs.emit('notification', { text: `${waveResult.roomName} cleared!`, type: 'quest' });
+      if (waveResult.exitUnlocked) {
+        gameNs.emit('exit:unlocked', {});
+        controllerNs.emit('notification', { text: 'Exit unlocked! Find the stairs!', type: 'quest' });
+      }
+    }
   }
 
   // Update monsters (AI + combat)
   for (const monster of world.monsters) {
     if (!monster.alive) continue;
 
-    // Poison ticks
     combat.processPoison(monster, dt);
 
-    // Monster AI returns attack events
     const aiEvents = monster.update(dt, allPlayers);
     for (const event of aiEvents) {
       if (event.type === 'monster_attack') {
@@ -453,43 +538,67 @@ function gameLoop() {
   // Collect combat events
   const combatEvents = combat.clearEvents();
 
-  // Process quest-relevant events
+  // Process combat events
   for (const event of combatEvents) {
     if (event.type === 'combat:death' && !event.playerId) {
-      // Monster died — find type
       const deadMonster = world.monsters.find(m => m.id === event.entityId);
       if (deadMonster) {
+        // Quest tracking
         const questResults = story.updateQuest('kill', deadMonster.type);
         for (const qr of questResults) {
           if (qr.complete) {
             controllerNs.emit('notification', { text: `Quest complete: ${qr.questId}`, type: 'quest' });
-            // Award quest XP to all players
             for (const p of allPlayers) {
-              const lr = p.gainXp(qr.rewards.xp);
+              p.gainXp(qr.rewards.xp);
               p.gold += qr.rewards.gold || 0;
             }
           }
         }
-      }
 
-      // Add loot to ground
-      if (event.loot) {
-        for (const lootItem of event.loot) {
-          world.addGroundItem(lootItem, lootItem.worldX, lootItem.worldY);
+        // Loot drops at death position
+        if (event.loot) {
+          for (const lootItem of event.loot) {
+            world.addGroundItem(lootItem, lootItem.worldX, lootItem.worldY);
+          }
+        }
+
+        // Slime split mechanic
+        const splits = deadMonster.getSplitMonsters();
+        if (splits.length > 0) {
+          for (const splitMonster of splits) {
+            world.monsters.push(splitMonster);
+          }
+          gameNs.emit('monster:split', {
+            parentId: deadMonster.id,
+            children: splits.map(s => s.serialize()),
+          });
         }
       }
     }
 
     // Send combat events to phones for feedback
     if (event.type === 'combat:hit' || event.type === 'combat:player_death') {
-      // Find the target player's socket and notify
       for (const [sid, player] of players) {
         if (player.id === event.targetId) {
           const socket = controllerNs.sockets.get(sid);
           if (socket) {
             socket.emit('stats:update', player.serializeForPhone());
+            if (event.type === 'combat:hit' && !event.dodged && event.damage > 0) {
+              socket.emit('damage:taken', { damage: event.damage });
+            }
             if (event.type === 'combat:player_death') {
+              // Drop gold on death
+              if (player.deathGoldDrop > 0) {
+                const goldDrop = generateConsumable('gold', player.deathGoldDrop);
+                if (goldDrop) {
+                  world.addGroundItem(goldDrop, player.x, player.y);
+                }
+              }
               socket.emit('notification', { text: 'You died!', type: 'error' });
+              socket.emit('player:death', {
+                deathTimer: player.deathTimer,
+                goldDropped: player.deathGoldDrop,
+              });
             }
           }
         }
@@ -509,35 +618,66 @@ function gameLoop() {
     }
   }
 
-  // Check room clear — advance to next room
-  if (world.allMonstersDead() && allPlayers.length > 0) {
-    // Brief delay before advancing (handled by checking if already loading)
-    if (!world._advancing) {
-      world._advancing = true;
-      setTimeout(() => {
-        const nextIdx = world.getNextRoom();
-        const nextRoom = world.loadRoom(nextIdx);
-        console.log(`[World] Advancing to room: ${nextRoom.name}`);
+  // Check if both players are dead simultaneously → restart floor
+  const alivePlayers = allPlayers.filter(p => p.alive && !p.isDying);
+  const dyingPlayers = allPlayers.filter(p => p.isDying);
+  if (allPlayers.length > 0 && alivePlayers.length === 0 && dyingPlayers.length === allPlayers.length) {
+    // All players dying at same time — will restart floor on respawn
+    // (Already handled by individual respawn timers)
+  }
 
-        // Reset player positions
-        let i = 0;
-        for (const player of allPlayers) {
-          player.x = 400 + i * 480;
-          player.y = 500;
-          if (!player.alive) {
-            player.alive = true;
-            player.hp = Math.floor(player.maxHp * 0.5);
-            player.mp = Math.floor(player.maxMp * 0.5);
+  // Check if player is on exit (floor progression)
+  if (!world.exitLocked && !world._advancing) {
+    for (const player of allPlayers) {
+      if (!player.alive || player.isDying) continue;
+      if (world.isPlayerOnExit(player)) {
+        world._advancing = true;
+        console.log(`[World] ${player.name} reached the exit! Advancing to floor ${world.currentFloor + 2}...`);
+
+        setTimeout(() => {
+          const nextFloor = world.currentFloor + 1;
+          world.generateFloor(nextFloor);
+
+          // Reposition all players at new spawn
+          let i = 0;
+          for (const p of allPlayers) {
+            const spawn = world.getSpawnPosition(i);
+            p.x = spawn.x;
+            p.y = spawn.y;
+            p.setRespawnPoint(spawn.x, spawn.y);
+            if (!p.alive) {
+              p.alive = true;
+              p.isDying = false;
+              p.deathTimer = 0;
+              p.hp = Math.floor(p.maxHp * 0.5);
+              p.mp = Math.floor(p.maxMp * 0.5);
+            }
+            i++;
           }
-          i++;
-        }
 
-        gameNs.emit('dungeon:enter', {
-          room: world.serialize(),
-          story: story.serialize(),
-        });
-        world._advancing = false;
-      }, 3000);
+          gameNs.emit('dungeon:enter', {
+            room: world.serialize(),
+            story: story.serialize(),
+            floor: world.currentFloor,
+            floorName: world.floorName,
+          });
+
+          controllerNs.emit('floor:change', {
+            floor: world.currentFloor,
+            floorName: world.floorName,
+          });
+          controllerNs.emit('notification', { text: `Floor ${world.currentFloor + 1}: ${world.floorName}`, type: 'quest' });
+
+          // Update phone stats
+          for (const [sid, p] of players) {
+            const socket = controllerNs.sockets.get(sid);
+            if (socket) {
+              socket.emit('stats:update', p.serializeForPhone());
+            }
+          }
+        }, 2000);
+        break;
+      }
     }
   }
 
@@ -557,11 +697,11 @@ setInterval(gameLoop, TICK_MS);
 // ─── Start ─────────────────────────────────────────────────────
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
-  console.log('╔══════════════════════════════════════════╗');
-  console.log('║      DevLoop RPG — Server Running        ║');
-  console.log('╠══════════════════════════════════════════╣');
-  console.log(`║  TV:    http://localhost:${PORT}/tv          ║`);
-  console.log(`║  Phone: http://localhost:${PORT}/phone       ║`);
-  console.log('╚══════════════════════════════════════════╝');
+  console.log('==================================================');
+  console.log('      DevLoop RPG -- Server Running        ');
+  console.log('==================================================');
+  console.log(`  TV:    http://localhost:${PORT}/tv`);
+  console.log(`  Phone: http://localhost:${PORT}/phone`);
+  console.log('==================================================');
   console.log('');
 });

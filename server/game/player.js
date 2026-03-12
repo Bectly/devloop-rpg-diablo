@@ -24,6 +24,11 @@ const CLASS_SKILLS = {
   ],
 };
 
+// Death/respawn constants
+const DEATH_DURATION = 5000;     // 5 seconds dead before respawn
+const RESPAWN_HP_PERCENT = 0.5;  // Respawn with 50% HP
+const DEATH_GOLD_DROP_PERCENT = 0.1; // Drop 10% gold on death
+
 class Player {
   constructor(name, characterClass) {
     this.id = uuidv4();
@@ -33,9 +38,9 @@ class Player {
     // Position
     this.x = 400;
     this.y = 300;
-    this.facing = 'down'; // up, down, left, right
+    this.facing = 'down';
     this.moving = false;
-    this.moveSpeed = 160; // pixels per second
+    this.moveSpeed = 160;
 
     // Movement input
     this.inputDx = 0;
@@ -56,7 +61,7 @@ class Player {
       vit: 10 + bonus.vit,
     };
 
-    // Derived stats (recalculated)
+    // Derived stats
     this.maxHp = 0;
     this.maxMp = 0;
     this.hp = 0;
@@ -67,7 +72,20 @@ class Player {
     this.attackPower = 0;
     this.spellPower = 0;
 
-    // Equipment bonuses (summed from equipped items)
+    // Equipment slots (must be before recalcStats)
+    this.equipment = {
+      helmet: null,
+      chest: null,
+      gloves: null,
+      boots: null,
+      weapon: null,
+      shield: null,
+      ring1: null,
+      ring2: null,
+      amulet: null,
+    };
+
+    // Equipment bonuses
     this.equipBonuses = { str: 0, dex: 0, int: 0, vit: 0, armor: 0, damage: 0 };
 
     this.recalcStats();
@@ -81,36 +99,33 @@ class Player {
     // Combat
     this.alive = true;
     this.attackCooldown = 0;
-    this.baseAttackSpeed = 800; // ms between attacks
+    this.baseAttackSpeed = 800;
     this.attackRange = 48;
     this.skillCooldowns = [0, 0, 0];
-    this.buffs = []; // { effect, duration, remaining }
+    this.buffs = [];
+
+    // Death/Respawn
+    this.deathTimer = 0;
+    this.isDying = false;
+    this.respawnX = 0;
+    this.respawnY = 0;
+    this.deathGoldDrop = 0;
 
     // Skills
     this.skills = CLASS_SKILLS[this.characterClass] || CLASS_SKILLS.warrior;
 
-    // Inventory (managed externally via Inventory class)
+    // Inventory (managed externally)
     this.inventoryId = null;
 
-    // Equipment slots
-    this.equipment = {
-      helmet: null,
-      chest: null,
-      gloves: null,
-      boots: null,
-      weapon: null,
-      shield: null,
-      ring1: null,
-      ring2: null,
-      amulet: null,
-    };
-
-    // Potions (quick-access)
+    // Potions
     this.healthPotions = 3;
     this.manaPotions = 2;
 
     // Gold
     this.gold = 0;
+
+    // Damage flash tracking
+    this.lastDamageTaken = 0;
   }
 
   recalcStats() {
@@ -129,7 +144,6 @@ class Player {
     this.attackPower = eb.damage + (totalStr * 2);
     this.spellPower = totalInt * 3;
 
-    // Weapon overrides
     if (this.equipment.weapon) {
       const w = this.equipment.weapon;
       if (w.subType === 'bow' || w.subType === 'staff') {
@@ -143,7 +157,6 @@ class Player {
       this.baseAttackSpeed = 800;
     }
 
-    // Clamp HP/MP
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mp > this.maxMp) this.mp = this.maxMp;
   }
@@ -212,7 +225,7 @@ class Player {
   }
 
   takeDamage(amount) {
-    if (!this.alive) return 0;
+    if (!this.alive || this.isDying) return 0;
 
     // Dodge check
     if (Math.random() * 100 < this.dodgeChance) {
@@ -222,17 +235,60 @@ class Player {
     // Armor reduction
     const reduced = Math.max(1, Math.floor(amount - this.armor * 0.4));
     this.hp -= reduced;
+    this.lastDamageTaken = Date.now();
 
     if (this.hp <= 0) {
       this.hp = 0;
-      this.alive = false;
+      this.die();
     }
 
     return reduced;
   }
 
+  // Death handling
+  die() {
+    this.alive = false;
+    this.isDying = true;
+    this.deathTimer = DEATH_DURATION;
+    this.inputDx = 0;
+    this.inputDy = 0;
+
+    // Calculate gold to drop
+    this.deathGoldDrop = Math.floor(this.gold * DEATH_GOLD_DROP_PERCENT);
+    this.gold -= this.deathGoldDrop;
+    if (this.gold < 0) this.gold = 0;
+  }
+
+  // Set respawn position (call before death timer runs out)
+  setRespawnPoint(x, y) {
+    this.respawnX = x;
+    this.respawnY = y;
+  }
+
+  // Respawn after death timer
+  respawn() {
+    this.alive = true;
+    this.isDying = false;
+    this.deathTimer = 0;
+
+    // Respawn at set point with 50% HP
+    this.x = this.respawnX;
+    this.y = this.respawnY;
+    this.hp = Math.floor(this.maxHp * RESPAWN_HP_PERCENT);
+    this.mp = Math.floor(this.maxMp * 0.3);
+
+    return {
+      type: 'player:respawn',
+      playerId: this.id,
+      playerName: this.name,
+      x: this.x,
+      y: this.y,
+      hp: this.hp,
+    };
+  }
+
   canAttack() {
-    return this.alive && this.attackCooldown <= 0;
+    return this.alive && !this.isDying && this.attackCooldown <= 0;
   }
 
   startAttackCooldown() {
@@ -240,7 +296,7 @@ class Player {
   }
 
   canUseSkill(index) {
-    if (!this.alive) return false;
+    if (!this.alive || this.isDying) return false;
     if (index < 0 || index >= this.skills.length) return false;
     if (this.skillCooldowns[index] > 0) return false;
     if (this.mp < this.skills[index].mpCost) return false;
@@ -256,12 +312,19 @@ class Player {
   }
 
   update(dt) {
-    // dt in ms
-    if (!this.alive) return;
+    // Handle death timer
+    if (this.isDying) {
+      this.deathTimer -= dt;
+      if (this.deathTimer <= 0) {
+        return this.respawn();
+      }
+      return null;
+    }
+
+    if (!this.alive) return null;
 
     // Movement
     if (this.inputDx !== 0 || this.inputDy !== 0) {
-      // Normalize diagonal movement
       let dx = this.inputDx;
       let dy = this.inputDy;
       const len = Math.sqrt(dx * dx + dy * dy);
@@ -274,7 +337,6 @@ class Player {
       this.y += dy * this.moveSpeed * (dt / 1000);
       this.moving = true;
 
-      // Update facing
       if (Math.abs(dx) > Math.abs(dy)) {
         this.facing = dx > 0 ? 'right' : 'left';
       } else {
@@ -284,9 +346,9 @@ class Player {
       this.moving = false;
     }
 
-    // Clamp to world bounds (basic)
-    this.x = Math.max(16, Math.min(1264, this.x));
-    this.y = Math.max(16, Math.min(704, this.y));
+    // Clamp to world bounds (will be overridden by world.isWalkable check in server)
+    this.x = Math.max(16, Math.min(1920, this.x));
+    this.y = Math.max(16, Math.min(1280, this.y));
 
     // Attack cooldown
     if (this.attackCooldown > 0) {
@@ -309,7 +371,7 @@ class Player {
       }
     }
 
-    // Regen (1 HP per sec per VIT/10, 1 MP per sec)
+    // Regen
     this.hpRegenAccum += dt;
     this.mpRegenAccum += dt;
     if (this.hpRegenAccum >= 1000) {
@@ -321,6 +383,8 @@ class Player {
       this.mpRegenAccum -= 1000;
       this.mp = Math.min(this.maxMp, this.mp + 2);
     }
+
+    return null;
   }
 
   serialize() {
@@ -338,6 +402,8 @@ class Player {
       mp: this.mp,
       maxMp: this.maxMp,
       alive: this.alive,
+      isDying: this.isDying,
+      deathTimer: this.deathTimer,
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
     };
   }
@@ -361,6 +427,8 @@ class Player {
       attackPower: Math.round(this.attackPower),
       spellPower: Math.round(this.spellPower),
       alive: this.alive,
+      isDying: this.isDying,
+      deathTimer: this.deathTimer,
       gold: this.gold,
       healthPotions: this.healthPotions,
       manaPotions: this.manaPotions,
@@ -368,8 +436,9 @@ class Player {
       skillCooldowns: this.skillCooldowns,
       skills: this.skills.map(s => ({ name: s.name, mpCost: s.mpCost, cooldown: s.cooldown, description: s.description })),
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
+      lastDamageTaken: this.lastDamageTaken,
     };
   }
 }
 
-module.exports = { Player, CLASS_SKILLS };
+module.exports = { Player, CLASS_SKILLS, DEATH_DURATION, RESPAWN_HP_PERCENT, DEATH_GOLD_DROP_PERCENT };

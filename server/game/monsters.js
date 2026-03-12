@@ -49,6 +49,58 @@ const MONSTER_DEFS = {
     color: 0xcc3333,
     size: 15,
   },
+  archer: {
+    name: 'Bone Archer',
+    hp: 60,
+    damage: 16,
+    armor: 2,
+    speed: 70,
+    attackRange: 200,
+    attackSpeed: 1800,
+    aggroRadius: 220,
+    leashDistance: 400,
+    xpReward: 30,
+    lootTier: 2,
+    behavior: 'ranged_kite',
+    color: 0xccaa66,
+    size: 13,
+    projectileSpeed: 300,
+    preferredRange: 140, // tries to stay at this distance
+  },
+  slime: {
+    name: 'Slime',
+    hp: 50,
+    damage: 8,
+    armor: 0,
+    speed: 55,
+    attackRange: 35,
+    attackSpeed: 1400,
+    aggroRadius: 100,
+    leashDistance: 300,
+    xpReward: 15,
+    lootTier: 1,
+    behavior: 'melee_split',
+    color: 0x44cc88,
+    size: 12,
+    splitCount: 2,     // splits into 2 smaller slimes on death
+    splitType: 'slime_small',
+  },
+  slime_small: {
+    name: 'Small Slime',
+    hp: 20,
+    damage: 4,
+    armor: 0,
+    speed: 65,
+    attackRange: 30,
+    attackSpeed: 1200,
+    aggroRadius: 80,
+    leashDistance: 250,
+    xpReward: 8,
+    lootTier: 0,
+    behavior: 'melee',
+    color: 0x33aa77,
+    size: 8,
+  },
   boss_knight: {
     name: 'Dark Knight',
     hp: 500,
@@ -83,7 +135,7 @@ const AI_STATES = {
 };
 
 class Monster {
-  constructor(type, x, y) {
+  constructor(type, x, y, floor = 0) {
     const def = MONSTER_DEFS[type];
     if (!def) throw new Error(`Unknown monster type: ${type}`);
 
@@ -98,23 +150,35 @@ class Monster {
     this.spawnY = y;
     this.facing = 'down';
 
-    // Stats from definition
-    this.maxHp = def.hp;
-    this.hp = def.hp;
-    this.damage = def.damage;
-    this.armor = def.armor;
+    // Floor scaling
+    const hpScale = 1 + floor * 0.2;
+    const dmgScale = 1 + floor * 0.15;
+
+    // Stats from definition (scaled by floor)
+    this.maxHp = Math.floor(def.hp * hpScale);
+    this.hp = this.maxHp;
+    this.damage = Math.floor(def.damage * dmgScale);
+    this.armor = def.armor + Math.floor(floor * 0.5);
     this.speed = def.speed;
     this.attackRange = def.attackRange;
     this.attackSpeed = def.attackSpeed;
     this.aggroRadius = def.aggroRadius;
     this.leashDistance = def.leashDistance;
-    this.xpReward = def.xpReward;
-    this.lootTier = def.lootTier;
+    this.xpReward = Math.floor(def.xpReward * (1 + floor * 0.1));
+    this.lootTier = def.lootTier + Math.floor(floor / 2);
     this.behavior = def.behavior;
     this.color = def.color;
     this.size = def.size;
     this.isBoss = def.isBoss || false;
     this.phases = def.phases || null;
+
+    // Ranged/archer specifics
+    this.projectileSpeed = def.projectileSpeed || 0;
+    this.preferredRange = def.preferredRange || 0;
+
+    // Split mechanics (slime)
+    this.splitCount = def.splitCount || 0;
+    this.splitType = def.splitType || null;
 
     // AI state
     this.aiState = AI_STATES.IDLE;
@@ -131,9 +195,13 @@ class Monster {
     this.currentPhase = 0;
 
     // Effects
-    this.stunned = 0; // ms remaining
+    this.stunned = 0;
     this.slowed = 0;
     this.poisonTick = 0;
+    this.poisonDamage = 0;
+
+    // Store floor for reference
+    this.floor = floor;
   }
 
   distanceTo(entity) {
@@ -169,7 +237,25 @@ class Monster {
     this.x += dx * ratio;
     this.y += dy * ratio;
 
-    // Update facing
+    if (Math.abs(dx) > Math.abs(dy)) {
+      this.facing = dx > 0 ? 'right' : 'left';
+    } else {
+      this.facing = dy > 0 ? 'down' : 'up';
+    }
+  }
+
+  moveAwayFrom(targetX, targetY, dt) {
+    const dx = this.x - targetX;
+    const dy = this.y - targetY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) return;
+
+    const speed = this.slowed > 0 ? this.speed * 0.5 : this.speed;
+    const step = speed * (dt / 1000);
+
+    this.x += (dx / dist) * step;
+    this.y += (dy / dist) * step;
+
     if (Math.abs(dx) > Math.abs(dy)) {
       this.facing = dx > 0 ? 'right' : 'left';
     } else {
@@ -184,7 +270,7 @@ class Monster {
     // Decrement stun/slow
     if (this.stunned > 0) {
       this.stunned -= dt;
-      return events; // can't do anything while stunned
+      return events;
     }
     if (this.slowed > 0) {
       this.slowed -= dt;
@@ -213,7 +299,6 @@ class Monster {
 
     switch (this.aiState) {
       case AI_STATES.IDLE:
-        // Wander randomly
         this.wanderTimer -= dt;
         if (this.wanderTimer <= 0) {
           this.wanderTimer = 2000 + Math.random() * 3000;
@@ -223,7 +308,6 @@ class Monster {
         }
         this.moveToward(this.spawnX + this.wanderDx, this.spawnY + this.wanderDy, dt);
 
-        // Check aggro
         if (closest && closestDist < this.aggroRadius) {
           this.aiState = AI_STATES.ALERT;
           this.targetId = closest.id;
@@ -247,15 +331,32 @@ class Monster {
           break;
         }
 
-        // Move toward target
-        this.moveToward(closest.x, closest.y, dt);
+        // Archer kiting behavior
+        if (this.behavior === 'ranged_kite' && this.preferredRange > 0) {
+          if (closestDist < this.preferredRange * 0.7) {
+            // Too close, back away
+            this.moveAwayFrom(closest.x, closest.y, dt);
+          } else if (closestDist > this.preferredRange * 1.3) {
+            // Too far, move closer
+            this.moveToward(closest.x, closest.y, dt);
+          }
+          // At preferred range, strafe slightly
+          else {
+            const strafeAngle = Math.atan2(closest.y - this.y, closest.x - this.x) + Math.PI / 2;
+            this.moveToward(
+              this.x + Math.cos(strafeAngle) * 20,
+              this.y + Math.sin(strafeAngle) * 20,
+              dt
+            );
+          }
+        } else {
+          this.moveToward(closest.x, closest.y, dt);
+        }
 
-        // Switch to attack when in range
         if (closestDist <= this.attackRange) {
           this.aiState = AI_STATES.ATTACK;
         }
 
-        // Re-target closest
         this.targetId = closest.id;
         break;
 
@@ -266,16 +367,20 @@ class Monster {
           break;
         }
 
-        // If out of range, chase
         if (closestDist > this.attackRange * 1.2) {
           this.aiState = AI_STATES.ALERT;
           break;
         }
 
-        // Flee behavior for weak monsters
+        // Flee behavior for weak non-boss monsters
         if (!this.isBoss && this.hp < this.maxHp * 0.2 && this.behavior !== 'boss') {
           this.aiState = AI_STATES.FLEE;
           break;
+        }
+
+        // Archer repositioning during attack
+        if (this.behavior === 'ranged_kite' && closestDist < this.preferredRange * 0.5) {
+          this.moveAwayFrom(closest.x, closest.y, dt);
         }
 
         // Attack
@@ -297,12 +402,11 @@ class Monster {
             }
           }
 
-          // Poison for zombies
           if (this.behavior === 'melee_poison') {
             attackType = 'poison';
           }
 
-          if (this.behavior === 'ranged') {
+          if (this.behavior === 'ranged' || this.behavior === 'ranged_kite') {
             attackType = 'ranged';
           }
 
@@ -312,6 +416,13 @@ class Monster {
             targetId: closest.id,
             damage: dmg,
             attackType,
+            projectile: this.behavior === 'ranged_kite' ? {
+              fromX: this.x,
+              fromY: this.y,
+              toX: closest.x,
+              toY: closest.y,
+              speed: this.projectileSpeed,
+            } : null,
           });
         }
 
@@ -327,33 +438,20 @@ class Monster {
 
       case AI_STATES.FLEE:
         if (closest) {
-          // Move away from player
-          const fleeDx = this.x - closest.x;
-          const fleeDy = this.y - closest.y;
-          const fleeDist = Math.sqrt(fleeDx * fleeDx + fleeDy * fleeDy);
-          if (fleeDist > 0) {
-            this.moveToward(
-              this.x + (fleeDx / fleeDist) * 100,
-              this.y + (fleeDy / fleeDist) * 100,
-              dt
-            );
-          }
+          this.moveAwayFrom(closest.x, closest.y, dt);
         }
-        // Return to alert if healed or far enough
         if (this.hp > this.maxHp * 0.3 || !closest || closestDist > this.aggroRadius * 2) {
           this.aiState = AI_STATES.ALERT;
         }
         break;
 
       case AI_STATES.LEASH:
-        // Return to spawn
         this.moveToward(this.spawnX, this.spawnY, dt);
         const distToSpawn = Math.sqrt(
           (this.x - this.spawnX) ** 2 + (this.y - this.spawnY) ** 2
         );
         if (distToSpawn < 10) {
           this.aiState = AI_STATES.IDLE;
-          // Heal on leash
           this.hp = this.maxHp;
         }
         break;
@@ -382,6 +480,20 @@ class Monster {
     this.slowed = Math.max(this.slowed, duration);
   }
 
+  // Returns split monsters array if this monster splits on death (slime)
+  getSplitMonsters() {
+    if (!this.splitType || !this.splitCount || this.type === 'slime_small') return [];
+
+    const splits = [];
+    for (let i = 0; i < this.splitCount; i++) {
+      const offsetX = (Math.random() - 0.5) * 40;
+      const offsetY = (Math.random() - 0.5) * 40;
+      const split = new Monster(this.splitType, this.x + offsetX, this.y + offsetY, this.floor);
+      splits.push(split);
+    }
+    return splits;
+  }
+
   serialize() {
     return {
       id: this.id,
@@ -399,12 +511,13 @@ class Monster {
       size: this.size,
       stunned: this.stunned > 0,
       slowed: this.slowed > 0,
+      behavior: this.behavior,
     };
   }
 }
 
-function createMonster(type, x, y) {
-  return new Monster(type, x, y);
+function createMonster(type, x, y, floor = 0) {
+  return new Monster(type, x, y, floor);
 }
 
 module.exports = { Monster, createMonster, MONSTER_DEFS, AI_STATES };

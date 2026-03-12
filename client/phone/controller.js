@@ -11,6 +11,11 @@ let selectedClass = 'warrior';
 let currentDialogue = null;
 let joystick = null;
 let skillCooldownTimers = [0, 0, 0];
+let currentFloor = 0;
+let currentFloorName = '';
+let isDead = false;
+let deathCountdown = 0;
+let deathInterval = null;
 
 // ─── DOM Elements ───────────────────────────────────────────────
 const joinScreen = document.getElementById('join-screen');
@@ -42,11 +47,14 @@ socket.on('joined', (data) => {
   playerId = data.playerId;
   playerStats = data.stats;
   inventoryData = data.inventory;
+  currentFloor = data.floor || 0;
+  currentFloorName = data.floorName || '';
 
   joinScreen.classList.add('hidden');
   controller.classList.remove('hidden');
 
   updateHUD(data.stats);
+  updateFloorDisplay();
   initJoystick();
   initButtons();
 });
@@ -71,10 +79,92 @@ socket.on('dialogue:prompt', (data) => {
   showDialogue(data);
 });
 
+socket.on('floor:change', (data) => {
+  currentFloor = data.floor;
+  currentFloorName = data.floorName || '';
+  updateFloorDisplay();
+});
+
+socket.on('damage:taken', (data) => {
+  flashDamage();
+});
+
+socket.on('player:death', (data) => {
+  showDeathScreen(data.deathTimer, data.goldDropped);
+});
+
+socket.on('player:respawn', (data) => {
+  hideDeathScreen();
+});
+
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');
   showNotification('Disconnected from server', 'error');
 });
+
+// ─── Floor Display ──────────────────────────────────────────────
+function updateFloorDisplay() {
+  const el = document.getElementById('hud-floor');
+  if (el) {
+    el.textContent = `F${currentFloor + 1}`;
+    el.title = currentFloorName;
+  }
+}
+
+// ─── Damage Flash ───────────────────────────────────────────────
+function flashDamage() {
+  const overlay = document.getElementById('damage-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  overlay.style.opacity = '0.4';
+
+  // Haptic
+  if (navigator.vibrate) navigator.vibrate(40);
+
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.classList.add('hidden'), 200);
+  }, 100);
+}
+
+// ─── Death Screen ───────────────────────────────────────────────
+function showDeathScreen(timerMs, goldDropped) {
+  isDead = true;
+  deathCountdown = timerMs || 5000;
+
+  const deathEl = document.getElementById('death-overlay');
+  if (!deathEl) return;
+  deathEl.classList.remove('hidden');
+
+  const goldText = goldDropped > 0 ? `Lost ${goldDropped} gold` : '';
+  document.getElementById('death-gold-text').textContent = goldText;
+
+  // Strong haptic
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+
+  // Countdown
+  if (deathInterval) clearInterval(deathInterval);
+  deathInterval = setInterval(() => {
+    deathCountdown -= 100;
+    if (deathCountdown < 0) deathCountdown = 0;
+    const secs = (deathCountdown / 1000).toFixed(1);
+    document.getElementById('death-timer-text').textContent = `Reviving in ${secs}s`;
+
+    if (deathCountdown <= 0) {
+      hideDeathScreen();
+    }
+  }, 100);
+}
+
+function hideDeathScreen() {
+  isDead = false;
+  if (deathInterval) {
+    clearInterval(deathInterval);
+    deathInterval = null;
+  }
+  const deathEl = document.getElementById('death-overlay');
+  if (deathEl) deathEl.classList.add('hidden');
+}
 
 // ─── HUD Update ─────────────────────────────────────────────────
 function updateHUD(stats) {
@@ -106,7 +196,7 @@ function updateHUD(stats) {
     hpBar.style.background = 'linear-gradient(90deg, #cc2222, #ff4444)';
   }
 
-  // Update skill button labels
+  // Skill button labels
   if (stats.skills) {
     for (let i = 0; i < 3; i++) {
       const btn = document.getElementById(`btn-skill-${i}`);
@@ -139,6 +229,13 @@ function updateHUD(stats) {
       }
     }
   }
+
+  // Check if respawned
+  if (isDead && stats.alive && !stats.isDying) {
+    hideDeathScreen();
+  }
+
+  updateFloorDisplay();
 }
 
 // ─── Joystick ───────────────────────────────────────────────────
@@ -156,10 +253,10 @@ function initJoystick() {
   });
 
   joystick.on('move', (evt, data) => {
-    if (!data || !data.vector) return;
+    if (!data || !data.vector || isDead) return;
     socket.emit('move', {
       dx: data.vector.x,
-      dy: -data.vector.y, // nipplejs Y is inverted
+      dy: -data.vector.y,
     });
   });
 
@@ -173,6 +270,7 @@ function initButtons() {
   // Attack
   document.getElementById('btn-attack').addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (isDead) return;
     socket.emit('attack');
     hapticFeedback();
   });
@@ -181,6 +279,7 @@ function initButtons() {
   for (let i = 0; i < 3; i++) {
     document.getElementById(`btn-skill-${i}`).addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (isDead) return;
       socket.emit('skill', { skillIndex: i });
       hapticFeedback();
     });
@@ -189,18 +288,21 @@ function initButtons() {
   // Health Potion
   document.getElementById('btn-potion').addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (isDead) return;
     socket.emit('use:potion', { type: 'health' });
   });
 
   // Interact
   document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (isDead) return;
     socket.emit('interact');
   });
 
-  // Pickup
+  // Pickup (LOOT button)
   document.getElementById('btn-pickup').addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (isDead) return;
     socket.emit('loot:pickup_nearest');
   });
 
@@ -225,7 +327,6 @@ function showNotification(text, type = 'info') {
   el.textContent = text;
   notifications.appendChild(el);
 
-  // Haptic for important notifications
   if (['legendary', 'epic', 'levelup', 'error'].includes(type)) {
     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
   }
@@ -250,7 +351,6 @@ document.getElementById('inv-close').addEventListener('click', () => {
 function renderInventory() {
   if (!inventoryData || !playerStats) return;
 
-  // Gold
   document.getElementById('inv-gold').textContent = `${playerStats.gold || 0}g`;
 
   // Equipment slots
@@ -310,7 +410,6 @@ function renderInventory() {
     }
   }
 
-  // Stats panel
   renderStats();
 }
 
@@ -385,7 +484,6 @@ function showTooltip(item, anchor, isEquipped, slotName) {
 
   tt.innerHTML = html;
 
-  // Position near the anchor
   const rect = anchor.getBoundingClientRect();
   tt.style.top = Math.min(rect.bottom + 5, window.innerHeight - 200) + 'px';
   tt.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 260)) + 'px';
@@ -439,11 +537,10 @@ function showDialogue(data) {
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
 document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('#inv-content')) return; // allow inventory scroll
+  if (e.target.closest('#inv-content')) return;
   e.preventDefault();
 }, { passive: false });
 
-// Prevent double-tap zoom
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => {
   const now = Date.now();
@@ -454,7 +551,6 @@ document.addEventListener('touchend', (e) => {
 }, false);
 
 // ─── Cooldown ticker ────────────────────────────────────────────
-// Visual cooldown updates (faster than server ticks for smooth display)
 setInterval(() => {
   if (!playerStats || !playerStats.skillCooldowns) return;
   for (let i = 0; i < 3; i++) {

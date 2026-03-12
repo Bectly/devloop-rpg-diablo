@@ -37,11 +37,25 @@
 
   <!-- Game Controller -->
   <div id="controller" class="hidden">
+    <!-- Damage Flash Overlay -->
+    <div id="damage-overlay" class="hidden"></div>
+
+    <!-- Death Overlay -->
+    <div id="death-overlay" class="hidden">
+      <div id="death-content">
+        <div id="death-skull">&#9760;</div>
+        <div id="death-text">YOU DIED</div>
+        <div id="death-gold-text"></div>
+        <div id="death-timer-text">Reviving in 5.0s</div>
+      </div>
+    </div>
+
     <!-- Status Bar -->
     <div id="status-bar">
       <div id="player-info">
         <span id="hud-name">Hero</span>
         <span id="hud-level">Lv.1</span>
+        <span id="hud-floor">F1</span>
       </div>
       <div id="bars">
         <div class="bar-container">

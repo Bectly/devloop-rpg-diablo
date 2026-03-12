@@ -227,11 +227,13 @@ function generateConsumable(subType, quantity = 1) {
   };
 }
 
-function generateLoot(lootTier, monsterType) {
+function generateLoot(lootTier, monsterType, floor = 0) {
   const drops = [];
 
-  // Gold always drops
-  drops.push(generateConsumable('gold', randomInt(5 + lootTier * 3, 15 + lootTier * 8)));
+  // Gold always drops (scaled by floor)
+  const goldBase = 5 + lootTier * 3 + floor * 5;
+  const goldMax = 15 + lootTier * 8 + floor * 10;
+  drops.push(generateConsumable('gold', randomInt(goldBase, goldMax)));
 
   // Chance for potion
   if (Math.random() < 0.3) {
@@ -239,29 +241,31 @@ function generateLoot(lootTier, monsterType) {
     drops.push(generateConsumable(potionType, randomInt(1, 2)));
   }
 
-  // Equipment drops based on tier
-  const equipChance = 0.15 + lootTier * 0.1;
+  // Equipment drops based on tier (rarity scaled with floor)
+  const equipChance = 0.15 + lootTier * 0.1 + floor * 0.03;
   if (Math.random() < equipChance) {
+    const tierBoost = lootTier + Math.floor(floor / 2);
     const roll = Math.random();
     if (roll < 0.4) {
-      drops.push(generateWeapon(lootTier));
+      drops.push(generateWeapon(tierBoost));
     } else if (roll < 0.8) {
-      drops.push(generateArmor(lootTier));
+      drops.push(generateArmor(tierBoost));
     } else {
-      drops.push(generateAccessory(lootTier));
+      drops.push(generateAccessory(tierBoost));
     }
   }
 
   // Boss guaranteed rare+ drop
   if (lootTier >= 4) {
+    const tierBoost = lootTier + floor;
     let bossItem;
     const roll = Math.random();
     if (roll < 0.5) {
-      bossItem = generateWeapon(lootTier);
+      bossItem = generateWeapon(tierBoost);
     } else if (roll < 0.85) {
-      bossItem = generateArmor(lootTier);
+      bossItem = generateArmor(tierBoost);
     } else {
-      bossItem = generateAccessory(lootTier);
+      bossItem = generateAccessory(tierBoost);
     }
     // Force at least rare
     const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
