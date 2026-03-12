@@ -678,4 +678,134 @@ describe('Player', () => {
       expect(s.skillCooldowns.length).toBe(3);
     });
   });
+
+  // ── restoreFrom ───────────────────────────────────────────────
+  describe('restoreFrom', () => {
+    it('sets level, xp, gold, kills correctly', () => {
+      const p = new Player('Restored', 'warrior');
+      p.restoreFrom({
+        level: 12,
+        xp: 450,
+        gold: 2500,
+        kills: 87,
+        stats: { str: 20, dex: 15, int: 12, vit: 18 },
+      });
+
+      expect(p.level).toBe(12);
+      expect(p.xp).toBe(450);
+      expect(p.gold).toBe(2500);
+      expect(p.kills).toBe(87);
+    });
+
+    it('recalculates derived stats', () => {
+      const p = new Player('Restored', 'warrior');
+      const oldMaxHp = p.maxHp;
+      const oldMaxMp = p.maxMp;
+
+      p.restoreFrom({
+        level: 10,
+        xp: 0,
+        gold: 0,
+        kills: 0,
+        stats: { str: 25, dex: 20, int: 18, vit: 30 },
+        equipment: {
+          weapon: { type: 'weapon', subType: 'sword', damage: 20, bonuses: { str: 5 }, attackSpeed: 700 },
+        },
+      });
+
+      // With vit=30 and level=10: maxHp = 100 + (30+0)*10 + 10*15 = 550
+      // (equipBonuses.vit is 0 since weapon has str bonus only)
+      expect(p.maxHp).toBeGreaterThan(oldMaxHp);
+      expect(p.maxMp).toBeGreaterThan(oldMaxMp);
+      // attackPower should incorporate weapon damage + str bonuses
+      expect(p.attackPower).toBeGreaterThan(0);
+      // xpToNext should be recalculated for level 10
+      expect(p.xpToNext).toBe(Math.floor(100 * Math.pow(1.15, 10)));
+    });
+
+    it('preserves potions count', () => {
+      const p = new Player('Restored', 'mage');
+      p.restoreFrom({
+        level: 5,
+        xp: 100,
+        gold: 50,
+        kills: 10,
+        healthPotions: 8,
+        manaPotions: 6,
+        stats: { str: 10, dex: 12, int: 13, vit: 10 },
+      });
+
+      expect(p.healthPotions).toBe(8);
+      expect(p.manaPotions).toBe(6);
+    });
+
+    it('sets HP/MP to max after restore', () => {
+      const p = new Player('Restored', 'warrior');
+      p.hp = 1;
+      p.mp = 1;
+
+      p.restoreFrom({
+        level: 15,
+        xp: 0,
+        gold: 0,
+        kills: 0,
+        stats: { str: 30, dex: 20, int: 15, vit: 25 },
+      });
+
+      expect(p.hp).toBe(p.maxHp);
+      expect(p.mp).toBe(p.maxMp);
+    });
+
+    it('with missing fields does not crash (defensive)', () => {
+      const p = new Player('Restored', 'ranger');
+
+      // Completely empty savedData
+      expect(() => p.restoreFrom({})).not.toThrow();
+      expect(p.level).toBe(1);
+      expect(p.xp).toBe(0);
+      expect(p.gold).toBe(0);
+      expect(p.kills).toBe(0);
+      expect(p.healthPotions).toBe(3); // default via ??
+      expect(p.manaPotions).toBe(2);   // default via ??
+      expect(p.hp).toBe(p.maxHp);
+      expect(p.mp).toBe(p.maxMp);
+    });
+
+    it('restores freeStatPoints', () => {
+      const p = new Player('Restored', 'warrior');
+      p.restoreFrom({
+        level: 8,
+        xp: 200,
+        gold: 100,
+        kills: 30,
+        freeStatPoints: 15,
+        stats: { str: 20, dex: 14, int: 10, vit: 16 },
+      });
+
+      expect(p.freeStatPoints).toBe(15);
+    });
+
+    it('restores equipment and recalculates bonuses', () => {
+      const p = new Player('Restored', 'warrior');
+      const baseAttackPower = p.attackPower;
+
+      p.restoreFrom({
+        level: 5,
+        xp: 0,
+        gold: 0,
+        kills: 0,
+        stats: { str: 13, dex: 10, int: 10, vit: 12 },
+        equipment: {
+          weapon: { type: 'weapon', subType: 'sword', damage: 15, bonuses: { str: 5 }, attackSpeed: 600 },
+          chest: { type: 'armor', subType: 'plate', armor: 20, bonuses: { vit: 3 } },
+        },
+      });
+
+      expect(p.equipment.weapon).not.toBeNull();
+      expect(p.equipment.weapon.damage).toBe(15);
+      expect(p.equipment.chest).not.toBeNull();
+      expect(p.attackPower).toBeGreaterThan(baseAttackPower);
+      expect(p.baseAttackSpeed).toBe(600);
+    });
+  });
 });
