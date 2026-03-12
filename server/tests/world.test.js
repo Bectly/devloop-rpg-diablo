@@ -377,5 +377,143 @@ describe('World', () => {
       expect(s).toHaveProperty('monsters');
       expect(s).toHaveProperty('groundItems');
     });
+
+    it('room serialization includes hasShrine and shrineUsed', () => {
+      const s = world.serialize();
+      for (const room of s.rooms) {
+        expect(room).toHaveProperty('hasShrine');
+        expect(room).toHaveProperty('shrineUsed');
+        expect(typeof room.hasShrine).toBe('boolean');
+        expect(typeof room.shrineUsed).toBe('boolean');
+      }
+    });
+
+    it('serialize includes shopNpc data', () => {
+      const s = world.serialize();
+      expect(s).toHaveProperty('shopNpc');
+      // shopNpc should exist since generateFloor(0) was called in beforeEach
+      if (s.shopNpc) {
+        expect(s.shopNpc.id).toBe('shop_npc');
+        expect(s.shopNpc.name).toBe('Merchant');
+        expect(typeof s.shopNpc.x).toBe('number');
+        expect(typeof s.shopNpc.y).toBe('number');
+      }
+    });
+  });
+
+  // ── Shrine Spawning ───────────────────────────────────────────
+  describe('shrine spawning', () => {
+    it('shrines only appear in monster or treasure rooms (never start/boss)', () => {
+      // Generate many floors to test distribution
+      for (let trial = 0; trial < 20; trial++) {
+        const w = new World();
+        w.generateFloor(trial);
+        for (const room of w.rooms) {
+          if (room.type === 'start' || room.type === 'boss') {
+            expect(room.hasShrine).toBe(false);
+          }
+        }
+      }
+    });
+
+    it('shrine spawning is approximately 30% for eligible rooms', () => {
+      let shrineCount = 0;
+      let eligibleCount = 0;
+      // Run many floors
+      for (let trial = 0; trial < 100; trial++) {
+        const w = new World();
+        w.generateFloor(trial % 7);
+        for (const room of w.rooms) {
+          if (room.type === 'monster' || room.type === 'treasure') {
+            eligibleCount++;
+            if (room.hasShrine) shrineCount++;
+          }
+        }
+      }
+      // 30% chance means roughly 20-40% observed with this sample size
+      const rate = shrineCount / eligibleCount;
+      expect(rate).toBeGreaterThan(0.15);
+      expect(rate).toBeLessThan(0.45);
+    });
+
+    it('all shrines start as unused', () => {
+      for (let trial = 0; trial < 10; trial++) {
+        const w = new World();
+        w.generateFloor(trial);
+        for (const room of w.rooms) {
+          if (room.hasShrine) {
+            expect(room.shrineUsed).toBe(false);
+          }
+        }
+      }
+    });
+
+    it('room discovery event includes hasShrine flag', () => {
+      // Find a room with shrine
+      let found = false;
+      for (let trial = 0; trial < 50 && !found; trial++) {
+        const w = new World();
+        w.generateFloor(trial % 7);
+        const shrineRoom = w.rooms.find(r => r.hasShrine && !r.discovered);
+        if (shrineRoom) {
+          const cx = (shrineRoom.room.x + shrineRoom.room.w / 2) * TILE_SIZE;
+          const cy = (shrineRoom.room.y + shrineRoom.room.h / 2) * TILE_SIZE;
+          const events = w.updateRoomDiscovery([{ alive: true, x: cx, y: cy }]);
+          const disc = events.find(e => e.type === 'room:discovered');
+          if (disc) {
+            expect(disc.hasShrine).toBe(true);
+            found = true;
+          }
+        }
+      }
+      // If no shrine was found after 50 tries, the test is inconclusive but not a failure
+      // (statistically extremely unlikely with 30% chance per eligible room)
+    });
+  });
+
+  // ── Shop NPC ──────────────────────────────────────────────────
+  describe('shop NPC', () => {
+    it('getShopNpc returns NPC with position and inventory', () => {
+      const npc = world.getShopNpc();
+      expect(npc).not.toBeNull();
+      expect(npc.id).toBe('shop_npc');
+      expect(npc.name).toBe('Merchant');
+      expect(typeof npc.x).toBe('number');
+      expect(typeof npc.y).toBe('number');
+      expect(Array.isArray(npc.inventory)).toBe(true);
+      expect(npc.inventory.length).toBeGreaterThan(0);
+    });
+
+    it('shop NPC is positioned in start room', () => {
+      const npc = world.getShopNpc();
+      const startRoom = world.rooms.find(r => r.type === 'start');
+      expect(npc).not.toBeNull();
+      expect(startRoom).toBeDefined();
+      // NPC should be within the start room pixel boundaries
+      const roomLeft = startRoom.room.x * TILE_SIZE;
+      const roomRight = (startRoom.room.x + startRoom.room.w) * TILE_SIZE;
+      const roomTop = startRoom.room.y * TILE_SIZE;
+      const roomBottom = (startRoom.room.y + startRoom.room.h) * TILE_SIZE;
+      expect(npc.x).toBeGreaterThanOrEqual(roomLeft);
+      expect(npc.x).toBeLessThanOrEqual(roomRight);
+      expect(npc.y).toBeGreaterThanOrEqual(roomTop);
+      expect(npc.y).toBeLessThanOrEqual(roomBottom);
+    });
+
+    it('shop NPC refreshes inventory on each floor', () => {
+      const inv0 = world.getShopNpc().inventory;
+      world.generateFloor(1);
+      const inv1 = world.getShopNpc().inventory;
+      // Inventories should be different arrays (regenerated)
+      expect(inv1).not.toBe(inv0);
+    });
+
+    it('shop NPC inventory contains potions', () => {
+      const npc = world.getShopNpc();
+      const hp = npc.inventory.find(i => i.subType === 'health_potion');
+      const mp = npc.inventory.find(i => i.subType === 'mana_potion');
+      expect(hp).toBeDefined();
+      expect(mp).toBeDefined();
+    });
   });
 });

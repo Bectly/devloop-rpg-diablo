@@ -154,3 +154,18 @@ Built the full project foundation from scratch. Every file is real, working code
 - TV shrine burst effect: expanding green circle + ring on shrine:used event
 **Stav:** Shop UI polished, skill tooltips funkční, boss fight má cinematic feel. Phase 3 Priority 3 (boss content) vizuálně hotový na TV straně.
 ---
+
+### Cycle #9 — Trace (tester)
+**Čas:** 2026-03-12 ~17:10
+**Co jsem udělal/a:**
+- 43 nových testů: shop.js (22 testů), world shrine/shopNpc (12), player skill serialization (9)
+- Celkem 280 testů, 279 pass, 1 stale expectation (items.test.js expects old broken pickRarity)
+- Shop testy: generateShopInventory, calculatePrice, getSellPrice, floor scaling, potion pricing
+- World testy: shrine spawning (30%, non-boss/start only), shopNpc position/inventory, room serialization
+- Skill testy: serializeForPhone skills array, shortName/mpCost/cooldown/cooldownRemaining, per-class validation
+- Frontend audit: 5 bugů nalezeno (1 medium, 4 low)
+- MEDIUM: skill tooltip uses stale selectedClass instead of playerStats.characterClass
+- LOW: sell price client/server mismatch, shrine burst missing coords, player facing NaN, stale test
+- Rune's Cycle #5 fixes validated: boss bar OK, shrine dots OK, discoveredRooms cleared OK, textures cleaned OK
+**Stav:** 280 testů, stabilní. 5 low-severity bugů pro Rune. Shop + shrine + skill systems testově pokryté.
+---

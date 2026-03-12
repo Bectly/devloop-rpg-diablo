@@ -587,5 +587,95 @@ describe('Player', () => {
       expect(s).toHaveProperty('skills');
       expect(s.skills.length).toBe(3);
     });
+
+    it('serializeForPhone() skills array has required fields', () => {
+      const p = new Player('TestHero', 'warrior');
+      const s = p.serializeForPhone();
+      for (const skill of s.skills) {
+        expect(skill).toHaveProperty('name');
+        expect(skill).toHaveProperty('shortName');
+        expect(skill).toHaveProperty('mpCost');
+        expect(skill).toHaveProperty('cooldown');
+        expect(skill).toHaveProperty('cooldownRemaining');
+        expect(skill).toHaveProperty('type');
+        expect(skill).toHaveProperty('description');
+        expect(typeof skill.shortName).toBe('string');
+        expect(skill.shortName.length).toBeLessThanOrEqual(3);
+        expect(typeof skill.mpCost).toBe('number');
+        expect(typeof skill.cooldown).toBe('number');
+        expect(typeof skill.cooldownRemaining).toBe('number');
+      }
+    });
+
+    it('cooldownRemaining is 0 when skill is ready', () => {
+      const p = new Player('TestHero', 'mage');
+      const s = p.serializeForPhone();
+      // All skills start off cooldown
+      for (const skill of s.skills) {
+        expect(skill.cooldownRemaining).toBe(0);
+      }
+    });
+
+    it('cooldownRemaining > 0 right after skill use', () => {
+      const p = new Player('TestHero', 'warrior');
+      p.useSkill(0); // Cleave: cooldown 3000
+      const s = p.serializeForPhone();
+      expect(s.skills[0].cooldownRemaining).toBe(3000);
+      // Other skills should still be 0
+      expect(s.skills[1].cooldownRemaining).toBe(0);
+      expect(s.skills[2].cooldownRemaining).toBe(0);
+    });
+
+    it('cooldownRemaining decreases over time and never goes negative', () => {
+      const p = new Player('TestHero', 'warrior');
+      p.useSkill(0); // Cleave: cooldown 3000
+      p.update(2000); // 2 seconds pass
+      const s1 = p.serializeForPhone();
+      expect(s1.skills[0].cooldownRemaining).toBe(1000);
+
+      p.update(2000); // 2 more seconds (1 extra past cooldown)
+      const s2 = p.serializeForPhone();
+      expect(s2.skills[0].cooldownRemaining).toBe(0); // clamped by Math.max(0, ...)
+    });
+
+    it('warrior skills have correct shortNames', () => {
+      const p = new Player('W', 'warrior');
+      const s = p.serializeForPhone();
+      expect(s.skills[0].shortName).toBe('CLV');
+      expect(s.skills[1].shortName).toBe('BSH');
+      expect(s.skills[2].shortName).toBe('CRY');
+    });
+
+    it('ranger skills have correct shortNames', () => {
+      const p = new Player('R', 'ranger');
+      const s = p.serializeForPhone();
+      expect(s.skills[0].shortName).toBe('MLT');
+      expect(s.skills[1].shortName).toBe('PSN');
+      expect(s.skills[2].shortName).toBe('EVD');
+    });
+
+    it('mage skills have correct shortNames', () => {
+      const p = new Player('M', 'mage');
+      const s = p.serializeForPhone();
+      expect(s.skills[0].shortName).toBe('FBL');
+      expect(s.skills[1].shortName).toBe('FRZ');
+      expect(s.skills[2].shortName).toBe('TLP');
+    });
+
+    it('serializeForPhone includes buffs and lastDamageTaken', () => {
+      const p = new Player('TestHero', 'warrior');
+      const s = p.serializeForPhone();
+      expect(s).toHaveProperty('buffs');
+      expect(Array.isArray(s.buffs)).toBe(true);
+      expect(s).toHaveProperty('lastDamageTaken');
+    });
+
+    it('serializeForPhone includes skillCooldowns array', () => {
+      const p = new Player('TestHero', 'warrior');
+      const s = p.serializeForPhone();
+      expect(s).toHaveProperty('skillCooldowns');
+      expect(Array.isArray(s.skillCooldowns)).toBe(true);
+      expect(s.skillCooldowns.length).toBe(3);
+    });
   });
 });
