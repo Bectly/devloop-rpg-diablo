@@ -1,4 +1,5 @@
 const { generateLoot } = require('./items');
+const { modifyDamageByAffixes, processAffixOnHitPlayer, processAffixOnDealDamage, processAffixOnDeath } = require('./affixes');
 
 class CombatSystem {
   constructor() {
@@ -70,7 +71,8 @@ class CombatSystem {
 
     player.startAttackCooldown();
     const { damage, isCrit } = this.calcPlayerDamage(player);
-    const dealt = nearest.takeDamage(damage);
+    const modifiedDamage = nearest.affixes ? modifyDamageByAffixes(nearest, damage) : damage;
+    const dealt = nearest.takeDamage(modifiedDamage);
 
     const event = {
       type: 'combat:hit',
@@ -95,6 +97,8 @@ class CombatSystem {
         killedBy: player.id,
         killedByName: player.name,
         isBoss: nearest.isBoss,
+        isElite: nearest.isElite || false,
+        eliteRank: nearest.eliteRank || null,
         loot: loot.map(item => ({
           ...item,
           worldX: nearest.x + (Math.random() - 0.5) * 40,
@@ -102,6 +106,15 @@ class CombatSystem {
         })),
         xpReward: nearest.xpReward,
       };
+
+      // Affix on-death effects (fire_explosion etc.)
+      if (nearest.affixes) {
+        const affixDeathEvents = processAffixOnDeath(nearest);
+        if (affixDeathEvents.length > 0) {
+          deathEvent.affixEvents = affixDeathEvents;
+        }
+      }
+
       this.events.push(deathEvent);
 
       // Award XP and track kill
@@ -136,9 +149,10 @@ class CombatSystem {
           const dy = monster.y - player.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= skill.radius) {
-            const baseDmg = (skill.name === 'Fireball' || skill.name === 'Frost Nova')
+            let baseDmg = (skill.name === 'Fireball' || skill.name === 'Frost Nova')
               ? Math.floor(player.spellPower * skill.damage)
               : Math.floor(player.attackPower * skill.damage);
+            baseDmg = monster.affixes ? modifyDamageByAffixes(monster, baseDmg) : baseDmg;
 
             const dealt = monster.takeDamage(baseDmg);
 
@@ -197,7 +211,8 @@ class CombatSystem {
           }
         }
         if (nearest) {
-          const baseDmg = Math.floor(player.attackPower * skill.damage);
+          let baseDmg = Math.floor(player.attackPower * skill.damage);
+          baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           if (skill.effect === 'stun') nearest.applyStun(skill.duration);
 
@@ -247,7 +262,8 @@ class CombatSystem {
 
         for (let i = 0; i < Math.min(skill.count, targets.length); i++) {
           const t = targets[i].monster;
-          const baseDmg = Math.floor(player.attackPower * skill.damage);
+          let baseDmg = Math.floor(player.attackPower * skill.damage);
+          baseDmg = t.affixes ? modifyDamageByAffixes(t, baseDmg) : baseDmg;
           const dealt = t.takeDamage(baseDmg);
 
           results.push({
@@ -297,7 +313,8 @@ class CombatSystem {
           }
         }
         if (nearest) {
-          const baseDmg = Math.floor(player.attackPower * skill.damage);
+          let baseDmg = Math.floor(player.attackPower * skill.damage);
+          baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           // Set poison timer on monster
           nearest.poisonTick = skill.duration;
@@ -386,7 +403,7 @@ class CombatSystem {
   }
 
   // Process monster attacks (called from monster AI)
-  processMonsterAttack(event, players) {
+  processMonsterAttack(event, players, monster) {
     const target = players.find(p => p.id === event.targetId);
     if (!target || !target.alive) return null;
 
@@ -401,6 +418,17 @@ class CombatSystem {
       attackType: event.attackType,
     };
     this.events.push(hitEvent);
+
+    // Affix on-hit effects (fire DoT, cold slow)
+    if (monster && monster.affixes && dealt > 0 && dealt !== -1) {
+      processAffixOnHitPlayer(monster, target);
+
+      // Vampiric healing
+      const healAmount = processAffixOnDealDamage(monster, dealt);
+      if (healAmount > 0) {
+        monster.hp = Math.min(monster.maxHp, monster.hp + healAmount);
+      }
+    }
 
     // Poison DoT setup
     if (event.attackType === 'poison' && dealt > 0) {

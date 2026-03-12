@@ -4,12 +4,13 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const { Player, DEATH_GOLD_DROP_PERCENT } = require('./game/player');
-const { World, TILE, TILE_SIZE, FLOOR_NAMES } = require('./game/world');
+const { World, TILE, TILE_SIZE, GRID_W, GRID_H, FLOOR_NAMES } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
 const { generateConsumable, generateLoot, generateWeapon, generateArmor } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
+const { processAffixUpdates } = require('./game/affixes');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
 const { GameDatabase } = require('./game/database');
@@ -318,15 +319,47 @@ function gameLoop() {
   }
 
   // Update monsters (AI + combat)
+  const worldBounds = { width: GRID_W * TILE_SIZE, height: GRID_H * TILE_SIZE };
   for (const monster of world.monsters) {
     if (!monster.alive) continue;
 
     combat.processPoison(monster, dt);
 
+    // Process affix updates (teleporter blink, shielding cycle)
+    if (monster.affixes) {
+      const affixEvents = processAffixUpdates(monster, worldBounds);
+      for (const evt of affixEvents) {
+        if (evt.type === 'teleport') {
+          monster.x = evt.newX;
+          monster.y = evt.newY;
+        }
+        // shield_on/shield_off handled internally by the affix
+      }
+    }
+
     const aiEvents = monster.update(dt, allPlayers);
     for (const event of aiEvents) {
       if (event.type === 'monster_attack') {
-        combat.processMonsterAttack(event, allPlayers);
+        combat.processMonsterAttack(event, allPlayers, monster);
+      }
+    }
+  }
+
+  // Process player debuffs (fire DoT, cold slow from affixes)
+  for (const player of allPlayers) {
+    if (!player.alive || player.isDying) continue;
+    const debuffDamage = player.processDebuffs();
+    if (debuffDamage > 0) {
+      player.hp -= debuffDamage;
+      if (player.hp <= 0) {
+        player.hp = 0;
+        player.die();
+        combat.events.push({
+          type: 'combat:player_death',
+          playerId: player.id,
+          playerName: player.name,
+          killedBy: 'affix_debuff',
+        });
       }
     }
   }

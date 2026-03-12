@@ -512,6 +512,13 @@ class Monster {
       stunned: this.stunned > 0,
       slowed: this.slowed > 0,
       behavior: this.behavior,
+      // Affix data
+      affixes: this.affixes || null,
+      isElite: this.isElite || false,
+      eliteRank: this.eliteRank || null,
+      shieldActive: this.shieldActive || false,
+      fireEnchanted: this.fireEnchanted || false,
+      coldEnchanted: this.coldEnchanted || false,
     };
   }
 }

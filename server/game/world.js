@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const { createMonster } = require('./monsters');
 const { generateConsumable } = require('./items');
 const { generateShopInventory } = require('./shop');
+const { rollAffixes, applyAffixes } = require('./affixes');
 
 const TILE_SIZE = 32;
 const GRID_W = 60;
@@ -342,7 +343,10 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
 
     const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
     const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
-    monsters.push(createMonster(type, mx, my, floor));
+    const monster = createMonster(type, mx, my, floor);
+    const affixResult = rollAffixes(floor, type);
+    if (affixResult) applyAffixes(monster, affixResult);
+    monsters.push(monster);
   }
 
   if (roomData.type === 'boss' && floor > 1) {
@@ -351,7 +355,10 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
       const type = monsterPool[Math.floor(Math.random() * monsterPool.length)];
       const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
       const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
-      monsters.push(createMonster(type, mx, my, floor));
+      const monster = createMonster(type, mx, my, floor);
+      const affixResult = rollAffixes(floor, type);
+      if (affixResult) applyAffixes(monster, affixResult);
+      monsters.push(monster);
     }
   }
 

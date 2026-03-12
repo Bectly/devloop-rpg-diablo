@@ -69,11 +69,11 @@
 - [ ] Extract `controller.js` reconnect overlay + save toast → `client/phone/reconnect.js` (~100 LOC)
 - [ ] Verify all 450 tests still pass after split
 
-### 6.1 Monster Affix System — Server [Bolt]
-**New file:** `server/game/affixes.js`
+### 6.1 Monster Affix System — Server [DONE — Bolt, Cycle #47]
+**New file:** `server/game/affixes.js` (314 LOC)
 Affixes are random modifiers applied to elite/champion monsters (Diablo-style "blue" and "yellow" packs).
 
-- [ ] **Affix definitions** — 8 affixes:
+- [x] **Affix definitions** — 8 affixes:
   | Affix | Effect | Visual (color tint) |
   |-------|--------|---------------------|
   | Fast | +50% speed | Yellow tint |
@@ -85,19 +85,19 @@ Affixes are random modifiers applied to elite/champion monsters (Diablo-style "b
   | Shielding | Immune to damage for 3s every 10s | White pulse |
   | Extra Health | +100% HP | Larger size |
 
-- [ ] **Elite spawn rules:**
+- [x] **Elite spawn rules:**
   - Floor 1-2: no elites
   - Floor 3-4: 15% chance per monster → "Champion" (1 affix, blue name)
   - Floor 5-6: 25% chance → "Champion" (1-2 affixes)
   - Floor 7: 30% chance → "Rare" (2-3 affixes, yellow name)
   - Boss never gets affixes
 
-- [ ] **Affix application** in `Monster` constructor or a `Monster.applyAffixes(affixList)` method:
+- [x] **Affix application** in `Monster` constructor or a `Monster.applyAffixes(affixList)` method:
   - Modifies monster stats (hp, damage, speed)
   - Stores `monster.affixes = ['fast', 'vampiric']`
   - Stores `monster.isElite = true`, `monster.eliteRank = 'champion'|'rare'`
 
-- [ ] **Affix behavior hooks** in combat.js / world.js update loop:
+- [x] **Affix behavior hooks** in combat.js / world.js update loop:
   - `onMonsterHit(monster, player)` — fire DoT, cold slow
   - `onMonsterDeath(monster)` — fire explosion
   - `onMonsterUpdate(monster, dt)` — teleporter blink, shielding cycle
@@ -117,10 +117,10 @@ Affixes are random modifiers applied to elite/champion monsters (Diablo-style "b
 - [ ] **Monster tooltip on damage** — show affix icons/names when hit by elite
 - [ ] **Notification** on elite encounter: "⚡ Champion Skeleton — Fast, Vampiric"
 
-### 6.4 Loot bonus for elites [Bolt]
-- [ ] Champions: +1 loot tier, guaranteed uncommon+
-- [ ] Rares: +2 loot tier, guaranteed rare+, 2x gold
-- [ ] XP bonus: Champion ×1.5, Rare ×2.5
+### 6.4 Loot bonus for elites [DONE — Bolt, Cycle #47]
+- [x] Champions: +1 loot tier, guaranteed uncommon+
+- [x] Rares: +2 loot tier, guaranteed rare+, 2x gold
+- [x] XP bonus: Champion ×1.5, Rare ×2.5
 
 ### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)

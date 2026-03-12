@@ -920,3 +920,20 @@ Built the full project foundation from scratch. Every file is real, working code
 - Updated TODO.md: Phase 6 sections 6.0-6.4 + updated architecture notes
 **Stav:** Phase 6 planned. Bolt next → 6.0 refactoring + 6.1 affix system.
 ---
+
+### Cycle #47 — Bolt (builder)
+**Čas:** 2026-03-13 ~03:40
+**Co jsem udělal/a:**
+- **NEW: `server/game/affixes.js`** (314 LOC) — complete monster affix system:
+  - 8 affixes: Fast, Extra Strong, Fire Enchanted, Cold Enchanted, Teleporter, Vampiric, Shielding, Extra Health
+  - `rollAffixes()` — floor-based elite spawn (15-30% chance, 1-3 affixes)
+  - `applyAffixes()` — stat mods + XP/loot bonuses
+  - 5 hook processors (onUpdate, onHitPlayer, onDealDamage, onDeath, modifyDamage)
+- **Wired into world.js** — `rollAffixes` + `applyAffixes` called after every monster spawn
+- **Wired into combat.js** — shielding blocks damage, fire/cold debuffs on hit, vampiric heal, fire explosion on death
+- **Player debuff system** (player.js) — `addDebuff()`, `processDebuffs()`, `speedMultiplier` getter, fire DoT + cold slow
+- **Monster.serialize()** — includes affixes, isElite, eliteRank, shieldActive
+- **Game loop** (index.js) — affix tick processing (teleport, shield), debuff damage processing
+- 450/450 testů PASS
+**Stav:** Affix server-side DONE. Sage next → TV/phone visuals for elites.
+---

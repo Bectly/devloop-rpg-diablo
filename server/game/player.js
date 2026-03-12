@@ -133,6 +133,9 @@ class Player {
 
     // Damage flash tracking
     this.lastDamageTaken = 0;
+
+    // Affix debuffs (fire DoT, cold slow, etc.)
+    this.debuffs = [];
   }
 
   recalcStats() {
@@ -340,8 +343,9 @@ class Player {
         dy /= len;
       }
 
-      this.x += dx * this.moveSpeed * (dt / 1000);
-      this.y += dy * this.moveSpeed * (dt / 1000);
+      const effectiveSpeed = this.moveSpeed * this.speedMultiplier;
+      this.x += dx * effectiveSpeed * (dt / 1000);
+      this.y += dy * effectiveSpeed * (dt / 1000);
       this.moving = true;
 
       if (Math.abs(dx) > Math.abs(dy)) {
@@ -394,6 +398,34 @@ class Player {
     return null;
   }
 
+  addDebuff(debuff) {
+    // Replace existing debuff from same source
+    this.debuffs = this.debuffs.filter(d => d.source !== debuff.source || d.effect !== debuff.effect);
+    this.debuffs.push(debuff);
+  }
+
+  processDebuffs() {
+    if (this.debuffs.length === 0) return 0;
+    let totalDamage = 0;
+    for (const d of this.debuffs) {
+      if (d.effect === 'fire_dot' && d.ticksRemaining > 0) {
+        totalDamage += d.damage;
+        d.ticksRemaining--;
+      }
+      if (d.effect === 'slow' && d.ticksRemaining > 0) {
+        d.ticksRemaining--;
+      }
+    }
+    // Remove expired debuffs
+    this.debuffs = this.debuffs.filter(d => d.ticksRemaining > 0);
+    return totalDamage;
+  }
+
+  get speedMultiplier() {
+    const slow = this.debuffs.find(d => d.effect === 'slow');
+    return slow ? slow.speedMult : 1.0;
+  }
+
   serialize() {
     return {
       id: this.id,
@@ -413,6 +445,7 @@ class Player {
       deathTimer: this.deathTimer,
       disconnected: this.disconnected || false,
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
+      debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
     };
   }
 
