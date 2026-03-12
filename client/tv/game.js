@@ -18,6 +18,17 @@ const FLOOR_THEMES = [
   { floor: 0x2a1a1a, wall: 0x553333, wallLight: 0x664444, corridor: 0x201010 },   // Throne of Ruin
 ];
 
+// Floor theme names for transition display
+const FLOOR_NAMES = [
+  'Dusty Catacombs',
+  'Sunken Crypts',
+  'Bone Gallery',
+  'Burning Depths',
+  'Shadow Halls',
+  'Abyssal Core',
+  'Throne of Ruin',
+];
+
 // ─── Socket Connection ──────────────────────────────────────────
 const socket = io('/game', {
   transports: ['websocket', 'polling'],
@@ -46,17 +57,79 @@ class BootScene extends Phaser.Scene {
   createTextures() {
     const g = this.make.graphics({ add: false });
 
-    // Player textures
-    const playerColors = { warrior: 0x4488ff, ranger: 0x44cc44, mage: 0xbb44ff };
-    for (const [cls, color] of Object.entries(playerColors)) {
-      g.clear();
-      g.fillStyle(color, 1);
-      g.fillCircle(16, 16, 14);
-      g.fillStyle(0xffffff, 0.8);
-      g.fillCircle(12, 12, 3);
-      g.fillCircle(20, 12, 3);
-      g.generateTexture(`player_${cls}`, 32, 32);
-    }
+    // ── Player: Warrior — blue shield with metallic highlight ──
+    g.clear();
+    // Body circle
+    g.fillStyle(0x3366cc, 1);
+    g.fillCircle(16, 16, 13);
+    // Shield shape (kite shield)
+    g.fillStyle(0x4488ff, 1);
+    g.fillTriangle(10, 8, 22, 8, 16, 26);
+    // Metallic highlight stripe
+    g.fillStyle(0x88bbff, 0.7);
+    g.fillTriangle(14, 10, 18, 10, 16, 22);
+    // Shield border accent
+    g.lineStyle(1, 0x2255aa, 0.9);
+    g.strokeTriangle(10, 8, 22, 8, 16, 26);
+    // Shield boss (center dot)
+    g.fillStyle(0xccddff, 1);
+    g.fillCircle(16, 14, 2);
+    // Directional indicator (facing line)
+    g.lineStyle(2, 0xffffff, 0.8);
+    g.lineBetween(16, 2, 16, 6);
+    g.generateTexture('player_warrior', 32, 32);
+
+    // ── Player: Ranger — green figure with arrow symbol ──
+    g.clear();
+    // Body circle
+    g.fillStyle(0x2a7a2a, 1);
+    g.fillCircle(16, 16, 13);
+    // Cloak shape
+    g.fillStyle(0x44cc44, 1);
+    g.fillTriangle(8, 22, 24, 22, 16, 6);
+    // Hood accent
+    g.fillStyle(0x338833, 1);
+    g.fillTriangle(12, 10, 20, 10, 16, 6);
+    // Arrow symbol (pointing up)
+    g.lineStyle(2, 0xccffcc, 0.9);
+    g.lineBetween(16, 8, 16, 24);
+    // Arrowhead
+    g.lineBetween(16, 8, 12, 14);
+    g.lineBetween(16, 8, 20, 14);
+    // Fletching
+    g.lineBetween(16, 24, 13, 22);
+    g.lineBetween(16, 24, 19, 22);
+    // Directional indicator
+    g.lineStyle(2, 0xffffff, 0.8);
+    g.lineBetween(16, 2, 16, 6);
+    g.generateTexture('player_ranger', 32, 32);
+
+    // ── Player: Mage — purple figure with star/magic symbol ──
+    g.clear();
+    // Body circle
+    g.fillStyle(0x6622aa, 1);
+    g.fillCircle(16, 16, 13);
+    // Robe shape
+    g.fillStyle(0xbb44ff, 1);
+    g.fillTriangle(7, 24, 25, 24, 16, 6);
+    // Inner robe highlight
+    g.fillStyle(0x9933dd, 0.8);
+    g.fillTriangle(11, 22, 21, 22, 16, 10);
+    // Star symbol (5-point, hand-drawn with lines)
+    g.lineStyle(2, 0xffcc88, 0.9);
+    // Star points
+    g.lineBetween(16, 9, 14, 17);
+    g.lineBetween(14, 17, 21, 12);
+    g.lineBetween(21, 12, 11, 12);
+    g.lineBetween(11, 12, 18, 17);
+    g.lineBetween(18, 17, 16, 9);
+    // Magic glow dot at center
+    g.fillStyle(0xffeedd, 1);
+    g.fillCircle(16, 13, 2);
+    // Directional indicator
+    g.lineStyle(2, 0xffffff, 0.8);
+    g.lineBetween(16, 2, 16, 6);
+    g.generateTexture('player_mage', 32, 32);
 
     // Dead player
     g.clear();
@@ -64,6 +137,12 @@ class BootScene extends Phaser.Scene {
     g.fillCircle(16, 16, 14);
     g.lineStyle(2, 0xff0000);
     g.strokeCircle(16, 16, 14);
+    // X eyes
+    g.lineStyle(2, 0xff0000, 0.8);
+    g.lineBetween(10, 11, 14, 15);
+    g.lineBetween(14, 11, 10, 15);
+    g.lineBetween(18, 11, 22, 15);
+    g.lineBetween(22, 11, 18, 15);
     g.generateTexture('player_dead', 32, 32);
 
     // Dying player (skull)
@@ -117,22 +196,42 @@ class GameScene extends Phaser.Scene {
     this.tilesDirty = true;
     this.lastTileFloor = -1;
 
+    // Smooth camera tracking position
+    this.camTargetX = GAME_W / 2;
+    this.camTargetY = GAME_H / 2;
+
     // HUD (fixed to camera)
-    this.roomText = this.add.text(10, 10, '', {
+    // ── Room name panel ──
+    this.hudPanel = this.add.graphics().setScrollFactor(0).setDepth(999);
+
+    this.roomText = this.add.text(20, 14, '', {
       fontSize: '18px', fill: '#ffffff', fontFamily: 'Courier New',
-      backgroundColor: '#00000088', padding: { x: 8, y: 4 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.floorText = this.add.text(10, 38, '', {
+    this.floorText = this.add.text(20, 40, '', {
       fontSize: '14px', fill: '#ffcc44', fontFamily: 'Courier New',
-      backgroundColor: '#00000088', padding: { x: 6, y: 2 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.waveText = this.add.text(GAME_W / 2, 50, '', {
-      fontSize: '22px', fill: '#ff4444', fontFamily: 'Courier New',
-      backgroundColor: '#00000088', padding: { x: 10, y: 4 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    this.waveText = this.add.text(GAME_W / 2, 60, '', {
+      fontSize: '24px', fill: '#ff4444', fontFamily: 'Courier New',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setAlpha(0);
     this.waveTextTimer = 0;
+
+    // Celebration particles container (for room cleared effect)
+    this.celebrationParticles = [];
+
+    // Floor transition overlay
+    this.transitionOverlay = this.add.graphics().setScrollFactor(0).setDepth(2000);
+    this.transitionOverlay.setAlpha(0);
+    this.transitionText = this.add.text(GAME_W / 2, GAME_H / 2, '', {
+      fontSize: '36px', fill: '#ffffff', fontFamily: 'Courier New',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(2001).setAlpha(0);
 
     // Minimap container (top-right corner)
     this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(1002);
@@ -170,14 +269,55 @@ class GameScene extends Phaser.Scene {
 
     // ── HUD ──
     const exitStatus = state.world.exitLocked ? ' [EXIT LOCKED]' : ' [EXIT OPEN]';
-    this.roomText.setText(`${state.world.roomName || 'Unknown'}${exitStatus}`);
-    this.floorText.setText(`Floor ${(state.world.currentFloor || 0) + 1} | Rooms: ${(state.world.rooms || []).length}`);
+    const roomLabel = `${state.world.roomName || 'Unknown'}${exitStatus}`;
+    const floorLabel = `Floor ${(state.world.currentFloor || 0) + 1} | Rooms: ${(state.world.rooms || []).length}`;
+    this.roomText.setText(roomLabel);
+    this.floorText.setText(floorLabel);
+
+    // Draw HUD panel background (semi-transparent rounded rect)
+    this.hudPanel.clear();
+    const panelW = Math.max(this.roomText.width, this.floorText.width) + 32;
+    const panelH = 52;
+    this.hudPanel.fillStyle(0x000000, 0.65);
+    this.hudPanel.fillRoundedRect(6, 6, panelW, panelH, 8);
+    this.hudPanel.lineStyle(1, 0x444466, 0.5);
+    this.hudPanel.strokeRoundedRect(6, 6, panelW, panelH, 8);
+
+    // Floor indicator color based on floor theme
+    const floorTheme = FLOOR_THEMES[(state.world.currentFloor || 0) % FLOOR_THEMES.length];
+    const floorTint = floorTheme.wallLight;
+    const floorR = ((floorTint >> 16) & 0xff);
+    const floorG = ((floorTint >> 8) & 0xff);
+    const floorB = (floorTint & 0xff);
+    // Brighten the wall-light color for text readability
+    const brightR = Math.min(255, floorR + 100);
+    const brightG = Math.min(255, floorG + 100);
+    const brightB = Math.min(255, floorB + 100);
+    const floorHex = `#${brightR.toString(16).padStart(2, '0')}${brightG.toString(16).padStart(2, '0')}${brightB.toString(16).padStart(2, '0')}`;
+    this.floorText.setColor(floorHex);
 
     // Wave text fade
     if (this.waveTextTimer > 0) {
       this.waveTextTimer -= 16;
       this.waveText.setAlpha(Math.min(1, this.waveTextTimer / 500));
-      if (this.waveTextTimer <= 0) this.waveText.setText('');
+      if (this.waveTextTimer <= 0) {
+        this.waveText.setText('');
+        this.waveText.setAlpha(0);
+      }
+    }
+
+    // ── Update celebration particles ──
+    for (let i = this.celebrationParticles.length - 1; i >= 0; i--) {
+      const cp = this.celebrationParticles[i];
+      cp.life -= 16;
+      cp.gfx.x += cp.vx;
+      cp.gfx.y += cp.vy;
+      cp.vy += 0.05; // gravity
+      cp.gfx.setAlpha(Math.max(0, cp.life / cp.maxLife));
+      if (cp.life <= 0) {
+        cp.gfx.destroy();
+        this.celebrationParticles.splice(i, 1);
+      }
     }
 
     // ── Render players ──
@@ -201,6 +341,13 @@ class GameScene extends Phaser.Scene {
       sprite.x += (p.x - sprite.x) * 0.3;
       sprite.y += (p.y - sprite.y) * 0.3;
       sprite.nameText.setPosition(sprite.x, sprite.y - 28);
+
+      // Rotation for directional indicator (facing direction)
+      if (p.facing !== undefined) {
+        sprite.setRotation(p.facing);
+      } else if (p.dx !== undefined && p.dy !== undefined && (p.dx !== 0 || p.dy !== 0)) {
+        sprite.setRotation(Math.atan2(p.dy, p.dx) - Math.PI / 2);
+      }
 
       // Texture swap
       if (p.isDying) {
@@ -273,22 +420,132 @@ class GameScene extends Phaser.Scene {
 
         if (!sprite) {
           const g = this.make.graphics({ add: false });
-          g.fillStyle(m.color, 1);
           const s = m.size;
+          const d = s * 2; // texture diameter
 
           if (m.isBoss) {
-            g.fillTriangle(s, 0, s * 2, s, s, s * 2);
-            g.fillTriangle(s, 0, 0, s, s, s * 2);
+            // Boss: large angular body with crown/horns
+            g.fillStyle(m.color, 1);
+            // Main body (hexagonal-ish)
+            g.fillTriangle(s, 2, d - 2, s, s, d - 2);
+            g.fillTriangle(s, 2, 2, s, s, d - 2);
+            // Darker center for depth
+            g.fillStyle(m.color - 0x222222, 1);
+            g.fillCircle(s, s, s * 0.5);
+            // Crown/horns on top
+            g.fillStyle(0xffcc00, 1);
+            g.fillTriangle(s - 6, 4, s - 4, 0, s - 2, 4);
+            g.fillTriangle(s - 1, 3, s, 0, s + 1, 3);
+            g.fillTriangle(s + 2, 4, s + 4, 0, s + 6, 4);
+            // Menacing eyes
+            g.fillStyle(0xff0000, 1);
+            g.fillCircle(s - 4, s - 2, 2);
+            g.fillCircle(s + 4, s - 2, 2);
+            g.fillStyle(0xffcc00, 1);
+            g.fillCircle(s - 4, s - 2, 1);
+            g.fillCircle(s + 4, s - 2, 1);
           } else if (m.behavior === 'ranged_kite') {
-            // Archer: triangle shape
-            g.fillTriangle(s, 0, s * 2, s * 2, 0, s * 2);
+            // Archer: light brown angular with arrow symbol
+            g.fillStyle(m.color, 1);
+            g.fillTriangle(s, 2, d - 4, d - 2, 4, d - 2);
+            // Darker inner
+            g.fillStyle(m.color - 0x111111, 0.7);
+            g.fillTriangle(s, 6, d - 8, d - 6, 8, d - 6);
+            // Arrow symbol
+            g.lineStyle(2, 0xffffcc, 0.9);
+            g.lineBetween(s, 5, s, d - 5);
+            g.lineBetween(s, 5, s - 3, 10);
+            g.lineBetween(s, 5, s + 3, 10);
           } else if (m.behavior === 'melee_split') {
-            // Slime: circle
+            // Slime: translucent blob with internal shading
+            // Outer glow
+            g.fillStyle(m.color, 0.3);
             g.fillCircle(s, s, s);
+            // Main body
+            g.fillStyle(m.color, 0.7);
+            g.fillCircle(s, s + 1, s - 2);
+            // Highlight (top-left)
+            g.fillStyle(0xffffff, 0.2);
+            g.fillCircle(s - 3, s - 3, s * 0.35);
+            // Internal darker spot
+            g.fillStyle(m.color - 0x224422, 0.5);
+            g.fillCircle(s + 2, s + 2, s * 0.3);
+            // Glossy eye dots
+            g.fillStyle(0x000000, 0.7);
+            g.fillCircle(s - 3, s - 1, 2);
+            g.fillCircle(s + 3, s - 1, 2);
           } else {
-            g.fillRect(0, 0, s * 2, s * 2);
+            // Default melee (skeleton/zombie/demon)
+            const mName = (m.name || '').toLowerCase();
+            if (mName.includes('skeleton') || mName.includes('skel')) {
+              // Skeleton: white/gray angular with skull
+              g.fillStyle(0xbbbbbb, 1);
+              g.fillRect(2, 2, d - 4, d - 4);
+              // Angular cuts
+              g.fillStyle(0x222222, 1);
+              g.fillTriangle(0, 0, 6, 0, 0, 6);
+              g.fillTriangle(d, 0, d - 6, 0, d, 6);
+              g.fillTriangle(0, d, 6, d, 0, d - 6);
+              g.fillTriangle(d, d, d - 6, d, d, d - 6);
+              // Skull face
+              g.fillStyle(0xdddddd, 1);
+              g.fillCircle(s, s - 2, s * 0.45);
+              // Eye sockets
+              g.fillStyle(0x111111, 1);
+              g.fillCircle(s - 3, s - 3, 2);
+              g.fillCircle(s + 3, s - 3, 2);
+              // Jaw line
+              g.lineStyle(1, 0x333333, 0.8);
+              g.lineBetween(s - 4, s + 2, s + 4, s + 2);
+            } else if (mName.includes('zombie')) {
+              // Zombie: green-brown lumbering
+              g.fillStyle(0x556633, 1);
+              g.fillRect(3, 1, d - 6, d - 2);
+              // Hunched top
+              g.fillStyle(0x667744, 1);
+              g.fillCircle(s, 6, s * 0.5);
+              // Tattered detail
+              g.fillStyle(0x445522, 0.8);
+              g.fillRect(4, d - 6, 4, 6);
+              g.fillRect(d - 8, d - 6, 4, 6);
+              // Eyes
+              g.fillStyle(0xaacc44, 0.8);
+              g.fillCircle(s - 3, 5, 2);
+              g.fillCircle(s + 3, 5, 2);
+              // Drool/detail line
+              g.lineStyle(1, 0x445522, 0.6);
+              g.lineBetween(s - 2, 9, s + 2, 10);
+            } else if (mName.includes('demon')) {
+              // Demon: red angular spiky
+              g.fillStyle(m.color, 1);
+              // Core body
+              g.fillTriangle(s, 2, d - 2, d - 2, 2, d - 2);
+              // Spikes on top
+              g.fillStyle(m.color + 0x220000, 1);
+              g.fillTriangle(4, s, 0, 2, 8, s);
+              g.fillTriangle(d - 8, s, d, 2, d - 4, s);
+              // Center spike
+              g.fillTriangle(s - 3, 6, s, 0, s + 3, 6);
+              // Glowing eyes
+              g.fillStyle(0xffaa00, 1);
+              g.fillCircle(s - 4, s - 2, 2);
+              g.fillCircle(s + 4, s - 2, 2);
+              // Dark accents
+              g.fillStyle(0x220000, 0.4);
+              g.fillCircle(s, s + 3, s * 0.3);
+            } else {
+              // Generic melee square with face
+              g.fillStyle(m.color, 1);
+              g.fillRect(2, 2, d - 4, d - 4);
+              g.fillStyle(m.color + 0x111111, 0.8);
+              g.fillRect(4, 4, d - 8, d - 8);
+              // Simple eyes
+              g.fillStyle(0xff0000, 0.8);
+              g.fillCircle(s - 3, s - 2, 2);
+              g.fillCircle(s + 3, s - 2, 2);
+            }
           }
-          g.generateTexture(`monster_${m.id}`, s * 2, s * 2);
+          g.generateTexture(`monster_${m.id}`, d, d);
           g.destroy();
 
           sprite = this.add.sprite(m.x, m.y, `monster_${m.id}`).setDepth(8);
@@ -333,7 +590,7 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── Render ground items with rarity glow ──
+    // ── Render ground items with rarity glow + bobbing + legendary sparkle ──
     const seenItems = new Set();
     if (state.world.groundItems) {
       for (const gi of state.world.groundItems) {
@@ -342,14 +599,16 @@ class GameScene extends Phaser.Scene {
 
         if (!sprite) {
           sprite = this.add.sprite(gi.x, gi.y, 'loot').setDepth(5).setScale(0.6);
+          sprite._baseY = gi.y;
+          sprite._isLegendary = (gi.rarity === 'legendary' || gi.rarity === 'Legendary'
+            || (gi.rarityColor && gi.rarityColor.toLowerCase() === '#ff8800'));
 
           // Rarity-colored glow ring
           const glowColor = this.parseColor(gi.rarityColor || '#aaaaaa');
           sprite.glow = this.add.graphics().setDepth(4);
-          sprite.glow.fillStyle(glowColor, 0.25);
-          sprite.glow.fillCircle(gi.x, gi.y, 18);
-          sprite.glow.lineStyle(1, glowColor, 0.6);
-          sprite.glow.strokeCircle(gi.x, gi.y, 18);
+          sprite._glowColor = glowColor;
+          sprite._glowX = gi.x;
+          sprite._glowY = gi.y;
 
           sprite.nameText = this.add.text(gi.x, gi.y - 18, gi.name, {
             fontSize: '9px',
@@ -360,15 +619,45 @@ class GameScene extends Phaser.Scene {
           }).setOrigin(0.5).setDepth(6);
           this.itemSprites.set(gi.id, sprite);
 
-          // Pulse tween
-          this.tweens.add({
-            targets: sprite,
-            scaleX: 0.7,
-            scaleY: 0.7,
-            duration: 500,
-            yoyo: true,
-            repeat: -1,
-          });
+          // Legendary sparkle sprites
+          if (sprite._isLegendary) {
+            sprite._sparkles = [];
+            for (let si = 0; si < 4; si++) {
+              const sparkle = this.add.graphics().setDepth(7);
+              sparkle._angle = (Math.PI * 2 / 4) * si;
+              sparkle._radius = 14;
+              sprite._sparkles.push(sparkle);
+            }
+          }
+        }
+
+        // Gentle bobbing (2px up/down)
+        const bobOffset = Math.sin(Date.now() / 400 + gi.id * 1.7) * 2;
+        sprite.y = sprite._baseY + bobOffset;
+        sprite.nameText.setPosition(sprite.x, sprite.y - 18);
+
+        // Pulsing glow (0.5 to 0.9 alpha)
+        const glowAlpha = 0.5 + Math.sin(Date.now() / 300 + gi.id * 2.3) * 0.2;
+        sprite.glow.clear();
+        sprite.glow.fillStyle(sprite._glowColor, glowAlpha * 0.4);
+        sprite.glow.fillCircle(sprite._glowX, sprite._baseY + bobOffset, 18);
+        sprite.glow.lineStyle(1, sprite._glowColor, glowAlpha);
+        sprite.glow.strokeCircle(sprite._glowX, sprite._baseY + bobOffset, 18);
+
+        // Legendary rotating sparkles
+        if (sprite._isLegendary && sprite._sparkles) {
+          const time = Date.now() / 800;
+          for (const sparkle of sprite._sparkles) {
+            sparkle.clear();
+            const a = sparkle._angle + time;
+            const sx = sprite._glowX + Math.cos(a) * sparkle._radius;
+            const sy = sprite._baseY + bobOffset + Math.sin(a) * sparkle._radius;
+            const sparkAlpha = 0.5 + Math.sin(time * 3 + sparkle._angle) * 0.5;
+            sparkle.fillStyle(0xffcc00, sparkAlpha);
+            // Draw a small 4-point star
+            sparkle.fillRect(sx - 1, sy - 3, 2, 6);
+            sparkle.fillRect(sx - 3, sy - 1, 6, 2);
+          }
         }
       }
     }
@@ -377,6 +666,9 @@ class GameScene extends Phaser.Scene {
       if (!seenItems.has(id)) {
         sprite.nameText.destroy();
         if (sprite.glow) sprite.glow.destroy();
+        if (sprite._sparkles) {
+          for (const sp of sprite._sparkles) sp.destroy();
+        }
         sprite.destroy();
         this.itemSprites.delete(id);
       }
@@ -390,12 +682,22 @@ class GameScene extends Phaser.Scene {
             || state.players?.find(p => p.id === ev.targetId);
           if (target) {
             this.spawnDamageText(target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged);
+            // Camera shake on crit
+            if (ev.isCrit) {
+              this.cameras.main.shake(200, 0.003);
+            }
           }
         }
         if (ev.type === 'combat:hit' && ev.dodged) {
           const target = state.players?.find(p => p.id === ev.targetId);
           if (target) {
             this.spawnDamageText(target.x, target.y - 30, 'DODGE', false, true);
+          }
+        }
+        if (ev.type === 'combat:heal') {
+          const target = state.players?.find(p => p.id === ev.targetId || p.id === ev.playerId);
+          if (target) {
+            this.spawnHealNumber(target.x, target.y - 30, ev.amount || ev.heal || ev.damage);
           }
         }
         if (ev.type === 'player:levelup') {
@@ -417,15 +719,25 @@ class GameScene extends Phaser.Scene {
     for (let i = this.damageTexts.length - 1; i >= 0; i--) {
       const dt = this.damageTexts[i];
       dt.life -= 16;
-      dt.text.y -= 0.8;
+      if (dt.isHeal) {
+        dt.text.y -= 1.0; // healing goes up faster
+      } else {
+        dt.text.y -= 0.8;
+      }
       dt.text.setAlpha(dt.life / dt.maxLife);
+      // Scale-pop for crits: shrink from 1.5 to 1.0 over first 200ms
+      if (dt.isCrit && dt.maxLife - dt.life < 200) {
+        const popProgress = (dt.maxLife - dt.life) / 200;
+        const popScale = 1.5 - popProgress * 0.5;
+        dt.text.setScale(popScale);
+      }
       if (dt.life <= 0) {
         dt.text.destroy();
         this.damageTexts.splice(i, 1);
       }
     }
 
-    // ── Camera follow ──
+    // ── Camera follow with lerp ──
     if (state.players.length > 0) {
       let cx = 0, cy = 0;
       for (const p of state.players) { cx += p.x; cy += p.y; }
@@ -434,10 +746,13 @@ class GameScene extends Phaser.Scene {
 
       const worldW = (state.world.gridW || 60) * TILE_SIZE;
       const worldH = (state.world.gridH || 40) * TILE_SIZE;
-      this.cameras.main.centerOn(
-        Math.max(GAME_W / 2, Math.min(cx, worldW - GAME_W / 2)),
-        Math.max(GAME_H / 2, Math.min(cy, worldH - GAME_H / 2))
-      );
+      const targetX = Math.max(GAME_W / 2, Math.min(cx, worldW - GAME_W / 2));
+      const targetY = Math.max(GAME_H / 2, Math.min(cy, worldH - GAME_H / 2));
+
+      // Smooth lerp camera (0.08 factor)
+      this.camTargetX += (targetX - this.camTargetX) * 0.08;
+      this.camTargetY += (targetY - this.camTargetY) * 0.08;
+      this.cameras.main.centerOn(this.camTargetX, this.camTargetY);
     }
 
     // ── Minimap ──
@@ -632,19 +947,159 @@ class GameScene extends Phaser.Scene {
 
   spawnDamageText(x, y, text, isCrit, isDodge, color) {
     const offset = (Math.random() - 0.5) * 30;
-    const col = color || (isDodge ? '#44ccff' : isCrit ? '#ffcc00' : '#ff4444');
-    const size = isCrit ? '18px' : isDodge ? '14px' : '14px';
+
+    if (isDodge) {
+      // Dodge: italic, cyan, "DODGE" text
+      const t = this.add.text(x + offset, y, 'DODGE', {
+        fontSize: '14px',
+        fill: '#44ccff',
+        fontFamily: 'Courier New',
+        fontStyle: 'italic',
+        stroke: '#001122',
+        strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(100);
+      this.damageTexts.push({ text: t, life: 800, maxLife: 800, isCrit: false, isHeal: false });
+      return;
+    }
+
+    if (isCrit) {
+      // Crit: large (22px), yellow with orange stroke, scale-pop
+      const t = this.add.text(x + offset, y, String(text), {
+        fontSize: '22px',
+        fill: '#ffdd00',
+        fontFamily: 'Courier New',
+        fontStyle: 'bold',
+        stroke: '#cc6600',
+        strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(100).setScale(1.5);
+      this.damageTexts.push({ text: t, life: 1000, maxLife: 1000, isCrit: true, isHeal: false });
+      return;
+    }
+
+    // Normal damage or special text
+    const col = color || '#ff6655';
+    const size = color ? '16px' : '14px';
+    const style = color ? 'bold' : 'normal';
 
     const t = this.add.text(x + offset, y, String(text), {
       fontSize: size,
       fill: col,
       fontFamily: 'Courier New',
-      fontStyle: isCrit ? 'bold' : 'normal',
+      fontStyle: style,
       stroke: '#000000',
-      strokeThickness: 2,
+      strokeThickness: 3,
     }).setOrigin(0.5).setDepth(100);
 
-    this.damageTexts.push({ text: t, life: 800, maxLife: 800 });
+    // Subtle pop for normal damage
+    if (!color) {
+      t.setScale(1.15);
+      this.tweens.add({
+        targets: t,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 150,
+        ease: 'Back.easeOut',
+      });
+    }
+
+    this.damageTexts.push({ text: t, life: 800, maxLife: 800, isCrit: false, isHeal: false });
+  }
+
+  spawnHealNumber(x, y, amount) {
+    if (!amount || amount <= 0) return;
+    const offset = (Math.random() - 0.5) * 20;
+    const t = this.add.text(x + offset, y, `+${amount}`, {
+      fontSize: '16px',
+      fill: '#44ff44',
+      fontFamily: 'Courier New',
+      fontStyle: 'bold',
+      stroke: '#003300',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(100);
+
+    this.damageTexts.push({ text: t, life: 900, maxLife: 900, isCrit: false, isHeal: true });
+  }
+
+  // ── Floor Transition Effect ──
+  playFloorTransition(floorIndex, floorName) {
+    // Black overlay fade in
+    this.transitionOverlay.clear();
+    this.transitionOverlay.fillStyle(0x000000, 1);
+    this.transitionOverlay.fillRect(0, 0, GAME_W, GAME_H);
+    this.transitionOverlay.setAlpha(0);
+
+    this.transitionText.setText(floorName || `Floor ${floorIndex + 1}`);
+    this.transitionText.setAlpha(0);
+
+    // Fade in black
+    this.tweens.add({
+      targets: this.transitionOverlay,
+      alpha: 0.85,
+      duration: 300,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        // Show floor name
+        this.transitionText.setAlpha(1).setScale(0.5);
+        this.tweens.add({
+          targets: this.transitionText,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 400,
+          ease: 'Back.easeOut',
+        });
+
+        // Hold for 1.5s then fade everything out
+        this.time.delayedCall(1500, () => {
+          this.tweens.add({
+            targets: [this.transitionOverlay, this.transitionText],
+            alpha: 0,
+            duration: 500,
+            ease: 'Sine.easeOut',
+          });
+        });
+      },
+    });
+  }
+
+  // ── Wave Announcement with dramatic entrance ──
+  showWaveAnnouncement(text, fillColor) {
+    this.waveText.setText(text);
+    if (fillColor) this.waveText.setColor(fillColor);
+    this.waveText.setScale(0);
+    this.waveText.setAlpha(1);
+    this.waveTextTimer = 2500;
+
+    // Scale from 0 to 1 with bounce
+    this.tweens.add({
+      targets: this.waveText,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 400,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  // ── Room Cleared Celebration Effect ──
+  spawnCelebrationParticles() {
+    const cx = GAME_W / 2;
+    const cy = 90;
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 / 20) * i + (Math.random() - 0.5) * 0.3;
+      const speed = 1.5 + Math.random() * 2;
+      const gfx = this.add.graphics().setScrollFactor(0).setDepth(1003);
+      const dotSize = 2 + Math.random() * 3;
+      const green = 0x44ff44 + Math.floor(Math.random() * 0x004400);
+      gfx.fillStyle(green, 1);
+      gfx.fillCircle(0, 0, dotSize);
+      gfx.setPosition(cx, cy);
+      this.celebrationParticles.push({
+        gfx,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        life: 800 + Math.random() * 400,
+        maxLife: 1200,
+      });
+    }
   }
 }
 
@@ -681,9 +1136,17 @@ socket.on('dungeon:enter', (data) => {
       for (const [id, sprite] of scene.itemSprites) {
         sprite.nameText.destroy();
         if (sprite.glow) sprite.glow.destroy();
+        if (sprite._sparkles) {
+          for (const sp of sprite._sparkles) sp.destroy();
+        }
         sprite.destroy();
       }
       scene.itemSprites.clear();
+
+      // Floor transition effect
+      const floorIdx = data.floor || 0;
+      const floorName = data.floorName || FLOOR_NAMES[floorIdx % FLOOR_NAMES.length] || `Floor ${floorIdx + 1}`;
+      scene.playFloorTransition(floorIdx, floorName);
     }
   }
 });
@@ -692,8 +1155,7 @@ socket.on('wave:start', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.waveText.setText(`WAVE ${data.wave}/${data.totalWaves}`);
-      scene.waveTextTimer = 2000;
+      scene.showWaveAnnouncement(`WAVE ${data.wave}/${data.totalWaves}`, '#ff4444');
     }
   }
 });
@@ -702,10 +1164,12 @@ socket.on('room:cleared', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.waveText.setText(`${data.roomName} CLEARED!`);
-      scene.waveText.setFill('#44ff44');
-      scene.waveTextTimer = 2000;
-      setTimeout(() => { scene.waveText.setFill('#ff4444'); }, 2100);
+      scene.showWaveAnnouncement(`${data.roomName} CLEARED!`, '#44ff44');
+      scene.spawnCelebrationParticles();
+      // Reset wave text color after announcement fades
+      scene.time.delayedCall(2600, () => {
+        scene.waveText.setColor('#ff4444');
+      });
     }
   }
 });
@@ -714,11 +1178,11 @@ socket.on('exit:unlocked', () => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene) {
-      scene.waveText.setText('EXIT UNLOCKED!');
-      scene.waveText.setFill('#ffcc00');
-      scene.waveTextTimer = 3000;
+      scene.showWaveAnnouncement('EXIT UNLOCKED!', '#ffcc00');
       scene.tilesDirty = true; // Re-render exit tile color
-      setTimeout(() => { scene.waveText.setFill('#ff4444'); }, 3100);
+      scene.time.delayedCall(3100, () => {
+        scene.waveText.setColor('#ff4444');
+      });
     }
   }
 });

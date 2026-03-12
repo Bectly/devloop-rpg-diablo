@@ -22,19 +22,18 @@ const joinScreen = document.getElementById('join-screen');
 const controller = document.getElementById('controller');
 const inventoryScreen = document.getElementById('inventory-screen');
 const dialogueScreen = document.getElementById('dialogue-screen');
-const notifications = document.getElementById('notifications');
 
-// ─── Join Screen ────────────────────────────────────────────────
-document.querySelectorAll('.class-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedClass = btn.dataset.class;
+// ─── Join Screen — Class Card Selection ─────────────────────────
+document.querySelectorAll('.class-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.class;
   });
 });
 
-document.getElementById('join-btn').addEventListener('click', () => {
-  const name = document.getElementById('player-name').value.trim() || 'Hero';
+document.getElementById('btn-join').addEventListener('click', () => {
+  const name = document.getElementById('name-input').value.trim() || 'Hero';
   socket.emit('join', { name, characterClass: selectedClass });
 });
 
@@ -173,28 +172,22 @@ function updateHUD(stats) {
   document.getElementById('hud-name').textContent = stats.name;
   document.getElementById('hud-level').textContent = `Lv.${stats.level}`;
 
-  const hpPct = (stats.hp / stats.maxHp * 100).toFixed(0);
-  document.getElementById('hp-bar').style.width = `${hpPct}%`;
-  document.getElementById('hp-text').textContent = `${stats.hp}/${stats.maxHp}`;
-
-  const mpPct = (stats.mp / stats.maxMp * 100).toFixed(0);
-  document.getElementById('mp-bar').style.width = `${mpPct}%`;
-  document.getElementById('mp-text').textContent = `${stats.mp}/${stats.maxMp}`;
-
-  const xpPct = stats.xpToNext > 0 ? (stats.xp / stats.xpToNext * 100).toFixed(0) : 0;
-  document.getElementById('xp-bar').style.width = `${xpPct}%`;
-  document.getElementById('xp-text').textContent = `${xpPct}%`;
-
-  // HP bar color
+  // HP bar with label and color class
+  const hpPct = (stats.hp / stats.maxHp) * 100;
   const hpBar = document.getElementById('hp-bar');
-  const hpRatio = stats.hp / stats.maxHp;
-  if (hpRatio > 0.5) {
-    hpBar.style.background = 'linear-gradient(90deg, #228822, #44cc44)';
-  } else if (hpRatio > 0.25) {
-    hpBar.style.background = 'linear-gradient(90deg, #ccaa00, #cccc44)';
-  } else {
-    hpBar.style.background = 'linear-gradient(90deg, #cc2222, #ff4444)';
-  }
+  hpBar.style.width = hpPct + '%';
+  hpBar.className = 'stat-bar hp' + (hpPct < 25 ? ' low' : hpPct < 50 ? ' mid' : '');
+  document.getElementById('hp-label').textContent = `${stats.hp}/${stats.maxHp}`;
+
+  // MP bar with label
+  const mpPct = (stats.mp / stats.maxMp) * 100;
+  document.getElementById('mp-bar').style.width = mpPct + '%';
+  document.getElementById('mp-label').textContent = `${stats.mp}/${stats.maxMp}`;
+
+  // XP bar with label
+  const xpPct = stats.xpToNext > 0 ? Math.round((stats.xp / stats.xpToNext) * 100) : 0;
+  document.getElementById('xp-bar').style.width = xpPct + '%';
+  document.getElementById('xp-label').textContent = `${xpPct}%`;
 
   // Skill button labels
   if (stats.skills) {
@@ -320,20 +313,18 @@ function hapticFeedback() {
   }
 }
 
-// ─── Notifications ──────────────────────────────────────────────
+// ─── Notifications — Toast Style ────────────────────────────────
 function showNotification(text, type = 'info') {
-  const el = document.createElement('div');
-  el.classList.add('notification', type);
-  el.textContent = text;
-  notifications.appendChild(el);
+  const toast = document.createElement('div');
+  toast.className = `notification-toast ${type}`;
+  toast.textContent = text;
+  document.body.appendChild(toast);
 
-  if (['legendary', 'epic', 'levelup', 'error'].includes(type)) {
-    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+  if (type === 'legendary' || type === 'epic' || type === 'levelup') {
+    if (navigator.vibrate) navigator.vibrate([50, 30, 80]);
   }
 
-  setTimeout(() => {
-    if (el.parentNode) el.parentNode.removeChild(el);
-  }, 2200);
+  setTimeout(() => toast.remove(), 2500);
 }
 
 // ─── Inventory ──────────────────────────────────────────────────
@@ -369,7 +360,7 @@ function renderInventory() {
     } else {
       slotEl.textContent = slotName.charAt(0).toUpperCase() + slotName.slice(1);
       slotEl.style.color = '#666';
-      slotEl.style.borderColor = '#333';
+      slotEl.style.borderColor = '';
       slotEl.classList.remove('filled');
       slotEl.onclick = null;
     }
@@ -403,7 +394,7 @@ function renderInventory() {
         }
       } else if (itemId) {
         cell.classList.add('occupied');
-        cell.style.borderColor = '#333';
+        cell.style.borderColor = '';
       }
 
       grid.appendChild(cell);

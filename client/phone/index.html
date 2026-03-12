@@ -11,28 +11,26 @@
 <body>
   <!-- Join Screen -->
   <div id="join-screen">
-    <h1>DevLoop RPG</h1>
-    <div class="join-form">
-      <input type="text" id="player-name" placeholder="Your name" maxlength="20" autocomplete="off">
-      <div class="class-select">
-        <button class="class-btn selected" data-class="warrior">
-          <span class="class-icon">&#9876;</span>
-          <span class="class-name">Warrior</span>
-          <span class="class-desc">STR + VIT</span>
-        </button>
-        <button class="class-btn" data-class="ranger">
-          <span class="class-icon">&#127993;</span>
-          <span class="class-name">Ranger</span>
-          <span class="class-desc">DEX + STR</span>
-        </button>
-        <button class="class-btn" data-class="mage">
-          <span class="class-icon">&#9733;</span>
-          <span class="class-name">Mage</span>
-          <span class="class-desc">INT + DEX</span>
-        </button>
+    <h1>DUNGEON FORGE</h1>
+    <div class="class-picker">
+      <div class="class-card selected" data-class="warrior">
+        <span class="class-icon">&#9876;&#65039;</span>
+        <div class="class-name">Warrior</div>
+        <div class="class-desc">STR + VIT</div>
       </div>
-      <button id="join-btn">Enter Dungeon</button>
+      <div class="class-card" data-class="ranger">
+        <span class="class-icon">&#127993;</span>
+        <div class="class-name">Ranger</div>
+        <div class="class-desc">DEX + STR</div>
+      </div>
+      <div class="class-card" data-class="mage">
+        <span class="class-icon">&#128302;</span>
+        <div class="class-name">Mage</div>
+        <div class="class-desc">INT + DEX</div>
+      </div>
     </div>
+    <input id="name-input" type="text" placeholder="Enter your name" maxlength="12" autocomplete="off" />
+    <button id="btn-join">ENTER DUNGEON</button>
   </div>
 
   <!-- Game Controller -->
@@ -52,25 +50,25 @@
 
     <!-- Status Bar -->
     <div id="status-bar">
-      <div id="player-info">
-        <span id="hud-name">Hero</span>
+      <div id="hud-info">
+        <span id="hud-name">Player</span>
         <span id="hud-level">Lv.1</span>
-        <span id="hud-floor">F1</span>
       </div>
-      <div id="bars">
-        <div class="bar-container">
-          <div id="hp-bar" class="bar hp"></div>
-          <span id="hp-text" class="bar-text">100/100</span>
+      <div id="hud-bars">
+        <div class="stat-bar-container">
+          <div class="stat-bar hp" id="hp-bar"></div>
+          <div class="stat-bar-label" id="hp-label">100/100</div>
         </div>
-        <div class="bar-container">
-          <div id="mp-bar" class="bar mp"></div>
-          <span id="mp-text" class="bar-text">50/50</span>
+        <div class="stat-bar-container">
+          <div class="stat-bar mp" id="mp-bar"></div>
+          <div class="stat-bar-label" id="mp-label">50/50</div>
         </div>
-        <div class="bar-container xp-bar-container">
-          <div id="xp-bar" class="bar xp"></div>
-          <span id="xp-text" class="bar-text">0%</span>
+        <div class="stat-bar-container">
+          <div class="stat-bar xp" id="xp-bar"></div>
+          <div class="stat-bar-label" id="xp-label">0%</div>
         </div>
       </div>
+      <span id="hud-floor">F1</span>
     </div>
 
     <!-- Joystick Zone (left half) -->
@@ -92,8 +90,7 @@
       </div>
     </div>
 
-    <!-- Notifications -->
-    <div id="notifications"></div>
+    <!-- Notifications container removed — toasts are appended to body -->
   </div>
 
   <!-- Inventory Screen -->

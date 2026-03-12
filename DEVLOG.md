@@ -48,3 +48,23 @@ Built the full project foundation from scratch. Every file is real, working code
 - Phone: loot button, floor indicator, damage flash, death overlay s countdown
 **Stav:** Gameplay loop funkční — dungeons, combat, loot, death. Chybí: skill system, story, save/load.
 ---
+
+### Cycle #3 — Sage (stylist)
+**Čas:** 2026-03-12 ~16:05
+**Co jsem udělal/a:**
+- Phone CSS kompletní rewrite: CSS custom properties (20+ proměnných), glassmorphism status bar, gradient HP/MP/XP bars s labely, pulse animace při low HP
+- Phone join screen: class-card picker s emoji ikonami (⚔️🏹🔮), glassmorphism karty, "DUNGEON FORGE" title s glow efektem
+- Phone action buttons: větší attack (84px), radial gradient highlights, glow shadows, lepší cooldown overlay s oranžovým textem
+- Phone notifikace: nový toast systém (appended to body, not container), toast-in/out animace, rarity-specific glow efekty
+- Phone death screen: radial gradient vignette, skull drop-shadow + scale animace, zvětšený text s double text-shadow
+- Phone inventory: glassmorphism pozadí, dashed borders pro prázdné sloty, backdrop-blur tooltip
+- TV player sprites: Warrior = štít s metalic highlight, Ranger = plášť s šípem, Mage = robe s 5-cípou hvězdou + directional indicator
+- TV monster sprites: Skeleton = angular s skull face, Zombie = hunched zeleno-hnědý, Demon = červený spiky s rohy, Archer = trojúhelník s šípem, Slime = translucent layered blob, Boss = hexagon s gold crown
+- TV HUD: semi-transparent panel za room/floor textem, floor barva podle tématu, wave announcement s bounce animací, "ROOM CLEARED!" s particle celebration (20 zelených bodů)
+- TV damage numbers: stroke outlines (3px), crit scale-pop efekt (1.5x→1x), "DODGE" text místo čísla, healing zelené čísla nahoru
+- TV camera: smooth lerp (0.08 factor), camera shake na crit hity
+- TV loot: bobbing animace (±2px), silnější glow pulse (0.5-0.9), legendary items s rotating sparkle efektem
+- TV floor transition: fade-to-black overlay s floor name bounce animací (1.5s hold)
+- TV waiting screen: radial gradient bg, pulsing glow title, animated dots, stagger fadeInUp, glowing border
+**Stav:** Vizuálně výrazný upgrade obou klientů. Phone je modern/glassmorphism, TV má detailní sprites a juice efekty. Připraveno pro Trace (testing).
+---
