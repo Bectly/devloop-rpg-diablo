@@ -9,6 +9,49 @@ const { getSellPrice } = require('./game/shop');
 const { TILE_SIZE } = require('./game/world');
 const uuid = require('uuid');
 
+// Two-player dialogue vote state: npcId → { votes: Map(socketId → choiceIdx), timeout: null }
+const dialogueVotes = new Map();
+
+function _resolveDialogue(socket, data, { players, world, story, gameNs, io }) {
+  const player = players.get(socket.id);
+  if (!player) return;
+
+  const result = story.processDialogueChoice(data.npcId, data.dialogueKey || 'intro', data.choiceIndex);
+
+  for (const action of result.actions) {
+    if (action.type === 'start_quest') {
+      const quest = story.startQuest(action.questId);
+      if (quest) {
+        socket.emit('notification', { text: `Quest started: ${quest.name}`, type: 'quest' });
+      }
+    } else if (action.type === 'give_items') {
+      if (action.itemType === 'health_potion') {
+        player.healthPotions += action.count;
+        socket.emit('notification', { text: `Received ${action.count} Health Potions`, type: 'info' });
+      }
+    } else if (action.type === 'open_shop') {
+      const shopNpc = world.getShopNpc();
+      if (shopNpc) {
+        socket.emit('shop:inventory', {
+          items: shopNpc.inventory,
+          playerGold: player.gold,
+        });
+      }
+    }
+  }
+
+  if (result.next) {
+    const nextDialogue = story.getNpcDialogue(data.npcId, result.next);
+    if (nextDialogue) {
+      socket.emit('dialogue:prompt', nextDialogue);
+      gameNs.emit('dialogue:start', { npcId: nextDialogue.npcId, npcName: nextDialogue.npcName, text: nextDialogue.text });
+    }
+  } else {
+    socket.emit('dialogue:end', { npcId: data.npcId });
+    gameNs.emit('dialogue:end', { npcId: data.npcId });
+  }
+}
+
 // ── Join Game ──
 exports.handleJoin = (socket, data, { players, inventories, controllerSockets, world, gameNs }) => {
   if (players.size >= 2) {
@@ -389,44 +432,63 @@ exports.handleInteract = (socket, data, { players, world, story, gameNs }) => {
   }
 };
 
-exports.handleDialogueChoose = (socket, data, { players, world, story, gameNs }) => {
+exports.handleDialogueChoose = (socket, data, { players, world, story, gameNs, io }) => {
   const player = players.get(socket.id);
   if (!player) return;
 
-  const result = story.processDialogueChoice(data.npcId, data.dialogueKey || 'intro', data.choiceIndex);
+  const totalPlayers = players.size;
+  const npcId = data.npcId;
+  const ctx = { players, world, story, gameNs, io };
 
-  for (const action of result.actions) {
-    if (action.type === 'start_quest') {
-      const quest = story.startQuest(action.questId);
-      if (quest) {
-        socket.emit('notification', { text: `Quest started: ${quest.name}`, type: 'quest' });
-      }
-    } else if (action.type === 'give_items') {
-      if (action.itemType === 'health_potion') {
-        player.healthPotions += action.count;
-        socket.emit('notification', { text: `Received ${action.count} Health Potions`, type: 'info' });
-      }
-    } else if (action.type === 'open_shop') {
-      // Trigger shop open via the shop NPC
-      const shopNpc = world.getShopNpc();
-      if (shopNpc) {
-        socket.emit('shop:inventory', {
-          items: shopNpc.inventory,
-          playerGold: player.gold,
-        });
-      }
-    }
+  // Single-player: resolve immediately
+  if (totalPlayers === 1) {
+    return _resolveDialogue(socket, data, ctx);
   }
 
-  if (result.next) {
-    const nextDialogue = story.getNpcDialogue(data.npcId, result.next);
-    if (nextDialogue) {
-      socket.emit('dialogue:prompt', nextDialogue);
-      gameNs.emit('dialogue:start', { npcId: nextDialogue.npcId, npcName: nextDialogue.npcName, text: nextDialogue.text });
+  // Two-player: collect votes
+  if (!dialogueVotes.has(npcId)) {
+    dialogueVotes.set(npcId, { votes: new Map(), timeout: null, firstSocket: socket });
+  }
+
+  const voteState = dialogueVotes.get(npcId);
+  voteState.votes.set(socket.id, data.choiceIndex);
+
+  const votedNames = [...voteState.votes.keys()]
+    .map(sid => players.get(sid)?.name)
+    .filter(Boolean);
+  const syncPayload = { votedPlayers: votedNames, totalPlayers, timeout: 10 };
+
+  if (voteState.votes.size >= totalPlayers) {
+    // All voted — majority wins, tie → first voter's choice
+    clearTimeout(voteState.timeout);
+    dialogueVotes.delete(npcId);
+    const tally = new Map();
+    for (const [, choice] of voteState.votes) tally.set(choice, (tally.get(choice) || 0) + 1);
+    const winningChoice = [...tally.entries()].reduce((a, b) => b[1] > a[1] ? b : a)[0];
+    const resolvedPayload = { ...syncPayload, resolved: true };
+    for (const sid of players.keys()) {
+      const s = io.sockets.sockets.get(sid);
+      if (s) s.emit('dialogue:sync', resolvedPayload);
     }
+    _resolveDialogue(voteState.firstSocket, { ...data, choiceIndex: winningChoice }, ctx);
   } else {
-    socket.emit('dialogue:end', { npcId: data.npcId });
-    gameNs.emit('dialogue:end', { npcId: data.npcId });
+    // First vote — notify all phones and start timeout
+    for (const sid of players.keys()) {
+      const s = io.sockets.sockets.get(sid);
+      if (s) s.emit('dialogue:sync', syncPayload);
+    }
+
+    voteState.timeout = setTimeout(() => {
+      if (!dialogueVotes.has(npcId)) return;
+      dialogueVotes.delete(npcId);
+      // Timeout: first voter's choice wins
+      const [, firstChoice] = [...voteState.votes.entries()][0];
+      for (const sid of players.keys()) {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('dialogue:sync', { ...syncPayload, resolved: true, timedOut: true });
+      }
+      _resolveDialogue(voteState.firstSocket, { ...data, choiceIndex: firstChoice }, ctx);
+    }, 10000);
   }
 };
 

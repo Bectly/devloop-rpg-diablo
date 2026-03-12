@@ -120,6 +120,48 @@ socket.on('dialogue:end', () => {
   const textEl = document.getElementById('dialogue-text');
   if (textEl) textEl.classList.remove('typing');
   dialogueScreen.classList.add('hidden');
+  _hideSyncBar();
+});
+
+let _syncTimerInterval = null;
+function _hideSyncBar() {
+  const el = document.getElementById('dialogue-sync');
+  if (el) el.classList.add('hidden');
+  if (_syncTimerInterval) { clearInterval(_syncTimerInterval); _syncTimerInterval = null; }
+}
+
+socket.on('dialogue:sync', (data) => {
+  const el = document.getElementById('dialogue-sync');
+  if (!el) return;
+
+  if (data.resolved) {
+    _hideSyncBar();
+    return;
+  }
+
+  el.classList.remove('hidden');
+
+  // Update dots — voted players get green dot
+  const dot1 = document.getElementById('dialogue-sync-dot-1');
+  const dot2 = document.getElementById('dialogue-sync-dot-2');
+  if (dot1) dot1.classList.toggle('voted', data.votedPlayers.length >= 1);
+  if (dot2) dot2.classList.toggle('voted', data.votedPlayers.length >= 2);
+
+  const label = document.getElementById('dialogue-sync-label');
+  if (label) label.textContent = data.votedPlayers.length === 1
+    ? `${data.votedPlayers[0]} voted — waiting...`
+    : 'Both voted!';
+
+  // Countdown timer
+  if (_syncTimerInterval) clearInterval(_syncTimerInterval);
+  const timerEl = document.getElementById('dialogue-sync-timer');
+  let remaining = data.timeout || 10;
+  if (timerEl) timerEl.textContent = `${remaining}s`;
+  _syncTimerInterval = setInterval(() => {
+    remaining--;
+    if (timerEl) timerEl.textContent = remaining > 0 ? `${remaining}s` : '';
+    if (remaining <= 0) { clearInterval(_syncTimerInterval); _syncTimerInterval = null; }
+  }, 1000);
 });
 
 socket.on('floor:change', (data) => {
