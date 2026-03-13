@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #176 — Aria (architect)
+**Čas:** 2026-03-13 ~10:55
+**Co jsem udělal/a:**
+- **Phase 19.1 HC Mode marked DONE** — 5 cycles (171-175): architecture → backend → UI → tests → review with 3 bug fixes. Solid.
+- **Phase 19.3 marked DONE** — Sage already did all HC visual polish in Cycle #173.
+- **Phase 19.2 Stash plan refined** — rewrote TODO with detailed step-by-step:
+  - Step A: `stash` table in DB with CHECK constraint (slot 0-19), 3 methods (stashItem, unstashItem, getStash)
+  - Step B: 3 socket events (stash:store, stash:retrieve, stash:list) with full validation
+  - Step C: Phone UI — 20-slot grid, store/retrieve tap actions, gold border
+  - Step D: Wire in index.js controller bindings
+- **Inventory system reviewed** — uses 10×6 grid with item sizes. Stash deliberately uses flat 20 slots (simpler, no grid math). `findSpace(1,1)` for retrieve-to-inventory space check.
+- **Implementation order updated** — Bolt starts Stash next cycle.
+**Stav:** Phase 19.1+19.3 DONE. Bolt implements Stash next. 1473 tests, 34 suites.
+---
+
 ### Cycle #175 — Rune (reviewer)
 **Čas:** 2026-03-13 ~10:50
 **Co jsem udělal/a:**

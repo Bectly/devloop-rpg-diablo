@@ -1972,58 +1972,65 @@ Extraction candidates noted for future refactoring if needed.
 **Files changed:** `server/game/player.js`, `server/game/database.js`, `server/index.js`, `server/socket-handlers.js`, `server/game/combat.js`, `server/game/skills.js`
 **Remaining for Sage:** Phone join screen HC toggle, TV HC skull badge, HC death animation, leaderboard tabs
 
-### 19.2 Shared Stash [for Bolt]
-**Persistent storage shared across all characters. 20 slots, items survive character death.**
+### 19.2 Shared Stash [TOP PRIORITY — for Bolt]
+**Persistent storage shared across all characters. 20 flat slots (no grid), items survive character death.**
 
-**Step A: Database table**
+**Step A: Database table + methods** (`server/game/database.js`)
+Add in `_createTables()`:
 ```sql
 CREATE TABLE IF NOT EXISTS stash (
-  slot INTEGER PRIMARY KEY,
+  slot INTEGER PRIMARY KEY CHECK(slot >= 0 AND slot < 20),
   item_json TEXT NOT NULL,
   stored_at TEXT DEFAULT (datetime('now'))
 );
 ```
-- Max 20 slots (0-19)
-- `stashItem(slot, item)` — INSERT OR REPLACE
-- `unstashItem(slot)` — DELETE, return item
-- `getStash()` — SELECT all, return array of {slot, item}
+Add prepared statements + methods:
+- `stashItem(slot, item)` — INSERT OR REPLACE `slot`, `JSON.stringify(item)`
+- `unstashItem(slot)` — SELECT item_json, then DELETE. Return parsed item or null
+- `getStash()` — SELECT all, return `Map<slot, item>` (or array of {slot, item})
+- `getStashCount()` — SELECT COUNT(*)
 
-**Step B: Server handlers**
-- `stash:store` — move item from inventory to stash slot
-- `stash:retrieve` — move item from stash to inventory (needs free slot)
-- `stash:list` — return current stash contents
+**Step B: Socket handlers** (`server/socket-handlers.js`)
+Wire 3 events in the controller namespace:
+- `stash:store` `{ inventoryIndex }` — find next empty stash slot, remove item from inventory, insert to stash. Emit `stash:update` + `inventory:update`.
+- `stash:retrieve` `{ slot }` — get item from stash, check inventory has space (`inv.findSpace(1,1)`), add to inventory, delete from stash. Emit both updates.
+- `stash:list` — emit `stash:update` with current stash contents.
+Validation: slot range 0-19, inventory item exists, stash not full (20 max), inventory not full on retrieve.
 
-**Step C: Phone UI**
-- New "Stash" tab in inventory screen (alongside Equipment / Inventory / Stats)
-- 20-slot grid (4×5), same item rendering as inventory
-- Drag-drop or tap-to-transfer between inventory ↔ stash
-- Gold-bordered container to distinguish from regular inventory
+**Step C: Phone UI** (`client/phone/controller.js` + `style.css`)
+- Add `socket.on('stash:update', ...)` handler
+- New screen/tab accessible from inventory: "STASH" button
+- 20-slot grid (4×5), each slot shows item icon + name or empty
+- Tap item in inventory → "Store" button → `socket.emit('stash:store', { inventoryIndex })`
+- Tap item in stash → "Retrieve" button → `socket.emit('stash:retrieve', { slot })`
+- Gold border, treasure chest icon in header
 
-**Step D: Access point**
-- Stash accessible only in town (floor 0) or at shrines
-- Or: always accessible via phone menu (simpler, better UX for couch co-op)
+**Step D: Wire in index.js**
+- Bind `stash:store`, `stash:retrieve`, `stash:list` in controller socket event bindings
+- Pass `gameDb` in ctx so handlers can call stash methods
 
-**Files:** `server/game/database.js`, `server/socket-handlers.js`, `client/phone/controller.js`, `client/phone/style.css`
-**Tests:** store/retrieve/list, slot limits, persistence across sessions, full stash rejection
+**Files:** `server/game/database.js`, `server/socket-handlers.js`, `server/index.js`, `client/phone/controller.js`, `client/phone/style.css`, `client/phone/index.html`
+**Tests:** store/retrieve/list, slot limits, persistence, full stash rejection, item integrity after store+retrieve
 
-### 19.3 Hardcore Visual Polish [for Sage]
-- TV: red skull icon next to HC player names
-- TV: "HARDCORE DEATH" screen with dramatic particles (red/black explosion)
-- Phone: HC toggle on join screen (skull + "Permanent Death" warning)
-- Phone: HC badge on stats screen
-- Stash UI styling: gold border, treasure chest icon
+### 19.3 Hardcore Visual Polish ✅ DONE (Cycle #173 — Sage)
+- [x] TV: red skull "☠ HC" badge next to HC player names
+- [x] TV: "HARDCORE DEATH" dramatic screen (camera shake, red flash, fade text)
+- [x] Phone: HC toggle on join screen (skull + red glow)
+- [x] Phone: HC badge in HUD
+- [x] Phone: HC death overlay with stats
 
-### 19.4 Hardcore + Stash Tests [for Trace]
-- Hardcore death flow (full integration)
-- Stash CRUD operations
-- HC leaderboard filtering
-- Edge cases: HC player reconnect, stash full, stash + HC death (stash survives)
+### 19.4 Stash + Integration Tests [for Trace]
+- Stash CRUD operations (store, retrieve, list, full rejection)
+- Stash persistence across DB open/close
+- Stash survives HC death (stash is cross-character)
+- Item integrity: store item, retrieve it, compare fields
+- Edge cases: retrieve to full inventory, store from empty inventory, invalid slot
 
 ### Implementation Order:
-1. **19.1** Hardcore mode (Steps A-E) — Bolt
-2. **19.2** Shared stash (Steps A-D) — Bolt (can run in parallel with 19.1)
-3. **19.3** Visual polish — Sage
-4. **19.4** Testing — Trace
+1. ~~**19.1** Hardcore mode~~ ✅ DONE (Cycles #172-175)
+2. **19.2** Shared stash — Bolt (next)
+3. ~~**19.3** Visual polish~~ ✅ DONE (Cycle #173)
+4. **19.4** Testing — Trace (after 19.2)
 
 ---
 
