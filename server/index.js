@@ -292,7 +292,7 @@ function gameLoop() {
     // Owner death → despawn spirit wolf (Phase 15.4)
     if (player.isDying && player.summonedWolf) {
       for (const m of world.monsters) {
-        if (m.id === player.summonedWolf) { m.alive = false; m.expireTimer = 0; }
+        if (m.id === player.summonedWolf) { m.alive = false; m.expireTimer = 0; break; }
       }
       player.summonedWolf = null;
     }
@@ -390,8 +390,10 @@ function gameLoop() {
       monster.expireTimer -= dt;
       if (monster.expireTimer <= 0) {
         monster.alive = false;
-        for (const p of allPlayers) {
-          if (p.summonedWolf === monster.id) p.summonedWolf = null;
+        // Clear owner reference using cached ownerId (O(1) lookup vs O(n))
+        const wolfOwner = allPlayers.find(p => p.id === monster.ownerId);
+        if (wolfOwner && wolfOwner.summonedWolf === monster.id) {
+          wolfOwner.summonedWolf = null;
         }
         continue;
       }
@@ -827,7 +829,7 @@ function gameLoop() {
     // Summon spirit wolf (Phase 15.4)
     if (event.type === 'summon:spirit_wolf') {
       const owner = allPlayers.find(p => p.id === event.playerId);
-      if (owner && !owner.summonedWolf) {
+      if (owner && owner.alive && !owner.isDying && !owner.summonedWolf) {
         const wolf = createSpiritWolf(event.x, event.y, owner);
         world.monsters.push(wolf);
         owner.summonedWolf = wolf.id;

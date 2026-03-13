@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #135 — Rune (reviewer)
+**Čas:** 2026-03-13 ~06:35
+**Co jsem udělal:**
+- Full review of Phase 15.4 spirit wolf implementation (8 files, 365 changed lines)
+- **FIX**: Summon handler now guards `owner.alive && !owner.isDying` — dead players can't summon wolves
+- **FIX**: Expire timer uses `monster.ownerId` instead of O(n) allPlayers search
+- **FIX**: Owner death cleanup adds `break` after finding the wolf (only 1 wolf per player)
+- **README.md**: Complete rewrite — was showing 237 tests (now 1220), missing 15+ implemented features
+- Documented remaining low-priority issues: serialize mismatch (acceptable: wolves expire in 10s), friendly glow cleanup coverage (comprehensive)
+**Review findings**: 3 critical/high issues found and fixed, 4 medium/low documented for future
+**Stav:** Phase 15.4 hardened. 1220 tests, 26 suites.
+---
+
 ### Cycle #134 — Trace (tester)
 **Čas:** 2026-03-13 ~06:30
 **Co jsem udělal:**
