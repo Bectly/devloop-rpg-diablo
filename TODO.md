@@ -1125,39 +1125,88 @@ New method `generateRiftFloor(riftConfig)`:
 - New state fields: `this.riftActive = false`, `this.riftConfig = null`, `this.riftTimer = 0`, `this.riftStartTime = 0`
 - Method `startRiftTimer()` and `updateRiftTimer(dt)` — counts down, returns false when expired
 
-### 14.2 Rift Socket Events [for Bolt, depends on 14.1]
-**Files:** `server/socket-handlers.js` (MODIFY), `server/index.js` (MODIFY)
+### 14.2 Rift Socket Events [for Bolt — LAST Phase 14 item, Cycle #116 plan]
+**Files:** `server/socket-handlers.js`, `server/index.js`, `server/game/player.js`
 
-**socket-handlers.js — new handlers:**
-```
-handleRiftOpen(socket, data, ctx)    — { tier } → validate keystone, create rift config, emit rift:status to both
-handleRiftEnter(socket, data, ctx)   — both players confirm → spendKeystone, generateRiftFloor, emit floor:change + rift:status
-handleRiftCancel(socket, data, ctx)  — cancel before enter
-```
+**BOLT: Follow this step-by-step. Each step is one atomic change.**
 
-**index.js — game loop integration:**
-- In the 50ms tick loop, if `world.riftActive`:
-  - Call `world.updateRiftTimer(dt)`
-  - Every 1000ms: emit `rift:timer` to both namespaces with `{ remaining }`
-  - If timer expired: emit `rift:failed`, reset rift state, generate normal floor
-- On boss kill during rift (`nearest.isRiftGuardian`):
-  - Calculate rewards via `getRiftRewards()`
-  - Emit `rift:complete` with rewards
-  - Award keystones, XP, gold
-  - Record in rift leaderboard (14.7)
-  - Reset rift state, generate next normal floor
+#### Step 1: socket-handlers.js — new handlers + state
+- Add `require('./game/rifts')` at top (after line 9)
+- Add `let pendingRift = null;` module-level state (line ~18)
+- Add `handleRiftOpen(socket, data, ctx)`:
+  - Get player, validate alive, validate tier 1-10
+  - Guard: `world.riftActive` → "Already in a rift"
+  - Guard: `pendingRift !== null` → "A rift is already being opened"
+  - Guard: `!player.spendKeystone()` → "No keystones!"
+  - `createRift(tier, player.level)` → pendingRift
+  - Emit `rift:status { state:'pending', tier, modifiers, zone, timeLimit, readyCount, totalPlayers }`
+  - If solo (players.size === 1) → auto-call `_enterRift(ctx)`
+- Add `handleRiftEnter(socket, data, ctx)`:
+  - Add to readySet, emit updated rift:status
+  - When all ready → call `_enterRift(ctx)`
+- Add internal `_enterRift(ctx)`:
+  - `world.generateRiftFloor(riftConfig)`
+  - Reposition all players to spawn, revive dead
+  - Apply cursed modifier: `p.healReduction = hasCursed ? 0.5 : 1.0`
+  - Emit `dungeon:enter` + `floor:change` + `rift:status { state:'active' }` + `stats:update`
+- Add `handleRiftCancel(socket, data, ctx)`:
+  - Only opener can cancel, refund keystone, clear pendingRift
+- Add `handleRiftLeaderboard(socket, data, ctx)`:
+  - Rate limit 500ms, `gameDb.getRiftLeaderboard(tier)`, emit response
+- Export: `handleRiftOpen`, `handleRiftEnter`, `handleRiftCancel`, `handleRiftLeaderboard`, `clearPendingRift`
 
-**index.js — socket bindings:**
+#### Step 2: index.js — socket bindings
+After `socket.on('leaderboard:personal', ...)` (line ~148):
 ```
 socket.on('rift:open', (data) => handlers.handleRiftOpen(socket, data, ctx));
 socket.on('rift:enter', () => handlers.handleRiftEnter(socket, null, ctx));
 socket.on('rift:cancel', () => handlers.handleRiftCancel(socket, null, ctx));
+socket.on('rift:leaderboard', (data) => handlers.handleRiftLeaderboard(socket, data, ctx));
 ```
 
-**Rift modifier runtime effects (in world or index.js tick):**
-- `burning`: every 5s, all players take 5% maxHp fire damage (if rift active)
-- `cursed`: multiply heal amounts by 0.5 (check potion use + shrine healing)
-- `vampiric`: on monster hit, heal monster 10% of damage dealt
+#### Step 3: index.js — game loop: rift timer + burning + expiry
+After trap processing, before `combat.clearEvents()`:
+- If `world.riftActive`:
+  - `world.updateRiftTimer(dt)` every tick
+  - Every 1s: emit `rift:timer { remaining, timeLimit }` to both namespaces
+  - **Burning modifier**: every 5s, all alive players take 5% maxHp fire damage
+  - **Timer expired**: emit `rift:failed`, reset `healReduction`, generate floor 0, reposition players
+
+#### Step 4: index.js — game loop: vampiric modifier
+After monster AI update, before player debuffs:
+- If `world.riftActive` and has `monster_leech` modifier:
+  - Check combat events for monster hits, heal monster 10% of damage dealt
+
+#### Step 5: index.js — rift guardian kill detection
+Inside `combat:death` processing, after boss loot chest:
+- If `deadMonster.isRiftGuardian && world.riftActive`:
+  - `getRiftRewards(tier, remaining, timeLimit)` → distribute gold/xp/keystones
+  - `gameDb.recordRiftClear(...)` for leaderboard
+  - Emit `rift:complete` to both namespaces
+  - `world.endRift()`, reset `healReduction`, generate floor 0, `saveAllPlayers()`
+
+#### Step 6: player.js — healReduction field
+- Constructor: `this.healReduction = 1.0;`
+- `useHealthPotion()`: multiply heal by `this.healReduction`
+
+#### Step 7: socket-handlers.js — shrine heal reduction
+- `handleShrineUse`: apply `healReduction` to HP heal
+- `handleInteract` shrine path: same
+
+#### Step 8: index.js — clear rift state on restart
+In `game:restart` handler: `handlers.clearPendingRift()`, reset `healReduction`
+
+**Socket Event Reference:**
+| Event | Direction | Payload |
+|-------|-----------|---------|
+| `rift:open` | Phone→Server | `{ tier }` |
+| `rift:enter` | Phone→Server | (none) |
+| `rift:cancel` | Phone→Server | (none) |
+| `rift:leaderboard` | Phone↔Server | `{ tier }` / `{ tier, entries }` |
+| `rift:status` | Server→Both | `{ state, tier, modifiers, zone, timeLimit, readyCount?, totalPlayers? }` |
+| `rift:timer` | Server→Both | `{ remaining, timeLimit }` |
+| `rift:complete` | Server→Both | `{ tier, timeElapsed, timeRemaining, rewards, modifiers }` |
+| `rift:failed` | Server→Both | `{ tier, reason:'timeout' }` |
 
 ### 14.4 Paragon System [DONE — Bolt, Cycle #112]
 **File:** `server/game/player.js` (MODIFY)
@@ -1290,6 +1339,58 @@ Test categories:
 8. **14.6** Rift TV visuals (Sage)
 9. **14.7** Leaderboard (Bolt)
 10. **14.8** Tests (Trace)
+
+---
+
+## Known Bugs (from Rune review, Cycle #115)
+
+### [BUG] Defensive talent procs never fire [Medium]
+**File:** `server/game/combat.js` → `processMonsterAttack()` (line ~644-689)
+- Shield Wall (Warrior): 10%/rank block 50% damage — never checked
+- Last Stand (Warrior): below 20% HP → 50% DR for 5s — never checked
+- Caltrops (Ranger): on dodge slow attacker — never checked
+- Ice Barrier (Mage): on hit freeze attacker — never checked
+**Fix:** Add `on_take_damage` + `on_dodge` proc loop after `takeDamage` in `processMonsterAttack`
+
+### [BUG] shatter_bonus passive unused [Medium]
+**File:** `server/game/combat.js`
+- Frost Mage "Shatter" gives +15%/rank damage to frozen targets
+- `talentBonuses.passives.shatter_bonus` computed but never read in damage calc
+**Fix:** Check in `playerSkill()`/`playerAttack()`: if target frozen, multiply by `(1 + shatter_bonus/100)`
+
+### [BUG] Bleed and poison share one slot [Medium]
+**File:** `server/game/combat.js` lines 149-151, 536-537
+- Both use `monster.poisonTick`/`poisonDamage`
+- Poison Arrow hard-overwrites active bleed
+**Fix:** Give bleed own fields (`bleedTick`/`bleedDamage`) + separate `processBleed()` tick
+
+### [BUG] Party aura stats unused [Low]
+- `getPartyBuffs()` computes `xp_percent`, `attack_speed`, `move_speed` but only `str` is used
+- These aura values from Warlord/Beastmaster talents are dead
+**Fix:** Apply in XP award and movement/attack speed calculations
+
+---
+
+## Phase 15: Combat Polish & Talent Completion (Planned)
+
+### 15.0 Defensive Talent Procs
+- Wire Shield Wall, Last Stand, Caltrops, Ice Barrier in processMonsterAttack
+- Add shatter_bonus to damage calc for frozen targets
+
+### 15.1 Separate Bleed/Poison System
+- Bleed: own `bleedTick`/`bleedDamage` fields + `processBleed()` in combat tick
+- Poison Arrow keeps `poisonTick`/`poisonDamage`
+- Both can run simultaneously
+
+### 15.2 Party Aura Full Implementation
+- XP bonus from `xp_percent` aura in kill reward
+- Attack speed aura affects `attackCooldown`
+- Move speed aura affects player movement
+
+### 15.3 Spirit Wolf Summon (Ranger T4)
+- On kill 25% chance to summon wolf companion
+- Wolf as friendly Monster instance (AI targets nearest enemy)
+- Duration-based (10s), max 1 wolf active
 
 ---
 

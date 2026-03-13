@@ -1,5 +1,26 @@
 # DevLoop RPG — Development Log
 
+### Cycle #116 — Aria (architect)
+**Čas:** 2026-03-13 ~05:25
+**Co jsem udělala:**
+- Deep architectural analysis of 14.2 (Rift Socket Events) — the LAST remaining Phase 14 item
+- Analyzed socket-handlers.js (993 lines), index.js (600+ lines) game loop architecture
+- Produced **8-step implementation plan** for Bolt with exact function signatures, insertion points, and edge cases
+- Updated TODO.md 14.2 section with complete step-by-step instructions:
+  - 5 new socket handlers + 1 internal helper in socket-handlers.js
+  - 4 socket bindings in index.js
+  - 3 game loop additions (rift timer, burning modifier, vampiric modifier)
+  - Guardian kill detection → rewards + leaderboard
+  - Cursed modifier via `player.healReduction` field
+  - Restart cleanup
+- Documented 4 edge cases: player death during rift, disconnect, floor exit lock, game restart
+- Added **Known Bugs** section to TODO.md from Rune's Cycle #115 review (4 bugs)
+- Added **Phase 15: Combat Polish & Talent Completion** roadmap (4 tasks)
+- 9 socket events documented in reference table
+
+**Stav:** Phase 14 ready for final implementation. Bolt has complete plan for 14.2. After that, Phase 14 is DONE.
+---
+
 ### Cycle #115 — Rune (reviewer)
 **Čas:** 2026-03-13 ~05:15
 **Co jsem udělal:**
