@@ -1904,98 +1904,65 @@ This lets TV client differentiate friendly wolves visually.
 
 ---
 
-## 🔥 Phase 17: Co-op Synergies & Endgame
+## Phase 17: Co-op Synergies & Endgame ✅ COMPLETE
 
-**Goal:** Make co-op play feel rewarding with cross-class synergies + add replayable endgame content. The game has all mechanics — now it needs depth.
+### 17.1 Cross-Class Combo System ✅ DONE (Cycles #162-165)
+- `server/game/combos.js` — ComboTracker + 5 combo definitions (Shatter Blast, Chain Reaction, Battle Fury, Shadow Barrage, Firestorm)
+- `client/tv/combat-fx.js` — `spawnComboEffect()` with per-combo particles + callout text
+- `server/index.js` — combo detection in game loop + phone notification forwarding
+- `client/phone/style.css` — combo notification CSS (purple-gold gradient)
+- `server/tests/phase17-combos.test.js` — 33 tests
+- **Bugs found & fixed:** Shatter Blast NaN damage, Shadow Barrage event ordering
 
-### 17.1 Cross-Class Combo System [for Bolt — TOP PRIORITY]
+### 17.2 Greater Rifts ✅ ALREADY DONE (Phase 14)
+- `server/game/rifts.js` — createRift, getRiftModifiers, createRiftGuardian, getRiftRewards
+- `server/game/world.js` — generateRiftFloor, rift timer, modifier application
+- `server/socket-handlers.js` — rift:open, rift:enter, rift:cancel, rift:leaderboard
+- `client/phone/rift-ui.js` — tier selector, timer overlay, results screen (21KB)
+- `client/tv/hud.js` — rift timer bar, tier indicator
+- `server/game/database.js` — rift_records table, recordRiftClear, leaderboard queries
+- Full game loop integration: burning/vampiric modifiers, guardian kill → completion
 
-When two players combine specific skill effects, trigger a **combo bonus**. Server-side detection, visual feedback on TV.
+### 17.3 Battle Shout L5 Fix ✅ DONE (Cycle #162)
+- `crit_up` buff pushed to party, checked in combat.js crit roll
 
-| Combo | Trigger | Effect |
-|-------|---------|--------|
-| **Shatter Blast** | Frozen (Blizzard L5) + Physical hit | 2x damage, ice shards explosion (AOE 100px) |
-| **Firestorm** | Burning ground (Meteor L5) + Blizzard | Steam cloud — 50% miss chance for monsters 3s |
-| **Chain Reaction** | Chain Lightning + Arrow Volley | Lightning arcs to ALL volley-hit targets |
-| **Battle Fury** | Battle Shout buff + Whirlwind | Whirlwind radius doubled, pull enemies in |
-| **Shadow Barrage** | Shadow decoy alive + Sniper Shot | Sniper shot fires from BOTH player AND decoy |
+---
 
-**Implementation:**
-1. **`server/game/combos.js`** — NEW file (~150 LOC):
-   - `COMBO_DEFINITIONS` — trigger conditions + effects
-   - `checkCombos(events, players, monsters)` — scan recent combat events for combo triggers
-   - Called from `index.js` game loop after combat events are processed
-   - Returns `combo:trigger` events for TV
+## 🔥 Phase 18: Polish & Missing Pieces
 
-2. **`server/game/combat.js`** — Track recent effects:
-   - `this.recentEffects[]` — ring buffer of last 20 effects with timestamps
-   - Checked by combos.js for temporal proximity (effects within 2s window)
+**Goal:** Fix remaining TODOs, add missing features, polish gameplay balance.
 
-3. **`client/tv/combat-fx.js`** — Combo visual effects:
-   - Big combo name text ("SHATTER BLAST!") with class-colored glow
-   - Unique particle burst per combo type
+### 18.1 Player Debuff System [for Bolt — TOP PRIORITY]
+`server/game/affixes.js` has 2 TODOs: `player.addDebuff()` does not exist.
+- [ ] Add `addDebuff(effect, value, duration)` method to Player class
+- [ ] Implement debuff tick/expiry in game loop (similar to buff system)
+- [ ] Wire affix-triggered debuffs (bleed, poison, slow on player)
+- [ ] Add debuff display on phone controller
 
-4. **`client/phone/controller.js`** — Combo notification:
-   - "COMBO: Shatter Blast!" notification when player participates
+### 18.2 Combo Damage Application [for Bolt]
+Combo effects currently emit events but don't apply actual damage/effects:
+- [ ] Shatter Blast: apply AOE damage to monsters in radius
+- [ ] Battle Fury: pull monsters toward vortex center
+- [ ] Firestorm: apply blind (increase monster miss chance) for 3s
+- [ ] Chain Reaction: trigger chain lightning arcs to nearby monsters
+- [ ] Shadow Barrage: spawn duplicate projectile from decoy position
 
-### 17.2 Greater Rifts [for Bolt]
+### 18.3 Quest System Polish [for Bolt]
+`server/game/quests.js` has stale TODO from Cycle #12:
+- [ ] Review quest reward balance
+- [ ] Add quest chaining (complete quest A → unlock quest B)
 
-Timed dungeon runs that scale infinitely. Spend keystones to open, get rewards based on how fast you clear.
+### 18.4 index.js Size [for Rune — refactoring]
+`server/index.js` is getting large (~1100+ LOC). Consider extracting:
+- [ ] Game loop tick into `server/game-loop.js`
+- [ ] Projectile processing into `server/game/projectiles.js`
+- [ ] Rift loop logic into rift handler
 
-**Keystone system already exists** (earned from boss kills on floor 3+). Currently unused.
-
-| Component | Details |
-|-----------|---------|
-| **Entry** | Spend 1 keystone to open a Greater Rift (GR). Level starts at 1. |
-| **Timer** | 5 minutes to clear all monsters on the rift floor |
-| **Scaling** | Monster HP × (1 + 0.3 × GR_level), damage × (1 + 0.2 × GR_level) |
-| **Progression** | Clear in time → next GR level unlocked. Fail → keep current max. |
-| **Rewards** | XP × GR_level, guaranteed legendary at GR 5+, guaranteed set at GR 10+ |
-| **Leaderboard** | Highest GR level cleared per player (ties broken by clear time) |
-
-**Implementation:**
-1. **`server/game/rift.js`** — NEW file (~200 LOC):
-   - `RiftManager` class: `startRift(player, level)`, `updateTimer(dt)`, `checkCompletion()`
-   - Monster scaling formulas
-   - Reward calculation
-   - Rift floor generation (dense monster spawns, no shops/NPCs)
-
-2. **`server/game/world.js`** — Rift floor type:
-   - `generateRiftFloor(level)` — single large room filled with scaled monsters
-   - Rift Guardian (boss) spawns at 90% kill progress
-
-3. **`server/socket-handlers.js`** — New events:
-   - `rift:open` — player spends keystone, starts GR
-   - `rift:timer` — periodic timer update to clients
-   - `rift:complete` / `rift:failed` — results + rewards
-
-4. **`client/phone/rift-ui.js`** — NEW file:
-   - GR level selector (spend keystones)
-   - Timer overlay during rift
-   - Results screen (time, rewards, new record)
-
-5. **`client/tv/hud.js`** — Rift timer display:
-   - Countdown timer top-center during GR
-   - GR level indicator
-   - Kill progress bar
-
-6. **`server/game/database.js`** — GR leaderboard:
-   - `rift_records` table: player, gr_level, clear_time, date
-   - `getGRLeaderboard()` — top 10 by GR level
-
-### 17.3 Battle Shout L5 Fix [for Bolt — quick fix]
-
-Fix the L5 `partyCrit` bonus gap found by Rune in Cycle #160:
-1. In `executeBuffDebuff`, when L5 `partyCrit` is active, push a `crit_up` buff to all party members (similar to `dodge_up` from Shadow Step)
-2. In `combat.js` `playerAttack()` crit roll, check for `crit_up` buff: `player.buffs.some(b => b.effect === 'crit_up')`
-3. Buff has duration matching Battle Shout (8s)
-
-### Implementation Order for Bolt:
-1. **17.3** Battle Shout L5 fix (quick, 1 cycle)
-2. **17.1** Cross-Class Combos (2-3 cycles)
-3. **17.2** Greater Rifts (3-4 cycles)
-
-**Parallelization:** Sage can start combo visuals (17.1 step 3) after Bolt finishes combo logic.
+### Implementation Order:
+1. **18.1** Player debuffs (enables full affix gameplay)
+2. **18.2** Combo damage application (completes combo system)
+3. **18.3** Quest polish (low priority)
+4. **18.4** Refactoring (when convenient)
 
 ---
 

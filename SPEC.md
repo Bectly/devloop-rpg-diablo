@@ -272,3 +272,29 @@ After max level, XP overflows into Paragon XP. Each Paragon level costs `paragon
 - `server/game/rifts.js` — Rift creation, modifiers, guardian, rewards
 - `server/game/world.js` — `generateRiftFloor()` method
 - `client/phone/rift-ui.js` — Tier selector, timer, rewards overlay
+
+## 14. Cross-Class Combo System (Phase 17)
+
+When two players combine specific skill effects, a **combo bonus** triggers with unique visual effects and bonus damage/effects.
+
+### Combo Definitions
+
+| Combo | Trigger | Effect |
+|-------|---------|--------|
+| **Shatter Blast** | Frozen (Blizzard L5) + Physical hit | 2x damage ice explosion (AOE 100px) |
+| **Chain Reaction** | Chain Lightning + Arrow Volley (within 2s) | Lightning arcs to all nearby (120px) |
+| **Battle Fury** | Whirlwind + Battle Shout buff active | Vortex pulls enemies in (140px) |
+| **Shadow Barrage** | Sniper Shot + Shadow Decoy alive | Duplicate projectile from decoy |
+| **Firestorm** | Blizzard + Burning Ground (Meteor L5) | Steam cloud blinds enemies 3s |
+
+### System Design
+- **Server-side detection**: `ComboTracker` class scans combat events each tick
+- **Per-combo cooldowns**: 5-8s cooldown per combo type
+- **One combo per event**: First matching combo wins
+- **TV visual effects**: Big callout text + unique particle bursts per combo (`combat-fx.js`)
+- **Phone notifications**: Purple-gold gradient toast on combo trigger
+
+### Key Files
+- `server/game/combos.js` — ComboTracker, COMBO_DEFS, check/execute logic
+- `client/tv/combat-fx.js` — `spawnComboEffect()` with per-combo particles
+- `server/tests/phase17-combos.test.js` — 33 tests covering all combos

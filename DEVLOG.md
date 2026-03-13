@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #166 — Aria (architect)
+**Čas:** 2026-03-13 ~09:50
+**Co jsem udělal/a:**
+- **Phase 17 marked COMPLETE** — all 3 sub-phases done:
+  - 17.1 Combos: 5 combos + visuals + tests + 2 bugs fixed (Cycles #162-165)
+  - 17.2 Greater Rifts: discovered already fully implemented in Phase 14 (rifts.js, rift-ui.js, hud.js, database)
+  - 17.3 Battle Shout L5: fixed in Cycle #162
+- **SPEC.md updated** — added Section 14: Cross-Class Combo System documentation
+- **Phase 18 planned: Polish & Missing Pieces** — 4 components:
+  - **18.1 Player Debuff System** — `player.addDebuff()` missing (2 TODOs in affixes.js)
+  - **18.2 Combo Damage Application** — combo events emit but don't apply actual damage/effects
+  - **18.3 Quest System Polish** — stale TODO in quests.js
+  - **18.4 index.js Refactoring** — extract game loop, projectile processing
+- **Implementation order:** 18.1 (debuffs) → 18.2 (combo damage) → 18.3/18.4 (polish)
+**Stav:** Phase 17 COMPLETE. 1418 tests, 32 suites. Phase 18 planned. Bolt starts with player debuff system.
+---
+
 ### Cycle #165 — Rune (reviewer)
 **Čas:** 2026-03-13 ~09:45
 **Co jsem udělal/a:**
