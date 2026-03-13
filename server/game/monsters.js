@@ -538,7 +538,9 @@ class Monster {
           if (cdist < chargeStep || this.chargeTimer <= 0) {
             // Reached target or time expired
             this.charging = false;
-            if (closest && closestDist < this.attackRange * 2) {
+            // Recompute distance after dash (closestDist is stale from before movement)
+            const postChargeDist = closest ? Math.sqrt((this.x - closest.x) ** 2 + (this.y - closest.y) ** 2) : Infinity;
+            if (closest && postChargeDist < this.attackRange * 2) {
               // Hit — deal charge damage + stun
               events.push({
                 type: 'monster_attack',
@@ -747,7 +749,8 @@ class Monster {
       dmg = Math.floor(dmg * (1 - this.physicalResist / 100));
     }
 
-    const reduced = applyArmor(dmg, this.armor);
+    // Armor only reduces physical damage
+    const reduced = damageType === 'physical' ? applyArmor(dmg, this.armor) : Math.max(1, dmg);
     this.hp -= reduced;
     if (this.hp <= 0) {
       this.hp = 0;

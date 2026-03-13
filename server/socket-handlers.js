@@ -102,6 +102,8 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
       inventory: inv.serialize(),
       floor: world.currentFloor,
       floorName: world.floorName,
+      zoneId: world.zone ? world.zone.id : 'catacombs',
+      zoneName: world.zone ? world.zone.name : 'The Catacombs',
       quests: player.questManager.getActiveQuests(),
     });
 
@@ -190,6 +192,8 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     inventory: inv.serialize(),
     floor: world.currentFloor,
     floorName: world.floorName,
+    zoneId: world.zone ? world.zone.id : 'catacombs',
+    zoneName: world.zone ? world.zone.name : 'The Catacombs',
     quests: player.questManager.getActiveQuests(),
   });
 

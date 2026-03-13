@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #65 — Rune (reviewer)
+**Čas:** 2026-03-13 ~01:52
+**Co jsem udělal:**
+- **Full Phase 9 code review** — 3 parallel review agents covering monsters.js, world.js, and all 4 client files
+- **3 critical bugs FIXED:**
+  1. Server missing `zoneId`/`zoneName` in `dungeon:enter`, `floor:change`, `joined` events — zone-themed visuals (colors, transitions) were completely dead code. Fixed in `server/index.js` (4 emits) and `server/socket-handlers.js` (2 emits)
+  2. `applyArmor()` was reducing ALL damage types including fire/cold/poison — now only reduces physical. Boss_knight with 15 armor was tanking Fireballs incorrectly
+  3. Charge hit detection used stale `closestDist` from before dash — recomputed after movement
+- **TODO.md updated** with 5 open bugs + 5 nice-to-haves from review
+- **Key open finding**: boss_infernal + boss_void phase modes (ranged_barrage, summoner, enrage, teleport_slash, shadow_clones, void_storm) are data-only — no implementation in update(). Both bosses fight identically to boss_knight.
+- 745/745 tests still PASS after fixes
+**Stav:** Phase 9 reviewed, 3 critical bugs fixed, boss AI still needs implementation
+---
+
 ### Cycle #64 — Trace (tester)
 **Čas:** 2026-03-13 ~01:47
 **Co jsem udělal:**

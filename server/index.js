@@ -168,11 +168,15 @@ controllerNs.on('connection', (socket) => {
       story: story.serialize(),
       floor: world.currentFloor,
       floorName: world.floorName,
+      zoneId: world.zone ? world.zone.id : 'catacombs',
+      zoneName: world.zone ? world.zone.name : 'The Catacombs',
     });
 
     controllerNs.emit('floor:change', {
       floor: world.currentFloor,
       floorName: world.floorName,
+      zoneId: world.zone ? world.zone.id : 'catacombs',
+      zoneName: world.zone ? world.zone.name : 'The Catacombs',
     });
     controllerNs.emit('notification', { text: `New Game! Floor 1: ${world.floorName}`, type: 'quest' });
 
@@ -592,11 +596,15 @@ function gameLoop() {
             story: story.serialize(),
             floor: world.currentFloor,
             floorName: world.floorName,
+            zoneId: world.zone ? world.zone.id : 'catacombs',
+            zoneName: world.zone ? world.zone.name : 'The Catacombs',
           });
 
           controllerNs.emit('floor:change', {
             floor: world.currentFloor,
             floorName: world.floorName,
+            zoneId: world.zone ? world.zone.id : 'catacombs',
+            zoneName: world.zone ? world.zone.name : 'The Catacombs',
           });
           controllerNs.emit('notification', { text: `Floor ${world.currentFloor + 1}: ${world.floorName}`, type: 'quest' });
 

@@ -377,6 +377,29 @@ Add 3 ambient tone generators (procedural, no audio files):
 6. **9.6** Boss UI updates
 7. **9.7** Zone ambient sounds
 
+---
+
+## 🔍 Review Findings — Rune, Cycle #65
+
+### FIXED (this cycle):
+- [x] [BUG] Server missing zoneId/zoneName in dungeon:enter, floor:change, joined events — zone-themed visuals were dead code
+- [x] [BUG] Armor reducing ALL damage types (fire/cold/poison) — now only reduces physical
+- [x] [BUG] Charge hit detection used stale closestDist from before dash movement
+
+### Open Items (for Bolt):
+- [ ] [BUG] Wraith teleport ignores map boundaries/leash — can teleport out of bounds or into walls
+- [ ] boss_infernal + boss_void phase modes not implemented (ranged_barrage, summoner, enrage, teleport_slash, shadow_clones, void_storm all no-op)
+- [ ] Archer + slime still have generic sprites (plain colored square) — need custom createMonsterSprite() branches
+- [ ] chargeCooldown only decrements in ALERT state — if hell_hound enters ATTACK (melee range), cooldown freezes
+- [ ] Stealth-to-charge visual: nameText/affixText stay hidden if monster transitions from stealthed to charging
+
+### Nice-to-have:
+- [ ] FLOOR_NAMES disconnected from ZONE_DEFS — embed floor names in zone definitions
+- [ ] monsters.js constructor has ~50 fields, most unused per monster type — consider composition
+- [ ] getMonsterPoolForFloor() is trivial wrapper called once — inline it
+- [ ] Duplicate ZONE_COLORS in hud.js + controller.js — extract to shared constants
+- [ ] hud.js ZONE_ACCENT_COLORS.glow defined but never used
+
 Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's domain.
 
 ---
