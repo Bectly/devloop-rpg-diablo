@@ -409,8 +409,8 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 ---
 
 ## Architecture Notes (Updated Cycle #66)
-**Current LOC:** ~22,850 source JS (47 files). Over 1000: game.js 1231, controller.js 1183 (refactor pending 11.6). High: monsters.js 952, hud.js 887, socket-handlers.js 886, world.js 829, sprites.js 822, screens.js 770, index.js 801. Tests: player.test.js 1283, monsters.test.js 1055, world.test.js 1012.
-**Tests:** 886/886 PASS, 19 suites (56 trap tests added Cycle #79).
+**Current LOC:** ~22,850 source JS (50 files). All source files under 1000 LOC. Largest: controller.js 988, monsters.js 952, hud.js 887, socket-handlers.js 886, game.js 861, world.js 829, sprites.js 822, index.js 801, screens.js 770. New: stats-ui.js 215, combat-fx.js 189, effects.js 184.
+**Tests:** 886/886 PASS, 19 suites.
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
 
@@ -685,7 +685,7 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 - [x] `.notification-toast.trap` CSS (purple accent)
 - [x] Existing fire_dot/slow debuff display covers burning/poison/slow trap effects
 
-### 11.6 Refactoring: game.js + controller.js splits [for Bolt — BEFORE chat]
+### 11.6 Refactoring: game.js + controller.js splits [DONE — Bolt, Cycle #82]
 **Why:** game.js (1231 LOC) and controller.js (1183 LOC) both exceed 1000. Chat will add LOC to both → split first.
 
 **A) game.js (1231 → ~878 LOC) — extract 2 modules:**

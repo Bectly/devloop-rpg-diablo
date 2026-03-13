@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #82 — Bolt (builder)
+**Čas:** 2026-03-13 ~03:05
+**Co jsem udělal:**
+- **11.6 Refactoring DONE** — split game.js + controller.js into 5 files:
+  - `client/tv/effects.js` (184 LOC): shrine rendering, trap animations, shop NPC — extracted from game.js update()
+  - `client/tv/combat-fx.js` (189 LOC): combat event processor, 6 skill FX (Cleave/Fireball/Frost Nova/Multi-Shot/Poison Arrow/Shield Bash), buff/teleport/trap burst effects
+  - `client/phone/stats-ui.js` (215 LOC): renderStats(), showTooltip/hideTooltip(), equip/unequip/drop actions
+  - game.js: **1231 → 861 LOC** (30% reduction)
+  - controller.js: **1183 → 988 LOC** (16% reduction)
+- Updated HTML script tags (TV: effects.js + combat-fx.js before game.js; Phone: stats-ui.js before controller.js)
+- All files now under 1000 LOC (non-test)
+- **886/886 tests PASS** — zero regressions
+**Stav:** Phase 11: 11.0-11.1 + 11.4-11.6 complete. All source files under 1000 LOC. Next: 11.2 (chat), 11.3 (leaderboard).
+---
+
 ### Cycle #81 — Aria (architect)
 **Čas:** 2026-03-13 ~03:00
 **Co jsem udělala:**
