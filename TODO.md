@@ -177,17 +177,58 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
 
 - [x] [BUG/LOW] `monsters.js:514-540` — **`Monster.serialize()` does not include `damageType`.** **Fixed:** Added `damageType: this.damageType` to `serialize()` return object. Test updated from asserting absence to asserting presence + added coverage for all monster types.
 
+---
+
+## 🔥 NEXT PRIORITIES (Phase 8: Item Sets & Legendaries)
+
+### 8.1 Set Item System — Server [Bolt]
+**New file:** `server/game/sets.js`
+Diablo-style item sets — wear multiple pieces for escalating bonuses.
+
+- [ ] **4 item sets** (3 pieces each, one per class + one universal):
+  | Set | Class | Pieces (slots) | 2pc Bonus | 3pc Bonus |
+  |-----|-------|----------------|-----------|-----------|
+  | Ironwall | Warrior | weapon(sword), chest(plate), boots(plate) | +30 armor, +15% HP | +25% damage, shield bash stuns 2s |
+  | Shadowweave | Rogue | weapon(dagger), gloves(leather), boots(leather) | +20% crit chance, +15% speed | poison_blade DoT ×2, +30% crit damage |
+  | Arcane Codex | Mage | weapon(staff), helmet(cloth), chest(cloth) | +25% spell damage, +20 mana | fireball chains to 1 extra target, -20% cooldowns |
+  | Bones of the Fallen | Any | helmet, gloves, amulet | +10 all resist, +100 HP | 5% lifesteal on hit, +50% XP |
+
+- [ ] **Set item generation:**
+  - Set items are a new rarity tier: `set` (green, `#00cc66`)
+  - Drop from rare elites (100%), champion elites (25%), floor 5+ bosses
+  - Each drop picks a random set, then a random unfilled slot from that set
+  - Set items have fixed names (e.g. "Ironwall Greatsword", "Shadowweave Stiletto")
+  - Set items have good base stats (between epic and legendary)
+
+- [ ] **Set bonus calculation** in `player.js`:
+  - `recalcSetBonuses()` — count equipped set pieces, apply 2pc/3pc bonuses
+  - Called after `recalcEquipBonuses()`
+  - Bonuses stack with regular bonuses (additive)
+  - `player.activeSets = [{ setId, piecesEquipped, bonusesActive }]`
+
+- [ ] **Set item identification:**
+  - Items have `item.setId` field (e.g. 'ironwall', 'shadowweave')
+  - `item.isSetItem = true`
+
+### 8.2 Set UI — Phone [Sage]
+- [ ] **Set item tooltip:** green text, shows set name + which pieces owned
+- [ ] **Set bonus display:** in equipment screen, show active set bonuses
+- [ ] **Set piece tracker:** "Ironwall (2/3)" with checkmarks for owned pieces
+
+### 8.3 Set UI — TV [Sage]
+- [ ] **Green name text** for set items on ground (like blue for magic, yellow for rare)
+- [ ] **Set completion notification** on TV: "🏛 Ironwall Set Complete! (3/3)"
+
 ### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)
-- [ ] Set bonuses (3-4 item sets with 2/3/5-piece bonuses)
 - [ ] Unique legendary item effects (special procs)
 - [ ] Leaderboard / stats tracking
 - [ ] Sprite assets via ComfyUI generation
 
 ---
 
-## Architecture Notes (Updated Cycle #55)
-**Current LOC:** ~16,600 source JS (31 files). Largest: hud.js 827, controller.js 1058, game.js 1073, socket-handlers.js 878.
+## Architecture Notes (Updated Cycle #56)
+**Current LOC:** ~17,570 source JS (32 files). Largest: game.js 1073, controller.js 1057, player.test.js 1076, socket-handlers.js 878.
 **Tests:** 605/605 PASS, 16 suites.
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). 0 open bugs.

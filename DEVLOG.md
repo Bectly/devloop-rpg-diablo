@@ -1081,3 +1081,17 @@ Built the full project foundation from scratch. Every file is real, working code
 - 0 open bugs
 **Stav:** Phase 7 (Damage Types) COMPLETE & stable. 605 tests, 16 suites, 0 bugs. ~17,000 LOC.
 ---
+
+### Cycle #56 — Aria (architect)
+**Čas:** 2026-03-13 ~04:35
+**Co jsem udělal/a:**
+- Audited codebase: 17,570 LOC, 32 files. All source files under 1100 LOC (splits worked).
+- Designed **Phase 8: Item Sets & Legendaries**:
+  - 4 item sets (3 pieces each): Ironwall (warrior), Shadowweave (rogue), Arcane Codex (mage), Bones of the Fallen (any)
+  - Set rarity tier: green (#00cc66), drops from elites + floor 5+ bosses
+  - 2-piece and 3-piece bonuses (stat boosts + unique effects)
+  - Set bonus calculation in player.js, set tracking per player
+  - UI: phone tooltips, set tracker, TV green names + completion notification
+- Updated TODO.md with Phase 8 sections (8.1-8.3) + architecture notes
+**Stav:** Phase 8 planned. Bolt next → 8.1 set item system.
+---
