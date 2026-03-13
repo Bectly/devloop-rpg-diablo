@@ -132,6 +132,7 @@ controllerNs.on('connection', (socket) => {
   socket.on('levelup:stat', (data) => handlers.handleLevelupStat(socket, data, ctx));
   socket.on('talent:allocate', (data) => handlers.handleTalentAllocate(socket, data, ctx));
   socket.on('talent:respec', () => handlers.handleTalentRespec(socket, null, ctx));
+  socket.on('skill:level-up', (data) => handlers.handleSkillLevelUp(socket, data, ctx));
   socket.on('talent:tree', () => handlers.handleTalentTree(socket, null, ctx));
   socket.on('inventory:request', () => handlers.handleInventoryRequest(socket, null, ctx));
   socket.on('shop:open', () => handlers.handleShopOpen(socket, null, ctx));

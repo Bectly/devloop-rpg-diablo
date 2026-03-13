@@ -125,6 +125,7 @@ class Player {
 
     // Skills
     this.skills = CLASS_SKILLS[this.characterClass] || CLASS_SKILLS.warrior;
+    this.skillLevels = [1, 1, 1]; // Skill levels 1-5 (spend talent points)
 
     // Inventory (managed externally)
     this.inventoryId = null;
@@ -484,15 +485,32 @@ class Player {
     if (!this.alive || this.isDying) return false;
     if (index < 0 || index >= this.skills.length) return false;
     if (this.skillCooldowns[index] > 0) return false;
-    if (this.mp < this.skills[index].mpCost) return false;
+    const { getEffectiveMpCost } = require('./skill-levels');
+    const level = this.skillLevels[index] || 1;
+    if (this.mp < getEffectiveMpCost(this.skills[index].mpCost, level)) return false;
+    return true;
+  }
+
+  /**
+   * Level up a skill (costs 1 talent point). Returns true on success.
+   */
+  levelUpSkill(skillIndex) {
+    const { canLevelUpSkill, MAX_SKILL_LEVEL } = require('./skill-levels');
+    const { getAvailablePoints } = require('./talents');
+    const available = getAvailablePoints(this.level, this.talents, this.skillLevels);
+    const check = canLevelUpSkill(skillIndex, this.skillLevels, available);
+    if (!check.ok) return false;
+    this.skillLevels[skillIndex] = Math.min(MAX_SKILL_LEVEL, (this.skillLevels[skillIndex] || 1) + 1);
     return true;
   }
 
   useSkill(index) {
     if (!this.canUseSkill(index)) return null;
     const skill = this.skills[index];
-    this.mp -= skill.mpCost;
-    let cd = skill.cooldown;
+    const { getEffectiveMpCost, getEffectiveCooldown } = require('./skill-levels');
+    const level = this.skillLevels[index] || 1;
+    this.mp -= getEffectiveMpCost(skill.mpCost, level);
+    let cd = getEffectiveCooldown(skill.cooldown, level);
     // Set bonus: cooldown reduction
     if (this.setBonuses && this.setBonuses.cooldownReduction) {
       cd = Math.floor(cd * (1 - this.setBonuses.cooldownReduction / 100));
@@ -694,6 +712,7 @@ class Player {
       paragonXp: this.paragonXp,
       paragonXpToNext: (this.paragonLevel + 1) * 1000,
       talentBonuses: this.talentBonuses,
+      skillLevels: [...this.skillLevels],
     };
   }
 
@@ -731,6 +750,13 @@ class Player {
     // Restore talents
     if (savedData.talents && typeof savedData.talents === 'object') {
       this.talents = savedData.talents;
+    }
+
+    // Restore skill levels
+    if (Array.isArray(savedData.skillLevels)) {
+      this.skillLevels = savedData.skillLevels.slice(0, 3);
+      // Ensure all 3 slots filled
+      while (this.skillLevels.length < 3) this.skillLevels.push(1);
     }
 
     // Restore paragon progression
@@ -771,15 +797,23 @@ class Player {
       manaPotions: this.manaPotions,
       equipment: this.equipment,
       skillCooldowns: this.skillCooldowns,
-      skills: this.skills.map((s, i) => ({
-        name: s.name,
-        shortName: s.shortName || s.name.substring(0, 3).toUpperCase(),
-        mpCost: s.mpCost,
-        cooldown: s.cooldown,
-        cooldownRemaining: Math.max(0, this.skillCooldowns[i] || 0),
-        type: s.type,
-        description: s.description,
-      })),
+      skills: this.skills.map((s, i) => {
+        const { getEffectiveMpCost, getEffectiveCooldown } = require('./skill-levels');
+        const lv = this.skillLevels[i] || 1;
+        return {
+          name: s.name,
+          shortName: s.shortName || s.name.substring(0, 3).toUpperCase(),
+          mpCost: getEffectiveMpCost(s.mpCost, lv),
+          baseMpCost: s.mpCost,
+          cooldown: getEffectiveCooldown(s.cooldown, lv),
+          baseCooldown: s.cooldown,
+          cooldownRemaining: Math.max(0, this.skillCooldowns[i] || 0),
+          type: s.type,
+          description: s.description,
+          level: lv,
+        };
+      }),
+      skillLevels: [...this.skillLevels],
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
       debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
       lastDamageTaken: this.lastDamageTaken,

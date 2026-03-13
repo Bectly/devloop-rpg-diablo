@@ -414,14 +414,14 @@ describe('computeTalentBonuses', () => {
 // ── respec ──────────────────────────────────────────────────────
 
 describe('respec', () => {
-  it('returns empty object', () => {
+  it('returns reset talents and skillLevels', () => {
     const result = respec({ warrior_berserker_t1: 3, warrior_sentinel_t1: 2 });
-    expect(result).toEqual({});
+    expect(result).toEqual({ talents: {}, skillLevels: [1, 1, 1] });
   });
 
   it('respecced player has full points available', () => {
-    const talents = respec({ warrior_berserker_t1: 3, warrior_sentinel_t1: 2 });
-    expect(getAvailablePoints(10, talents)).toBe(10);
+    const result = respec({ warrior_berserker_t1: 3, warrior_sentinel_t1: 2 });
+    expect(getAvailablePoints(10, result.talents, result.skillLevels)).toBe(10);
   });
 });
 

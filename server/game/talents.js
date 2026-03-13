@@ -498,8 +498,9 @@ function _totalAllocated(playerTalents) {
  * Get available (unspent) talent points.
  * Players earn 1 talent point per level (level 1 = 1 point, level 10 = 10 points).
  */
-function getAvailablePoints(level, playerTalents) {
-  return Math.max(0, level - _totalAllocated(playerTalents));
+function getAvailablePoints(level, playerTalents, skillLevels) {
+  const { getSkillPointsSpent } = require('./skill-levels');
+  return Math.max(0, level - _totalAllocated(playerTalents) - getSkillPointsSpent(skillLevels));
 }
 
 /**
@@ -520,7 +521,7 @@ function getPointsInBranch(playerTalents, characterClass, branchName) {
  * Check whether a talent can be allocated.
  * Returns { ok: true } or { ok: false, reason: '...' }
  */
-function canAllocate(characterClass, playerTalents, talentId, playerLevel) {
+function canAllocate(characterClass, playerTalents, talentId, playerLevel, skillLevels) {
   // 1. Talent exists for this class?
   const entry = _talentIndex[talentId];
   if (!entry || entry.characterClass !== characterClass) {
@@ -537,7 +538,7 @@ function canAllocate(characterClass, playerTalents, talentId, playerLevel) {
   }
 
   // 3. Has available points?
-  if (getAvailablePoints(playerLevel, playerTalents) <= 0) {
+  if (getAvailablePoints(playerLevel, playerTalents, skillLevels) <= 0) {
     return { ok: false, reason: 'No talent points available.' };
   }
 
@@ -672,7 +673,7 @@ function computeTalentBonuses(playerTalents, characterClass) {
  * Returns an empty talents map.
  */
 function respec(playerTalents) {
-  return {};
+  return { talents: {}, skillLevels: [1, 1, 1] };
 }
 
 // ─── Exports ────────────────────────────────────────────────────────

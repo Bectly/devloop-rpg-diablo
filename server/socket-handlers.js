@@ -632,7 +632,7 @@ exports.handleTalentAllocate = (socket, data, { players, controllerSockets }) =>
   if (!data || !data.talentId) return;
 
   const { canAllocate, allocateTalent, getTalentTree, getAvailablePoints } = require('./game/talents');
-  const check = canAllocate(player.characterClass, player.talents, data.talentId, player.level);
+  const check = canAllocate(player.characterClass, player.talents, data.talentId, player.level, player.skillLevels);
   if (!check.ok) {
     socket.emit('notification', { text: check.reason || 'Cannot allocate talent', type: 'error' });
     return;
@@ -650,7 +650,8 @@ exports.handleTalentAllocate = (socket, data, { players, controllerSockets }) =>
   socket.emit('talent:tree', {
     tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
     talents: player.talents,
-    availablePoints: getAvailablePoints(player.level, player.talents),
+    availablePoints: getAvailablePoints(player.level, player.talents, player.skillLevels),
+    skillLevels: [...player.skillLevels],
   });
   socket.emit('stats:update', player.serializeForPhone());
   socket.emit('notification', { text: 'Talent allocated!', type: 'info' });
@@ -669,16 +670,50 @@ exports.handleTalentRespec = (socket, data, { players }) => {
   }
 
   player.gold -= cost;
-  player.talents = respec();
+  const result = respec();
+  player.talents = result.talents;
+  player.skillLevels = result.skillLevels;
   player.recalcTalentBonuses();
 
   socket.emit('talent:tree', {
     tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
     talents: player.talents,
-    availablePoints: getAvailablePoints(player.level, player.talents),
+    availablePoints: getAvailablePoints(player.level, player.talents, player.skillLevels),
+    skillLevels: [...player.skillLevels],
   });
   socket.emit('stats:update', player.serializeForPhone());
   socket.emit('notification', { text: `Respec done! (-${cost} gold)`, type: 'info' });
+};
+
+// ── Skill Level Up ──
+exports.handleSkillLevelUp = (socket, data, { players }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+  if (!data || typeof data.skillIndex !== 'number') return;
+
+  const idx = data.skillIndex;
+  if (idx < 0 || idx > 2) {
+    socket.emit('notification', { text: 'Invalid skill index', type: 'error' });
+    return;
+  }
+
+  const success = player.levelUpSkill(idx);
+  if (!success) {
+    socket.emit('notification', { text: 'Cannot level up skill', type: 'error' });
+    return;
+  }
+
+  const { getTalentTree, getAvailablePoints } = require('./game/talents');
+  socket.emit('talent:tree', {
+    tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
+    talents: player.talents,
+    availablePoints: getAvailablePoints(player.level, player.talents, player.skillLevels),
+    skillLevels: [...player.skillLevels],
+  });
+  socket.emit('stats:update', player.serializeForPhone());
+  const skillName = player.skills[idx].name;
+  const newLevel = player.skillLevels[idx];
+  socket.emit('notification', { text: `${skillName} → Level ${newLevel}!`, type: 'info' });
 };
 
 // ── Talent Tree Request ──
@@ -690,7 +725,8 @@ exports.handleTalentTree = (socket, data, { players }) => {
   socket.emit('talent:tree', {
     tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
     talents: player.talents,
-    availablePoints: getAvailablePoints(player.level, player.talents),
+    availablePoints: getAvailablePoints(player.level, player.talents, player.skillLevels),
+    skillLevels: [...player.skillLevels],
   });
 };
 

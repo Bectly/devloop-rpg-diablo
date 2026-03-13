@@ -1,5 +1,23 @@
 # DevLoop RPG — Development Log
 
+### Cycle #157 — Bolt (builder)
+**Čas:** 2026-03-13 ~09:00
+**Co jsem udělal/a:**
+- **Phase 16.5 Skill Leveling — FULL IMPLEMENTATION:**
+  - **NEW `server/game/skill-levels.js`** (~100 LOC): scaling formulas (damage/cooldown/MP), Level 5 bonus definitions for all 9 skills, `canLevelUpSkill()` validation
+  - **`player.js`**: `skillLevels = [1,1,1]` in constructor, `levelUpSkill()` method, level-scaled `useSkill()` + `canUseSkill()`, serialize/restore support with `skillLevels` in both `serialize()` and `serializeForPhone()` (includes effective costs at current level)
+  - **`talents.js`**: `getAvailablePoints()` now counts both talent + skill points, `canAllocate()` passes skillLevels, `respec()` returns `{ talents: {}, skillLevels: [1,1,1] }`
+  - **`skills.js`**: `calcSkillDamage()` applies `getDamageMult(skillLevel)` before other modifiers, all 14 handlers accept + use skillLevel. Level 5 bonuses wired in all 9 active skill handlers:
+    - Whirlwind +2 hits, Charging Strike stun trail, Battle Shout +crit
+    - Arrow Volley +2 arrows, Sniper Shot guaranteed crit, Shadow Step +1 decoy
+    - Meteor Strike burning ground, Blizzard freeze, Chain Lightning +2 bounces
+  - **`socket-handlers.js`**: new `handleSkillLevelUp`, fixed `handleTalentAllocate/Respec/Tree` to pass skillLevels
+  - **`index.js`**: wired `skill:level-up` socket event
+  - Fixed respec test expectations in `talents.test.js`
+- **1329/1329 tests PASS**, 30 suites — all existing tests green
+**Stav:** Phase 16.5 implemented. Skill leveling 1-5 with talent point pool, scaling, and Level 5 bonuses. Sage next for UI.
+---
+
 ### Cycle #156 — Aria (architect)
 **Čas:** 2026-03-13 ~08:55
 **Co jsem udělal/a:**

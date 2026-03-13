@@ -2,6 +2,7 @@ const { generateLoot } = require('./items');
 const { modifyDamageByAffixes, processAffixOnDeath } = require('./affixes');
 const { getSkillDamageType } = require('./damage-types');
 const { rollSetDrop, generateSetItem } = require('./sets');
+const { getDamageMult, getLevel5Bonus } = require('./skill-levels');
 
 /** Apply shatter bonus if target is stunned/frozen and player has the passive. */
 function applyShatter(damage, player, target) {
@@ -21,7 +22,10 @@ function applyShatter(damage, player, target) {
  * @param {object} monster    - target (for shatter + affix checks)
  * @returns {number} final damage value
  */
-function calcSkillDamage(player, skill, baseDmg, monster) {
+function calcSkillDamage(player, skill, baseDmg, monster, skillLevel) {
+  // Skill level damage scaling (+15% per level above 1)
+  baseDmg = Math.floor(baseDmg * getDamageMult(skillLevel || 1));
+
   const isSpell = skill.useSpellPower === true;
 
   // Set bonus: spell damage
@@ -169,7 +173,7 @@ function handleSkillKill(player, monster, results, partyBuffs) {
  * Spells (useSpellPower=true) use spellPower; others use attackPower.
  * Applies stun/slow effects based on skill.effect / skill.duration.
  */
-function executeAoe(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeAoe(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
 
   for (const monster of monsters) {
@@ -183,7 +187,7 @@ function executeAoe(player, skill, monsters, partyBuffs, skillDamageType) {
         ? Math.floor(player.spellPower * skill.damage)
         : Math.floor(player.attackPower * skill.damage);
 
-      baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+      baseDmg = calcSkillDamage(player, skill, baseDmg, monster, skillLevel);
       const dealt = monster.takeDamage(baseDmg);
 
       applyLifesteal(player, dealt);
@@ -218,7 +222,7 @@ function executeAoe(player, skill, monsters, partyBuffs, skillDamageType) {
  * Single-target skill: hits nearest monster within attackRange * 1.5.
  * Applies stun if skill.effect === 'stun'.
  */
-function executeSingle(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeSingle(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
 
   let nearest = null;
@@ -234,7 +238,7 @@ function executeSingle(player, skill, monsters, partyBuffs, skillDamageType) {
 
   if (nearest) {
     let baseDmg = Math.floor(player.attackPower * skill.damage);
-    baseDmg = calcSkillDamage(player, skill, baseDmg, nearest);
+    baseDmg = calcSkillDamage(player, skill, baseDmg, nearest, skillLevel);
     const dealt = nearest.takeDamage(baseDmg);
     if (skill.effect === 'stun') nearest.applyStun(skill.duration);
 
@@ -263,7 +267,7 @@ function executeSingle(player, skill, monsters, partyBuffs, skillDamageType) {
  * Multi-target skill: all alive monsters within dist <= 200,
  * sorted by distance, takes min(skill.count, targets.length).
  */
-function executeMulti(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeMulti(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
 
   const targets = [];
@@ -277,7 +281,7 @@ function executeMulti(player, skill, monsters, partyBuffs, skillDamageType) {
   for (let i = 0; i < Math.min(skill.count, targets.length); i++) {
     const t = targets[i].monster;
     let baseDmg = Math.floor(player.attackPower * skill.damage);
-    baseDmg = calcSkillDamage(player, skill, baseDmg, t);
+    baseDmg = calcSkillDamage(player, skill, baseDmg, t, skillLevel);
     const dealt = t.takeDamage(baseDmg);
 
     applyLifesteal(player, dealt);
@@ -305,7 +309,7 @@ function executeMulti(player, skill, monsters, partyBuffs, skillDamageType) {
  * DoT skill: nearest monster within 200.
  * Sets poisonTick / poisonDamage on target. Adds effect: 'poison' to hit event.
  */
-function executeDot(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeDot(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
 
   let nearest = null;
@@ -321,7 +325,7 @@ function executeDot(player, skill, monsters, partyBuffs, skillDamageType) {
 
   if (nearest) {
     let baseDmg = Math.floor(player.attackPower * skill.damage);
-    baseDmg = calcSkillDamage(player, skill, baseDmg, nearest);
+    baseDmg = calcSkillDamage(player, skill, baseDmg, nearest, skillLevel);
     const dealt = nearest.takeDamage(baseDmg);
     // Set poison timer on monster
     nearest.poisonTick = skill.duration;
@@ -353,7 +357,7 @@ function executeDot(player, skill, monsters, partyBuffs, skillDamageType) {
  * Buff skill: self-targeted buff.
  * Pushes buff to target.buffs[].
  */
-function executeBuff(player, skill, allPlayers) {
+function executeBuff(player, skill, allPlayers, skillLevel = 1) {
   const results = [];
 
   const targets = [player];
@@ -380,8 +384,10 @@ function executeBuff(player, skill, allPlayers) {
  * Spin attack: instant multi-hit AOE. All monsters within radius take
  * skill.hits ticks of damage. Each hit is skill.damage * attackPower.
  */
-function executeSpin(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeSpin(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
+  const totalHits = skill.hits + (l5 && l5.extraHits ? l5.extraHits : 0);
 
   results.push({
     type: 'effect:spawn',
@@ -400,10 +406,10 @@ function executeSpin(player, skill, monsters, partyBuffs, skillDamageType) {
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > skill.radius) continue;
 
-    for (let hit = 0; hit < skill.hits; hit++) {
+    for (let hit = 0; hit < totalHits; hit++) {
       if (!monster.alive) break;
       let baseDmg = Math.floor(player.attackPower * skill.damage);
-      baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+      baseDmg = calcSkillDamage(player, skill, baseDmg, monster, skillLevel);
       const dealt = monster.takeDamage(baseDmg);
       applyLifesteal(player, dealt);
 
@@ -434,7 +440,7 @@ function executeSpin(player, skill, monsters, partyBuffs, skillDamageType) {
  * Charging Strike: dash toward nearest monster (or forward if none).
  * Trail damage to monsters along the path, main damage + stun on target.
  */
-function executeCharge(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeCharge(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
   const startX = player.x;
   const startY = player.y;
@@ -492,7 +498,7 @@ function executeCharge(player, skill, monsters, partyBuffs, skillDamageType) {
       if (Math.sqrt(dx * dx + dy * dy) <= trailRadius) {
         trailHitIds.add(monster.id);
         let baseDmg = Math.floor(player.attackPower * skill.trailDamage);
-        baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+        baseDmg = calcSkillDamage(player, skill, baseDmg, monster, skillLevel);
         const dealt = monster.takeDamage(baseDmg);
         applyLifesteal(player, dealt);
         results.push({
@@ -512,10 +518,19 @@ function executeCharge(player, skill, monsters, partyBuffs, skillDamageType) {
     }
   }
 
+  // Level 5 bonus: stun trail targets on impact
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
+  if (l5 && l5.stunOnImpact) {
+    for (const monster of monsters) {
+      if (!monster.alive || !trailHitIds.has(monster.id)) continue;
+      monster.stunned = (monster.stunned || 0) + l5.stunOnImpact;
+    }
+  }
+
   // Primary target: full damage + stun
   if (target && target.alive) {
     let baseDmg = Math.floor(player.attackPower * skill.damage);
-    baseDmg = calcSkillDamage(player, skill, baseDmg, target);
+    baseDmg = calcSkillDamage(player, skill, baseDmg, target, skillLevel);
     const dealt = target.takeDamage(baseDmg);
     if (skill.effect === 'stun') target.applyStun(skill.duration);
     applyLifesteal(player, dealt);
@@ -539,8 +554,9 @@ function executeCharge(player, skill, monsters, partyBuffs, skillDamageType) {
 /**
  * Buff+Debuff hybrid (Battle Shout): party buff + fear nearby monsters.
  */
-function executeBuffDebuff(player, skill, monsters, allPlayers) {
+function executeBuffDebuff(player, skill, monsters, allPlayers, skillLevel = 1) {
   const results = [];
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   const targets = allPlayers || [player];
   for (const target of targets) {
@@ -556,6 +572,7 @@ function executeBuffDebuff(player, skill, monsters, allPlayers) {
       effect: skill.effect,
       duration: skill.duration,
       skillName: skill.name,
+      partyCritBonus: l5 && l5.partyCrit ? l5.partyCrit : 0,
     });
   }
 
@@ -594,8 +611,9 @@ function executeBuffDebuff(player, skill, monsters, allPlayers) {
  * Volley skill (Arrow Volley): fire multiple projectiles in a cone.
  * Emits projectile:create events for the game loop to spawn actual Projectile objects.
  */
-function executeVolley(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeVolley(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   // Find nearest monster to aim at
   let targetAngle;
@@ -620,7 +638,7 @@ function executeVolley(player, skill, monsters, partyBuffs, skillDamageType) {
 
   // Spawn projectiles in a cone
   const spreadRad = (skill.spreadAngle * Math.PI) / 180;
-  const count = skill.projectileCount || 5;
+  const count = (skill.projectileCount || 5) + (l5 && l5.extraProjectiles ? l5.extraProjectiles : 0);
   for (let i = 0; i < count; i++) {
     const offset = count <= 1 ? 0 : spreadRad * ((i / (count - 1)) - 0.5);
     const angle = targetAngle + offset;
@@ -658,7 +676,7 @@ function executeVolley(player, skill, monsters, partyBuffs, skillDamageType) {
  * Sniper Shot: fire a single heavy piercing projectile.
  * Emits one projectile:create event. Slow speed but pierces ALL targets.
  */
-function executeSniper(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeSniper(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
 
   // Find nearest monster to aim at
@@ -682,6 +700,7 @@ function executeSniper(player, skill, monsters, partyBuffs, skillDamageType) {
   }
 
   const projDamage = Math.floor(player.attackPower * skill.damage);
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   results.push({
     type: 'projectile:create',
@@ -696,6 +715,7 @@ function executeSniper(player, skill, monsters, partyBuffs, skillDamageType) {
     visual: 'sniper',
     skillName: skill.name,
     lifetime: 3000,
+    guaranteedCrit: !!(l5 && l5.guaranteedCrit),
   });
 
   results.push({
@@ -714,10 +734,12 @@ function executeSniper(player, skill, monsters, partyBuffs, skillDamageType) {
  * Shadow Step: teleport in facing direction, gain dodge buff, leave shadow decoy.
  * The decoy is a friendly "monster" that draws aggro for decoyDuration.
  */
-function executeShadowStep(player, skill, monsters, allPlayers) {
+function executeShadowStep(player, skill, monsters, allPlayers, skillLevel = 1) {
   const results = [];
   const startX = player.x;
   const startY = player.y;
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
+  const decoyCount = 1 + (l5 && l5.extraDecoys ? l5.extraDecoys : 0);
 
   // Teleport in facing direction
   const dirMap = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -743,14 +765,16 @@ function executeShadowStep(player, skill, monsters, allPlayers) {
     skillName: skill.name,
   });
 
-  // Spawn shadow decoy at original position
-  results.push({
-    type: 'summon:shadow_decoy',
-    playerId: player.id,
-    x: startX,
-    y: startY,
-    duration: skill.decoyDuration,
-  });
+  // Spawn shadow decoy(s) at original position
+  for (let d = 0; d < decoyCount; d++) {
+    results.push({
+      type: 'summon:shadow_decoy',
+      playerId: player.id,
+      x: startX + (d > 0 ? (Math.random() - 0.5) * 40 : 0),
+      y: startY + (d > 0 ? (Math.random() - 0.5) * 40 : 0),
+      duration: skill.decoyDuration,
+    });
+  }
 
   // Teleport visual
   results.push({
@@ -770,7 +794,7 @@ function executeShadowStep(player, skill, monsters, allPlayers) {
  * Meteor Strike: fire a projectile that explodes on impact (AOE).
  * Emits projectile:create event with aoeRadius. Uses spellPower.
  */
-function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
 
   // Find nearest monster to aim at
@@ -794,6 +818,7 @@ function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType) {
   }
 
   const projDamage = Math.floor(player.spellPower * skill.damage);
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   results.push({
     type: 'projectile:create',
@@ -808,6 +833,9 @@ function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType) {
     aoeRadius: skill.aoeRadius || 80,
     visual: 'fireball',
     skillName: skill.name,
+    burningGround: !!(l5 && l5.burningGround),
+    burnDamage: l5 ? l5.burnDamage : 0,
+    burnDuration: l5 ? l5.burnDuration : 0,
   });
 
   results.push({
@@ -826,8 +854,9 @@ function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType) {
  * Blizzard: AOE around player with multiple damage ticks + slow.
  * Uses spellPower. Hits all monsters in radius, applies slow.
  */
-function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   results.push({
     type: 'effect:spawn',
@@ -849,7 +878,7 @@ function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType) {
     for (let hit = 0; hit < skill.hits; hit++) {
       if (!monster.alive) break;
       let baseDmg = Math.floor(player.spellPower * skill.damage);
-      baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+      baseDmg = calcSkillDamage(player, skill, baseDmg, monster, skillLevel);
       const dealt = monster.takeDamage(baseDmg);
       applyLifesteal(player, dealt);
 
@@ -872,9 +901,13 @@ function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType) {
       }
     }
 
-    // Apply slow after all hits
+    // Apply slow (or freeze at Level 5) after all hits
     if (monster.alive && skill.effect === 'slow') {
-      monster.applySlow(skill.duration);
+      if (l5 && l5.freezeInsteadOfSlow) {
+        monster.stunned = (monster.stunned || 0) + l5.freezeDuration;
+      } else {
+        monster.applySlow(skill.duration);
+      }
     }
   }
 
@@ -885,9 +918,10 @@ function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType) {
  * Chain Lightning: bounces between targets with damage falloff.
  * Uses spellPower. Finds nearest target, chains to next nearest within chainRange.
  */
-function executeChain(player, skill, monsters, partyBuffs, skillDamageType) {
+function executeChain(player, skill, monsters, partyBuffs, skillDamageType, skillLevel = 1) {
   const results = [];
   const hitIds = new Set();
+  const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   // Find initial target (nearest within range)
   let current = null;
@@ -908,11 +942,12 @@ function executeChain(player, skill, monsters, partyBuffs, skillDamageType) {
   let sourceY = player.y;
   let bounceCount = 0;
 
-  while (current && bounceCount < (skill.maxBounces || 4)) {
+  const maxBounces = (skill.maxBounces || 4) + (l5 && l5.extraBounces ? l5.extraBounces : 0);
+  while (current && bounceCount < maxBounces) {
     hitIds.add(current.id);
 
     let dmg = currentDamage;
-    dmg = calcSkillDamage(player, skill, dmg, current);
+    dmg = calcSkillDamage(player, skill, dmg, current, skillLevel);
     const dealt = current.takeDamage(dmg);
     applyLifesteal(player, dealt);
 
@@ -986,50 +1021,51 @@ function executeSkill(combat, player, skillIndex, monsters, allPlayers) {
 
   const skillDamageType = getSkillDamageType(skill.name);
   const partyBuffs = allPlayers ? combat.getPartyBuffs(allPlayers) : null;
+  const skillLevel = (player.skillLevels && player.skillLevels[skillIndex]) || 1;
   let results;
 
   switch (skill.type) {
     case 'aoe':
-      results = executeAoe(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeAoe(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'single':
-      results = executeSingle(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeSingle(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'multi':
-      results = executeMulti(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeMulti(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'dot':
-      results = executeDot(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeDot(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'buff':
-      results = executeBuff(player, skill, allPlayers);
+      results = executeBuff(player, skill, allPlayers, skillLevel);
       break;
     case 'spin':
-      results = executeSpin(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeSpin(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'charge':
-      results = executeCharge(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeCharge(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'buff_debuff':
-      results = executeBuffDebuff(player, skill, monsters, allPlayers);
+      results = executeBuffDebuff(player, skill, monsters, allPlayers, skillLevel);
       break;
     case 'volley':
-      results = executeVolley(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeVolley(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'sniper':
-      results = executeSniper(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeSniper(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'shadow_step':
-      results = executeShadowStep(player, skill, monsters, allPlayers);
+      results = executeShadowStep(player, skill, monsters, allPlayers, skillLevel);
       break;
     case 'meteor':
-      results = executeMeteor(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeMeteor(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'blizzard':
-      results = executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     case 'chain':
-      results = executeChain(player, skill, monsters, partyBuffs, skillDamageType);
+      results = executeChain(player, skill, monsters, partyBuffs, skillDamageType, skillLevel);
       break;
     default:
       results = [];
