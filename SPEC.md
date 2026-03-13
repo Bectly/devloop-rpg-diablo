@@ -298,3 +298,51 @@ When two players combine specific skill effects, a **combo bonus** triggers with
 - `server/game/combos.js` — ComboTracker, COMBO_DEFS, check/execute logic
 - `client/tv/combat-fx.js` — `spawnComboEffect()` with per-combo particles
 - `server/tests/phase17-combos.test.js` — 33 tests covering all combos
+
+## 15. Hardcore Mode (Phase 19)
+
+Permanent death mode. Character is deleted on death. Higher risk = better rewards.
+
+### Rules
+- `player.hardcore = true` — set at character creation, immutable
+- Death = character deleted from DB (no respawn, no grace period)
+- +25% magic find bonus (multiplicative with existing MF)
+- Separate leaderboard (Normal vs Hardcore tabs)
+- HC players visible on TV with red skull badge
+
+### Death Flow
+1. HP ≤ 0 → check `player.hardcore`
+2. If true: emit `hardcore:death` to phone + TV
+3. Delete character from `characters` table
+4. Remove from `players` Map, disconnect controller
+5. TV: red explosion particles + "HARDCORE DEATH" callout
+
+### Integration Points
+- `database.js`: `hardcore` column, filtered leaderboard queries
+- `player.js`: `hardcore` flag in constructor, serialize, restoreFrom
+- `index.js`: permadeath check in respawn handler
+- `socket-handlers.js`: HC flag in join payload
+
+## 16. Shared Stash (Phase 19)
+
+Persistent cross-character storage. 20 slots, accessible from phone UI.
+
+### Database Schema
+```sql
+CREATE TABLE IF NOT EXISTS stash (
+  slot INTEGER PRIMARY KEY,
+  item_json TEXT NOT NULL,
+  stored_at TEXT DEFAULT (datetime('now'))
+);
+```
+
+### Socket Events
+- `stash:store` (slot, inventoryIndex) → move item to stash
+- `stash:retrieve` (slot) → move item to inventory
+- `stash:list` → return all stash contents
+
+### Design Decisions
+- Stash is per-device (SQLite is local), not per-character
+- Always accessible from phone (no town-only restriction — couch co-op UX)
+- Stash survives hardcore death (items are cross-character)
+- 20 slots max (4×5 grid on phone UI)

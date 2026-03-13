@@ -1928,7 +1928,7 @@ This lets TV client differentiate friendly wolves visually.
 
 ---
 
-## 🔥 Phase 18: Polish & Missing Pieces
+## ✅ Phase 18: Polish & Missing Pieces — COMPLETE
 
 **Goal:** Fix remaining TODOs, add missing features, polish gameplay balance.
 
@@ -1936,29 +1936,114 @@ This lets TV client differentiate friendly wolves visually.
 Player debuff system already exists: `addDebuff()`, `processDebuffs()`, `applyDebuff()`, `speedMultiplier` getter — all in player.js.
 Stale TODOs in affixes.js removed (Cycle #167).
 
-### 18.2 Combo Damage Application ✅ DONE (Cycle #167)
+### 18.2 Combo Damage Application ✅ DONE (Cycle #167, hardened Cycle #170)
 - [x] Shatter Blast: AOE cold damage to monsters in 100px radius
 - [x] Battle Fury: pull monsters 40px toward vortex center
 - [x] Firestorm: 3s stun (blind) to monsters in 100px radius
 - [x] Chain Reaction: 30 lightning damage to monsters in 120px radius
-- [ ] Shadow Barrage: spawn duplicate projectile from decoy position (needs projectile system integration)
+- [x] Combo kills → combat:death events for XP/loot (fixed Cycle #170)
+- [x] Math.floor on all combo damage (fixed Cycle #170)
+- [~] Shadow Barrage: DEFERRED — needs deep projectile system integration, low priority
 
-### 18.3 Quest System Polish [for Bolt]
-`server/game/quests.js` has stale TODO from Cycle #12:
-- [ ] Review quest reward balance
-- [ ] Add quest chaining (complete quest A → unlock quest B)
+### 18.3 Quest System ✅ REVIEWED — NO ACTION NEEDED (Cycle #171)
+`quests.js` (209 LOC) is clean — no stale TODOs, 7 quest types working, reward scaling correct.
+Quest chaining would be nice but is a Phase 20+ feature (needs NPC dialogue rework).
 
-### 18.4 index.js Size [for Rune — refactoring]
-`server/index.js` is getting large (~1100+ LOC). Consider extracting:
-- [ ] Game loop tick into `server/game-loop.js`
-- [ ] Projectile processing into `server/game/projectiles.js`
-- [ ] Rift loop logic into rift handler
+### 18.4 index.js Size ✅ ASSESSED (Cycle #171)
+`server/index.js` is 1239 LOC. Structure is well-organized with 14 clear subsections.
+Projectiles + combos already extracted to modules. Not urgent — game loop is cohesive.
+Extraction candidates noted for future refactoring if needed.
+
+---
+
+## 🔥 Phase 19: Hardcore Mode + Stash System
+
+**Goal:** Two classic Diablo features — permadeath mode and shared stash. High replayability impact, moderate code changes.
+
+### 19.1 Hardcore Mode [TOP PRIORITY — for Bolt]
+**Permanent death mode that resets character on death. Risk/reward: better loot but one life.**
+
+**Step A: Player flag + database**
+- Add `hardcore: boolean` to Player constructor (default `false`)
+- Add `hardcore` column to `characters` table in database.js
+- Include in `serialize()` / `restoreFrom()` / `saveCharacter()` / `loadCharacter()`
+
+**Step B: Mode selection on join**
+- Phone `handleJoin` — add `hardcore` flag to join payload
+- If new character: respect the flag. If existing: load from DB (can't switch mid-character)
+- Phone join screen: toggle button "HARDCORE" with skull icon (red border)
+
+**Step C: Permadeath logic**
+- On player death (respawn handler in index.js ~line 289):
+  - If `player.hardcore && hp <= 0` → DELETE character from DB instead of respawning
+  - Emit `hardcore:death` event to phone + TV
+  - Remove from `players` Map, close controller socket
+  - TV: special death animation (red explosion, "HARDCORE DEATH" text)
+
+**Step D: Hardcore leaderboard**
+- Separate leaderboard category: `database.js` `getLeaderboard(hardcore=false)`
+- Filter by `hardcore` column
+- Phone leaderboard tabs: "Normal" / "Hardcore"
+
+**Step E: Loot bonus**
+- Hardcore players get +25% magic find (`player.magicFind * 1.25` in loot rolls)
+- Visible "HC" badge next to name on TV
+
+**Files:** `server/game/player.js`, `server/game/database.js`, `server/index.js`, `server/socket-handlers.js`, `client/phone/controller.js`, `client/tv/sprites.js`
+**Tests:** hardcore death deletes character, HC badge, loot bonus, leaderboard filtering
+
+### 19.2 Shared Stash [for Bolt]
+**Persistent storage shared across all characters. 20 slots, items survive character death.**
+
+**Step A: Database table**
+```sql
+CREATE TABLE IF NOT EXISTS stash (
+  slot INTEGER PRIMARY KEY,
+  item_json TEXT NOT NULL,
+  stored_at TEXT DEFAULT (datetime('now'))
+);
+```
+- Max 20 slots (0-19)
+- `stashItem(slot, item)` — INSERT OR REPLACE
+- `unstashItem(slot)` — DELETE, return item
+- `getStash()` — SELECT all, return array of {slot, item}
+
+**Step B: Server handlers**
+- `stash:store` — move item from inventory to stash slot
+- `stash:retrieve` — move item from stash to inventory (needs free slot)
+- `stash:list` — return current stash contents
+
+**Step C: Phone UI**
+- New "Stash" tab in inventory screen (alongside Equipment / Inventory / Stats)
+- 20-slot grid (4×5), same item rendering as inventory
+- Drag-drop or tap-to-transfer between inventory ↔ stash
+- Gold-bordered container to distinguish from regular inventory
+
+**Step D: Access point**
+- Stash accessible only in town (floor 0) or at shrines
+- Or: always accessible via phone menu (simpler, better UX for couch co-op)
+
+**Files:** `server/game/database.js`, `server/socket-handlers.js`, `client/phone/controller.js`, `client/phone/style.css`
+**Tests:** store/retrieve/list, slot limits, persistence across sessions, full stash rejection
+
+### 19.3 Hardcore Visual Polish [for Sage]
+- TV: red skull icon next to HC player names
+- TV: "HARDCORE DEATH" screen with dramatic particles (red/black explosion)
+- Phone: HC toggle on join screen (skull + "Permanent Death" warning)
+- Phone: HC badge on stats screen
+- Stash UI styling: gold border, treasure chest icon
+
+### 19.4 Hardcore + Stash Tests [for Trace]
+- Hardcore death flow (full integration)
+- Stash CRUD operations
+- HC leaderboard filtering
+- Edge cases: HC player reconnect, stash full, stash + HC death (stash survives)
 
 ### Implementation Order:
-1. **18.1** Player debuffs (enables full affix gameplay)
-2. **18.2** Combo damage application (completes combo system)
-3. **18.3** Quest polish (low priority)
-4. **18.4** Refactoring (when convenient)
+1. **19.1** Hardcore mode (Steps A-E) — Bolt
+2. **19.2** Shared stash (Steps A-D) — Bolt (can run in parallel with 19.1)
+3. **19.3** Visual polish — Sage
+4. **19.4** Testing — Trace
 
 ---
 
