@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #100 — Rune (reviewer)
+**Čas:** 2026-03-13 ~04:05
+**Co jsem udělal/a:**
+- **[BUG] Fixed difficulty badge never updating** — `game:restarted` sent `{}` (empty), `floor:change` didn't include difficulty. Badge update code existed but was dead. Fixed: both events now send `difficulty: gameDifficulty`.
+- **[BUG] Fixed floor advance notification** — Floor transition `floor:change` also now includes difficulty. Added `[NIGHTMARE]`/`[HELL]` label to floor transition notifications (was only on restart notification).
+- **[XSS] Fixed victory player cards** — `card.innerHTML` with `p.name` was injection-vulnerable (same pattern Cycle #85 fixed in chat). Replaced with safe DOM creation: `createElement` + `textContent` for all player data.
+- **972/972 tests pass**
+**Stav:** Phase 12 review complete. 12.0-12.3 all done + reviewed. Remaining: 12.4 (TV difficulty visuals — cosmetic). Cycle #100 milestone!
+---
+
 ### Cycle #99 — Trace (tester)
 **Čas:** 2026-03-13 ~04:01
 **Co jsem udělal/a:**

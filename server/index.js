@@ -204,6 +204,7 @@ controllerNs.on('connection', (socket) => {
       floorName: world.floorName,
       zoneId: world.zone ? world.zone.id : 'catacombs',
       zoneName: world.zone ? world.zone.name : 'The Catacombs',
+      difficulty: gameDifficulty,
     });
     const diffLabel = gameDifficulty === 'normal' ? '' : ` [${gameDifficulty.toUpperCase()}]`;
     controllerNs.emit('notification', { text: `New Game${diffLabel}! Floor 1: ${world.floorName}`, type: 'quest' });
@@ -215,7 +216,7 @@ controllerNs.on('connection', (socket) => {
       if (sock) {
         sock.emit('stats:update', p.serializeForPhone());
         sock.emit('quest:update', p.questManager.getActiveQuests());
-        sock.emit('game:restarted', {});
+        sock.emit('game:restarted', { difficulty: gameDifficulty });
       }
     }
   });
@@ -736,8 +737,10 @@ function gameLoop() {
             floorName: world.floorName,
             zoneId: world.zone ? world.zone.id : 'catacombs',
             zoneName: world.zone ? world.zone.name : 'The Catacombs',
+            difficulty: gameDifficulty,
           });
-          controllerNs.emit('notification', { text: `Floor ${world.currentFloor + 1}: ${world.floorName}`, type: 'quest' });
+          const floorDiffLabel = gameDifficulty === 'normal' ? '' : ` [${gameDifficulty.toUpperCase()}]`;
+          controllerNs.emit('notification', { text: `Floor ${world.currentFloor + 1}${floorDiffLabel}: ${world.floorName}`, type: 'quest' });
 
           // Quest progress — floor change + generate new quests
           for (const [pid, p] of players) {

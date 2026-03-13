@@ -87,14 +87,28 @@ const DeathVictory = (() => {
       card.className = 'victory-player-card';
       if (p.characterClass) card.setAttribute('data-class', p.characterClass);
       if (i === mvpIndex && maxKills > 0) card.classList.add('mvp');
-      card.innerHTML = `
-        <div class="victory-player-icon">${classIcons[p.characterClass] || '\u2694\uFE0F'}</div>
-        <div class="victory-player-info">
-          <div class="victory-player-name">${p.name}</div>
-          <div class="victory-player-class">${p.characterClass}</div>
-          <div class="victory-player-stats">\u2B06\uFE0F Lv.${p.level} \u00B7 \uD83D\uDC80 ${p.kills} \u00B7 \uD83E\uDE99 ${p.gold}</div>
-        </div>
-      `;
+
+      const icon = document.createElement('div');
+      icon.className = 'victory-player-icon';
+      icon.textContent = classIcons[p.characterClass] || '\u2694\uFE0F';
+
+      const info = document.createElement('div');
+      info.className = 'victory-player-info';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'victory-player-name';
+      nameEl.textContent = p.name;
+      const classEl = document.createElement('div');
+      classEl.className = 'victory-player-class';
+      classEl.textContent = p.characterClass;
+      const statEl = document.createElement('div');
+      statEl.className = 'victory-player-stats';
+      statEl.textContent = `\u2B06\uFE0F Lv.${p.level} \u00B7 \uD83D\uDC80 ${p.kills} \u00B7 \uD83E\uDE99 ${p.gold}`;
+      info.appendChild(nameEl);
+      info.appendChild(classEl);
+      info.appendChild(statEl);
+
+      card.appendChild(icon);
+      card.appendChild(info);
       statsEl.appendChild(card);
     }
 
