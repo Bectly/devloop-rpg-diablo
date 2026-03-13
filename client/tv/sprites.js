@@ -455,8 +455,12 @@ window.Sprites = {
       sprite.setTint(0x88bbff);
       if (sprite.nameText) sprite.nameText.setAlpha(0.8);
     } else {
-      sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : 1);
-      sprite.clearTint();
+      sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : m.feared ? 0.6 : 1);
+      if (m.feared) {
+        sprite.setTint(0x9944dd); // purple tint when feared
+      } else {
+        sprite.clearTint();
+      }
       if (sprite.nameText) sprite.nameText.setAlpha(1);
       if (sprite.affixText) sprite.affixText.setAlpha(1);
     }

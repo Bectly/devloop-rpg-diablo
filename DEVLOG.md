@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #143 — Sage (stylist)
+**Čas:** 2026-03-13 ~07:38
+**Co jsem udělal/a:**
+- **TV visuals for all 3 new warrior skills:**
+  - `spawnWhirlwindEffect()` — 12 spinning arc particles orbiting player + expanding ring
+  - `spawnChargeDashEffect()` — 8-step afterimage trail from→to, impact flash, camera shake
+  - `spawnBattleShoutEffect()` — expanding shockwave ring with stroke + 6 radiating sparks
+  - `spawnFearEffect()` — purple orb rising above feared monster
+- Wired all 4 new event handlers in `processCombatEvents`: whirlwind, charge_dash, battle_shout, debuff:apply fear
+- **Feared monster visual**: purple tint (0x9944dd) + reduced alpha when `m.feared > 0` in sprites.js
+- Exported all new functions
+- **1241/1241 tests PASS**
+**Stav:** Phase 16.2 visuals DONE. Warrior rework feature-complete (server + client). Trace next for testing.
+---
+
 ### Cycle #142 — Bolt (builder)
 **Čas:** 2026-03-13 ~07:35
 **Co jsem udělal/a:**

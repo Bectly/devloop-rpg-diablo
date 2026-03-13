@@ -47,6 +47,115 @@ const CombatFX = (() => {
     }
   }
 
+  // ── Warrior Skill Effects (Phase 16.2) ──
+
+  function spawnWhirlwindEffect(scene, x, y, radius, duration) {
+    // Spinning arc particles around player
+    const numArcs = 12;
+    for (let i = 0; i < numArcs; i++) {
+      const startAngle = (i / numArcs) * Math.PI * 2;
+      const px = x + Math.cos(startAngle) * radius * 0.6;
+      const py = y + Math.sin(startAngle) * radius * 0.6;
+      const slash = scene.add.circle(px, py, 3, 0xff8833, 0.9);
+      slash.setDepth(8);
+      scene.tweens.add({
+        targets: slash,
+        x: x + Math.cos(startAngle + Math.PI) * radius,
+        y: y + Math.sin(startAngle + Math.PI) * radius,
+        alpha: 0,
+        scale: 0.3,
+        duration: duration || 500,
+        delay: i * 30,
+        onComplete: () => slash.destroy(),
+      });
+    }
+    // Central spin ring
+    const ring = scene.add.circle(x, y, radius, 0xff6600, 0.15);
+    ring.setDepth(7);
+    scene.tweens.add({
+      targets: ring,
+      scale: 1.3,
+      alpha: 0,
+      duration: (duration || 500) + 200,
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  function spawnChargeDashEffect(scene, fromX, fromY, toX, toY) {
+    // Dash trail: line of fading afterimages
+    const steps = 8;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const px = fromX + (toX - fromX) * t;
+      const py = fromY + (toY - fromY) * t;
+      const ghost = scene.add.circle(px, py, 6, 0xffcc44, 0.6 - t * 0.4);
+      ghost.setDepth(7);
+      scene.tweens.add({
+        targets: ghost,
+        alpha: 0,
+        scale: 0.2,
+        duration: 400,
+        delay: i * 30,
+        onComplete: () => ghost.destroy(),
+      });
+    }
+    // Impact flash at destination
+    const impact = scene.add.circle(toX, toY, 20, 0xffdd66, 0.7);
+    impact.setDepth(8);
+    scene.tweens.add({
+      targets: impact,
+      scale: 1.8,
+      alpha: 0,
+      duration: 300,
+      delay: steps * 30,
+      onComplete: () => impact.destroy(),
+    });
+    scene.cameras.main.shake(200, 0.003);
+  }
+
+  function spawnBattleShoutEffect(scene, x, y, radius) {
+    // Expanding shockwave ring
+    const ring = scene.add.circle(x, y, 10, 0xffaa00, 0.5);
+    ring.setStrokeStyle(3, 0xffcc00, 0.8);
+    ring.setDepth(8);
+    scene.tweens.add({
+      targets: ring,
+      scale: radius / 10,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => ring.destroy(),
+    });
+    // Exclamation particles radiating outward
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const spark = scene.add.circle(x, y, 2, 0xffdd44, 1);
+      spark.setDepth(9);
+      scene.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * radius * 0.8,
+        y: y + Math.sin(angle) * radius * 0.8,
+        alpha: 0,
+        duration: 500,
+        delay: i * 40,
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  function spawnFearEffect(scene, x, y) {
+    // Purple skull/swirl above feared monster
+    const fear = scene.add.circle(x, y - 20, 5, 0x9944dd, 0.8);
+    fear.setDepth(10);
+    scene.tweens.add({
+      targets: fear,
+      y: y - 35,
+      alpha: 0,
+      scale: 1.5,
+      duration: 800,
+      onComplete: () => fear.destroy(),
+    });
+  }
+
   function spawnBleedProc(scene, x, y) {
     // 4 small red circles that drift upward and fade — indicates a bleed proc
     for (let i = 0; i < 4; i++) {
@@ -282,6 +391,22 @@ const CombatFX = (() => {
           }
         }
       }
+      // Warrior skill effects (Phase 16.2)
+      if (ev.type === 'effect:spawn' && ev.effectType === 'whirlwind') {
+        const p = state.players?.find(p => p.id === ev.playerId);
+        if (p) spawnWhirlwindEffect(scene, p.x, p.y, ev.radius || 70, ev.duration || 500);
+      }
+      if (ev.type === 'effect:spawn' && ev.effectType === 'charge_dash') {
+        spawnChargeDashEffect(scene, ev.fromX, ev.fromY, ev.toX, ev.toY);
+      }
+      if (ev.type === 'effect:spawn' && ev.effectType === 'battle_shout') {
+        const p = state.players?.find(p => p.id === ev.playerId);
+        if (p) spawnBattleShoutEffect(scene, p.x, p.y, ev.radius || 150);
+      }
+      if (ev.type === 'debuff:apply' && ev.effect === 'fear') {
+        const m = state.world.monsters?.find(m => m.id === ev.targetId);
+        if (m) spawnFearEffect(scene, m.x, m.y);
+      }
       if (ev.type === 'effect:spawn' && ev.effectType === 'teleport') {
         const p = state.players?.find(p => p.id === ev.playerId);
         const sprite = p ? scene.playerSprites.get(p.id) : null;
@@ -311,5 +436,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect };
 })();
