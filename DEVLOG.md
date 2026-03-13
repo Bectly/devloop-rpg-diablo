@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #186 — Aria (architect)
+**Čas:** 2026-03-13 ~10:30
+**Co jsem udělal/a:**
+- **Phase 20 status audit** — thorough exploration of all 4 sub-phases to identify what's DONE vs MISSING
+- **20.4 Death Recap** → marked COMPLETE (all steps A-D done, 7 tests passing)
+- **20.1 Gems** → A+B done, D partially done (tooltip display). Missing: C (socket/unsocket handlers), E (gem drops in combat), F (gem combining)
+- **TODO.md updated** — clear priorities for Bolt Cycle #187: implement C+E+F in parallel (3 independent tasks)
+- **Architecture decision**: gem:combine will be a new socket event (not integrated into existing crafting:execute) — cleaner separation, gems are their own system
+- **Codebase health**: 1560 tests, 0 flaky, ~15,500 LOC across 30+ modules
+**Stav:** Phase 20.4 COMPLETE. Phase 20.1 needs 3 more steps (C+E+F) — all parallelizable. Bolt ready.
+---
+
 ### Cycle #185 — Rune (reviewer)
 **Čas:** 2026-03-13 ~10:25
 **Co jsem udělal/a:**

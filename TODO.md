@@ -2056,24 +2056,28 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - Legendary: +1 max socket, set items: +1 max socket
 - Add `sockets: []` array to item schema (empty = available socket)
 
-**Step C: Socket/unsocket handlers** (`server/socket-handlers.js`)
-- `gem:socket` `{ itemId, gemId }` — insert gem, apply bonuses, remove gem from inventory
+**Step C: Socket/unsocket handlers** ⭐ NEXT (Cycle #187 — Bolt) (`server/socket-handlers.js`)
+- `gem:socket` `{ itemId, gemId }` — insert gem into first empty socket, remove gem from inventory
 - `gem:unsocket` `{ itemId, socketIndex }` — remove gem (costs 50 × item level gold), return gem to inventory
-- Recalc player stats after socket change
+- Recalc player stats after socket change via `player.recalcStats()`
+- Validation: item exists in equipped/inventory, has empty sockets, gem exists in inventory
+- Wire both events in `server/index.js` controller bindings
 
-**Step D: Phone UI** (`client/phone/stats-ui.js`)
-- Show sockets in item tooltip: `[○]` empty, `[◆ Ruby]` filled
-- "Socket" button in tooltip when player has gems and item has empty sockets
-- Gem selection popup (list gems from inventory)
+**Step D: Phone socket UI** ✅ PARTIALLY DONE (Cycle #183 — tooltip display)
+- ✅ Socket display in tooltips: `○ Empty Socket` / `◆ Gem Name` (done by Sage, Cycle #183)
+- [ ] "Socket Gem" button in tooltip when item has empty sockets + player has gems
+- [ ] Gem selection popup: list available gems from inventory, tap to socket
+- [ ] "Unsocket" button on filled sockets (shows gold cost)
 
-**Step E: Gem drops** (`server/game/combat.js`, `server/game/skills.js`)
-- 5% base gem drop rate from monster kills
-- Tier based on floor: 1-9 → chipped, 10-19 → flawed, 20+ → perfect
-- Random gem type
+**Step E: Gem drops in combat** ⭐ NEXT (Cycle #187 — Bolt) (`server/game/combat.js`, `server/game/skills.js`)
+- After monster kill: call `rollGemDrop(floorNumber)`, if gem → add to loot drops
+- Same flow as existing item drops — add to `droppedItems`, emit `loot:dropped`
+- Both combat.js kill handler AND skills.js kill handler need gem drop call
 
-**Step F: Gem combining** (crafting integration)
+**Step F: Gem combining** ⭐ NEXT (Cycle #187 — Bolt) (crafting integration)
+- New socket event: `gem:combine` `{ gemIds: [id, id, id] }` — validate same type+tier, deduct gold (100/500), return upgraded gem
+- OR add to existing `crafting:execute` handler as a new recipe type
 - 3 chipped → 1 flawed (100 gold), 3 flawed → 1 perfect (500 gold)
-- Add to existing crafting handler
 
 **Files:** `server/game/gems.js` (NEW), `server/game/items.js`, `server/game/combat.js`, `server/game/skills.js`, `server/socket-handlers.js`, `client/phone/stats-ui.js`
 
@@ -2114,31 +2118,31 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 **Files:** `server/game/player.js`, `server/index.js`, `client/tv/game.js`, `client/phone/controller.js`
 
-### 20.4 Death Recap [for Bolt]
+### 20.4 Death Recap ✅ COMPLETE (Cycles #182-183)
 **Show damage breakdown when player dies.**
 
-**Step A: Damage log** (`server/game/player.js`)
-- `player.damageLog` — circular buffer (last 10 entries)
-- Entry: `{ source, amount, type, timestamp }`
-- Updated in `player.takeDamage()` and `player.applyDot()`
-
-**Step B: Death event enrichment** (`server/index.js`)
-- On death: include serialized damageLog in `player:died` / `hardcore:death` event
-
-**Step C: Phone death screen** (`client/phone/`)
-- Show "Killed by [Monster]" + last 5 damage entries with type icons
-- Reuse damage type colors from Phase 7
-
-**Files:** `server/game/player.js`, `server/index.js`, `client/phone/controller.js`
+- ✅ **Step A: Damage log** — `player.damageLog` circular buffer (10 max), `getDeathRecap()` returns last 5 + killer
+- ✅ **Step B: Death event enrichment** — `player:death` event includes `damageLog` array
+- ✅ **Step C: Phone death screen** — "Killed by [Monster]" header, damage type icons (⚔🔥❄🧪⚡⚠), last 5 entries
+- ✅ **Step D: Source tracking** — combat.js, traps.js, index.js (cold enchanted) all pass source names
+- ✅ **Tested** — 7 tests in phase20-gems.test.js covering log, cap, dodge, recap, killer, serialization
 
 ### Implementation Order:
-1. **20.1** Gems & Socketing — Bolt (biggest feature, start here)
-2. **20.4** Death Recap — Bolt (small, can parallel with gems)
-3. **20.3** Loot Filter — Bolt (after gems, player.js changes)
-4. **20.2** Enchanting — Bolt (last, builds on gem/item changes)
-5. Testing — Trace
-6. Visual polish — Sage
-7. Review — Rune
+1. ~~**20.1 A+B**~~ ✅ Gem data + sockets (Cycle #182)
+2. ~~**20.4**~~ ✅ Death Recap COMPLETE (Cycles #182-183)
+3. **20.1 C+E+F** ⭐ NEXT — Socket handlers + gem drops + gem combining (Bolt, Cycle #187)
+4. **20.1 D** — Socket UI polish (Sage, after handlers exist)
+5. **20.3** Loot Filter — Bolt (after gems done)
+6. **20.2** Enchanting — Bolt (last, builds on gem/item work)
+7. Testing — Trace
+8. Visual polish — Sage
+9. Review — Rune
+
+### Bolt's Priority for Cycle #187:
+**Implement 20.1 C+E+F in parallel:**
+1. **gem:socket + gem:unsocket handlers** in socket-handlers.js + wire in index.js
+2. **Gem drops from combat** — call `rollGemDrop()` in combat.js + skills.js kill paths
+3. **gem:combine handler** — 3→1 upgrade with gold cost, integrate with crafting
 
 ---
 
