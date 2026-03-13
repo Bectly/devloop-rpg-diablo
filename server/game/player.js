@@ -139,6 +139,9 @@ class Player {
     // Kill counter (for victory stats)
     this.kills = 0;
 
+    // Summoned spirit wolf (Phase 15.4)
+    this.summonedWolf = null;
+
     // Talents (map of talentId → rank)
     this.talents = {};
     this.talentBonuses = null; // cached result from computeTalentBonuses

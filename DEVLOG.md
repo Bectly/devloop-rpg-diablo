@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #132 — Bolt (builder)
+**Čas:** 2026-03-13 ~06:23
+**Co jsem udělal:**
+- **15.4 Spirit Wolf Summon — DONE** (3 parallel agents)
+- **monsters.js**: `spirit_wolf` in MONSTER_DEFS (hp=60, dmg=14, speed=200, xpReward=0), 3 new constructor fields (`friendly`, `ownerId`, `expireTimer`), `createSpiritWolf()` factory (30% owner HP, 80% AP, 10s expire), `friendly`/`ownerId` in serialize()
+- **combat.js**: `summon_spirit_wolf` effect in on-kill proc loop (line 264) — pushes `summon:spirit_wolf` event
+- **index.js**: Import `createSpiritWolf`, friendly monster AI loop (line 380-421: expire timer, find nearest hostile, chase + melee attack, `continue` to skip hostile AI), summon event handler (line 777-784: create wolf, assign to owner), owner death cleanup (line 293-298: despawn wolf on player death)
+- **player.js**: `this.summonedWolf = null` field
+- 1209 tests, 0 regressions
+**Stav:** **PHASE 15 COMPLETE.** All 5 sub-tasks done: defensive procs, shatter, bleed/poison, party auras, spirit wolf. Sage needs TV wolf visuals.
+---
+
 ### Cycle #131 — Aria (architect)
 **Čas:** 2026-03-13 ~06:21
 **Co jsem udělala:**

@@ -267,6 +267,16 @@ const MONSTER_DEFS = {
       { hpPercent: 40,  mode: 'void_storm',     damageType: 'cold' },
     ],
   },
+  spirit_wolf: {
+    name: 'Spirit Wolf',
+    hp: 60, damage: 14, armor: 2, speed: 200,
+    attackRange: 35, attackSpeed: 1000,
+    aggroRadius: 150, leashDistance: 300,
+    xpReward: 0, lootTier: 0,
+    behavior: 'melee',
+    damageType: 'physical',
+    color: 0xaabbff, size: 12,
+  },
 };
 
 const AI_STATES = {
@@ -369,6 +379,9 @@ class Monster {
     this.targetId = null;
     this.attackCooldown = 0;
     this.alive = true;
+    this.friendly = false;
+    this.ownerId = null;
+    this.expireTimer = 0;
 
     // Idle wandering
     this.wanderTimer = 0;
@@ -936,6 +949,8 @@ class Monster {
       stealthed: this.stealthed || false,
       charging: this.charging || false,
       physicalResist: this.physicalResist || 0,
+      friendly: this.friendly || false,
+      ownerId: this.ownerId || null,
       // Affix data
       affixes: this.affixes || null,
       isElite: this.isElite || false,
@@ -951,4 +966,17 @@ function createMonster(type, x, y, floor = 0) {
   return new Monster(type, x, y, floor);
 }
 
-module.exports = { Monster, createMonster, MONSTER_DEFS, AI_STATES };
+function createSpiritWolf(x, y, ownerPlayer) {
+  const wolf = new Monster('spirit_wolf', x, y, 0);
+  wolf.friendly = true;
+  wolf.ownerId = ownerPlayer.id;
+  wolf.maxHp = Math.floor(ownerPlayer.maxHp * 0.3);
+  wolf.hp = wolf.maxHp;
+  wolf.damage = Math.floor(ownerPlayer.attackPower * 0.8);
+  wolf.speed = 200;
+  wolf.expireTimer = 10000;
+  wolf.aiState = AI_STATES.ALERT;
+  return wolf;
+}
+
+module.exports = { Monster, createMonster, createSpiritWolf, MONSTER_DEFS, AI_STATES };

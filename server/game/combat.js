@@ -261,6 +261,13 @@ class CombatSystem {
               const heal = Math.floor(player.maxHp * (proc.value || 15) / 100);
               player.hp = Math.min(player.maxHp, player.hp + heal);
               this.events.push({ type: 'combat:proc', targetId: player.id, attackerId: player.id, effect: 'heal_on_kill', heal });
+            } else if (proc.effect === 'summon_spirit_wolf') {
+              this.events.push({
+                type: 'summon:spirit_wolf',
+                playerId: player.id,
+                x: nearest.x,
+                y: nearest.y,
+              });
             }
           }
         }

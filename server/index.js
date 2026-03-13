@@ -10,7 +10,7 @@ const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
 const { generateConsumable, generateLoot, generateWeapon, generateArmor } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
-const { createMonster } = require('./game/monsters');
+const { createMonster, createSpiritWolf } = require('./game/monsters');
 const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
 const { getRiftRewards } = require('./game/rifts');
 const uuid = require('uuid');
@@ -289,6 +289,14 @@ function gameLoop() {
     // Decrement Last Stand timer (defensive proc — Phase 15.0)
     if (player.lastStandTimer > 0) player.lastStandTimer -= dt;
 
+    // Owner death → despawn spirit wolf (Phase 15.4)
+    if (player.isDying && player.summonedWolf) {
+      for (const m of world.monsters) {
+        if (m.id === player.summonedWolf) { m.alive = false; m.expireTimer = 0; }
+      }
+      player.summonedWolf = null;
+    }
+
     if (player.disconnected) {
       player.inputDx = savedDx;
       player.inputDy = savedDy;
@@ -376,6 +384,49 @@ function gameLoop() {
   const worldBounds = { width: GRID_W * TILE_SIZE, height: GRID_H * TILE_SIZE };
   for (const monster of world.monsters) {
     if (!monster.alive) continue;
+
+    // Friendly summon AI (spirit wolf — Phase 15.4)
+    if (monster.friendly) {
+      monster.expireTimer -= dt;
+      if (monster.expireTimer <= 0) {
+        monster.alive = false;
+        for (const p of allPlayers) {
+          if (p.summonedWolf === monster.id) p.summonedWolf = null;
+        }
+        continue;
+      }
+      // Attack cooldown
+      if (monster.attackCooldown > 0) monster.attackCooldown -= dt;
+      // Find nearest hostile monster
+      let nearestEnemy = null;
+      let nearestDist = Infinity;
+      for (const m of world.monsters) {
+        if (m === monster || !m.alive || m.friendly) continue;
+        const dx = m.x - monster.x;
+        const dy = m.y - monster.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < nearestDist) { nearestDist = d; nearestEnemy = m; }
+      }
+      if (nearestEnemy && nearestDist <= monster.attackRange) {
+        if (monster.attackCooldown <= 0) {
+          monster.attackCooldown = monster.attackSpeed;
+          const dealt = nearestEnemy.takeDamage(monster.damage);
+          combat.events.push({
+            type: 'combat:hit', attackerId: monster.id, targetId: nearestEnemy.id,
+            damage: dealt, attackType: 'wolf_bite',
+          });
+        }
+      } else if (nearestEnemy) {
+        const dx = nearestEnemy.x - monster.x;
+        const dy = nearestEnemy.y - monster.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+          monster.x += (dx / len) * monster.speed * (dt / 1000);
+          monster.y += (dy / len) * monster.speed * (dt / 1000);
+        }
+      }
+      continue;
+    }
 
     combat.processPoison(monster, dt);
     combat.processBleed(monster, dt);
@@ -770,6 +821,16 @@ function gameLoop() {
             children: splits.map(s => s.serialize()),
           });
         }
+      }
+    }
+
+    // Summon spirit wolf (Phase 15.4)
+    if (event.type === 'summon:spirit_wolf') {
+      const owner = allPlayers.find(p => p.id === event.playerId);
+      if (owner && !owner.summonedWolf) {
+        const wolf = createSpiritWolf(event.x, event.y, owner);
+        world.monsters.push(wolf);
+        owner.summonedWolf = wolf.id;
       }
     }
 
