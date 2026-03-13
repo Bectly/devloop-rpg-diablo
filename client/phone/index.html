@@ -105,6 +105,7 @@
         <button id="btn-quests" class="action-btn quest-btn">QST</button>
         <button id="btn-craft" class="action-btn craft-btn">CRF</button>
         <button id="btn-chat" class="action-btn chat-btn">MSG</button>
+        <button id="btn-talents" class="action-btn talent-btn">TLN</button>
         <button id="btn-leaderboard" class="action-btn ldb-btn">LDB</button>
       </div>
     </div>
@@ -151,6 +152,15 @@
     <div id="item-tooltip" class="hidden"></div>
   </div>
 
+  <!-- Talent Screen -->
+  <div id="talent-screen" class="hidden">
+    <div id="talent-header-bar">
+      <h2>Talents</h2>
+      <button id="talent-close">&times;</button>
+    </div>
+    <div id="talent-tree-container"></div>
+  </div>
+
   <!-- Dialogue Screen -->
   <div id="dialogue-screen" class="hidden">
     <div id="dialogue-box">
@@ -174,6 +184,7 @@
   <script src="stats-ui.js"></script>
   <script src="death-victory.js"></script>
   <script src="chat-ui.js"></script>
+  <script src="talents-ui.js"></script>
   <script src="controller.js"></script>
 </body>
 </html>

@@ -970,7 +970,7 @@ Engine functions:
 2. Save/load talents in `saveCharacter()` / `loadCharacter()`
 3. No migration needed — SQLite `DEFAULT '{}'` handles new column gracefully
 
-### 13.3 Talent UI — Phone [for Sage]
+### 13.3 Talent UI — Phone [DONE — Sage, Cycle #103]
 **Files:** `client/phone/talents-ui.js` (NEW), `client/phone/index.html`, `client/phone/style.css`
 
 1. New screen accessible from stats panel ("Talents" tab/button)

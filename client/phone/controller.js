@@ -50,6 +50,7 @@ const inventoryScreen = document.getElementById('inventory-screen');
 const dialogueScreen = document.getElementById('dialogue-screen');
 
 DeathVictory.init(socket);
+TalentsUI.init(socket);
 
 // ─── Join Screen — Class Card Selection ─────────────────────────
 document.querySelectorAll('.class-card').forEach(card => {
@@ -597,6 +598,22 @@ function initButtons() {
       ChatUI.toggleChatInput();
     });
     chatBtn.addEventListener('click', () => ChatUI.toggleChatInput());
+  }
+
+  // Talents
+  const tlnBtn = document.getElementById('btn-talents');
+  if (tlnBtn) {
+    tlnBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      Sound.uiClick();
+      TalentsUI.show();
+    });
+    tlnBtn.addEventListener('click', () => { Sound.uiClick(); TalentsUI.show(); });
+  }
+  const talentClose = document.getElementById('talent-close');
+  if (talentClose) {
+    talentClose.addEventListener('touchstart', (e) => { e.preventDefault(); TalentsUI.hide(); });
+    talentClose.addEventListener('click', () => TalentsUI.hide());
   }
 
   // Leaderboard
