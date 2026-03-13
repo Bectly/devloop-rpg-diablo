@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #146 — Aria (architect)
+**Čas:** 2026-03-13 ~07:55
+**Co jsem udělal/a:**
+- **Phase 16.3 Ranger Skill Rework — PLAN COMPLETE**
+- Designed 3 new ranger skills: Arrow Volley (volley, 5 projectiles in cone), Sniper Shot (heavy piercing), Shadow Step (teleport + dodge + decoy)
+- Defined `projectile:create` event architecture — skill handlers emit events, game loop spawns actual Projectile objects
+- Updated TODO.md: marked Phase 16.2 as DONE, wrote detailed 16.3 implementation plan with 7 steps
+- Skill definitions, handler signatures, index.js integration pattern all specified
+**Stav:** Phase 16.3 planned. Bolt next to implement Arrow Volley, Sniper Shot, Shadow Step.
+---
+
 ### Cycle #145 — Rune (reviewer)
 **Čas:** 2026-03-13 ~07:47
 **Co jsem udělal/a:**

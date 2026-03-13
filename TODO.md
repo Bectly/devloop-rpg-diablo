@@ -1726,31 +1726,48 @@ This lets TV client differentiate friendly wolves visually.
 - [x] damageType passed to takeDamage() for elemental projectiles
 - [x] 21 tests in projectiles.test.js
 
-### 16.2 Warrior Skill Rework [for Bolt — TOP PRIORITY]
+### 16.2 Warrior Skill Rework ✅ DONE (Bolt #142, Sage #143, Trace #144, Rune #145)
+- [x] 3 new skill types: `spin` (Whirlwind), `charge` (Charging Strike), `buff_debuff` (Battle Shout)
+- [x] Fear mechanic: `applyFear()`, FLEE state timer, serialize
+- [x] TV visuals: whirlwind particles, charge trail, shockwave, fear purple tint
+- [x] 30 tests (phase16-warrior.test.js), 1271/1271 PASS
+- [x] Review: talents.js, sets.js, reconnect.js stale refs fixed
 
-**Skill changes:**
+### 16.3 Ranger Skill Rework [for Bolt — TOP PRIORITY]
 
 | Old Skill | New Skill | Type | Key Change |
 |-----------|-----------|------|------------|
-| Cleave (aoe, 1.8x, r60) | **Whirlwind** (spin, 0.6x × 3 hits, r70) | NEW `spin` | Multi-hit AOE, 3 damage ticks, same total damage |
-| Shield Bash (single, 1.2x, stun) | **Charging Strike** (charge, 2.0x, dash+stun) | NEW `charge` | Dash to target, trail damage (0.5x), stun on arrival |
-| War Cry (buff, attack_up 8s) | **Battle Shout** (buff_debuff, attack_up 8s + fear) | NEW `buff_debuff` | Same party buff + Intimidate (fear r150, 1.5s) |
+| Multi-Shot (projectile, 3 arrows) | **Arrow Volley** (volley, 5 projectiles, 30° cone, piercing) | NEW `volley` | 5 arrows, 60% ATK each, pierce first target |
+| Power Shot (single target high) | **Sniper Shot** (sniper, heavy piercing projectile) | NEW `sniper` | 300% ATK, pierces ALL targets, range 400, slow + visible trail |
+| Evasion (+dodge buff 5s) | **Shadow Step** (shadow_step, teleport + dodge) | NEW `shadow_step` | Teleport 100px, 100% dodge 1s, shadow decoy (aggro 2s) |
 
 **Implementation order for Bolt:**
-1. `monsters.js` — Add `feared` field, `applyFear()` method, update FLEE state to respect fear timer, update serialize
-2. `player.js:14-18` — Replace 3 warrior skill definitions (new names, types, properties)
-3. `damage-types.js` — Rename Cleave/Shield Bash/War Cry → Whirlwind/Charging Strike/Battle Shout
-4. `skills.js` — Add 3 new handlers (`executeSpin`, `executeCharge`, `executeBuffDebuff`) + 3 switch cases (~140 LOC)
-5. `client/tv/combat-fx.js` — Update 'War Cry' → 'Battle Shout' reference
-6. Update existing tests (skill names changed)
+1. `player.js` — Replace 3 ranger skill definitions:
+   ```
+   Arrow Volley:  { type: 'volley', mpCost: 18, cooldown: 3000, damage: 0.6, projectileCount: 5, spreadAngle: 30, piercing: true, range: 300 }
+   Sniper Shot:   { type: 'sniper', mpCost: 25, cooldown: 8000, damage: 3.0, piercing: true, range: 400, speed: 200 }
+   Shadow Step:   { type: 'shadow_step', mpCost: 20, cooldown: 7000, range: 100, dodgeDuration: 1000, decoyDuration: 2000 }
+   ```
+2. `damage-types.js` — Update ranger skill entries (Arrow Volley, Sniper Shot, Shadow Step)
+3. `skills.js` — Add 3 new handlers:
+   - `executeVolley(player, skill, monsters)` — emit `projectile:create` events for 5 angled projectiles
+   - `executeSniper(player, skill, monsters)` — emit `projectile:create` for single heavy piercing projectile
+   - `executeShadowStep(player, skill, monsters, allPlayers)` — teleport player, apply dodge buff, spawn shadow decoy
+   - Add 3 switch cases: `'volley'`, `'sniper'`, `'shadow_step'`
+   - Import `createProjectileAngled` from projectiles.js for angle math
+4. `index.js` — Add `projectile:create` event handler in game loop:
+   ```
+   // In results processing: if (ev.type === 'projectile:create') { createProjectileAngled(ev.ownerId, ev.x, ev.y, ev.angle, ev.speed, ev.damage, ev.damageType, ev.piercing); }
+   ```
+5. `client/tv/combat-fx.js` — Update ranger skill visual references
+6. `client/phone/screens.js` — Update ranger skill tooltips
+7. Update existing tests (skill names changed)
 
-### 16.3 Ranger Skill Rework [for Bolt]
-
-| Skill | Current | New |
-|-------|---------|-----|
-| Arrow Rain | AOE damage in area | **Arrow Volley** — fires 5 projectiles in a cone (30° spread), each deals 60% ATK. Piercing (goes through first target) |
-| Evasion | +dodge buff 5s | **Shadow Step** — teleport 100px in movement direction, gain 100% dodge for 1s. Leave shadow decoy (draws aggro 2s) |
-| Power Shot | Single target high damage | **Sniper Shot** — fires one heavy projectile (300% ATK), pierces all targets in a line. Range 400px. Slow projectile with visible trail |
+**Architecture: projectile:create events**
+- Skill handlers DON'T create Projectile objects directly (no access to world state)
+- Instead, they emit `{ type: 'projectile:create', ownerId, x, y, angle, speed, damage, damageType, piercing }` events
+- Game loop in index.js catches these and calls `createProjectileAngled()` to spawn actual projectiles
+- This keeps skills.js decoupled from world/projectile state
 
 ### 16.4 Mage Skill Rework [for Bolt]
 
