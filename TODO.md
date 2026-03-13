@@ -210,14 +210,15 @@ Diablo-style item sets — wear multiple pieces for escalating bonuses.
   - Items have `item.setId` field (e.g. 'ironwall', 'shadowweave')
   - `item.isSetItem = true`
 
-### 8.2 Set UI — Phone [Sage]
-- [ ] **Set item tooltip:** green text, shows set name + which pieces owned
-- [ ] **Set bonus display:** in equipment screen, show active set bonuses
-- [ ] **Set piece tracker:** "Ironwall (2/3)" with checkmarks for owned pieces
+### 8.2 Set UI — Phone [DONE — Sage, Cycle #58]
+- [x] **Set item tooltip:** green text, set name, piece checklist, bonus thresholds (active/inactive)
+- [x] **Set bonus display:** "Sets" section in stats screen with active bonuses
+- [x] **Set piece tracker:** checkmarks for owned pieces, gray for missing
+- [x] **Set bonus notification:** green toast on new set bonus activation
 
-### 8.3 Set UI — TV [Sage]
-- [ ] **Green name text** for set items on ground (like blue for magic, yellow for rare)
-- [ ] **Set completion notification** on TV: "🏛 Ironwall Set Complete! (3/3)"
+### 8.3 Set UI — TV [DONE — Sage, Cycle #58]
+- [x] **Green sparkle** for set items on ground (6 green sparkles)
+- [x] **Set announcement:** "Ironwall Set (2/3)" or "Complete! (3/3)" with green text + particles
 
 ### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)

@@ -472,6 +472,53 @@ window.HUD = {
     });
   },
 
+  // ── Set Bonus Announcement ──
+  showSetAnnouncement(scene, text, isComplete) {
+    const GAME_W = 1280;
+    const GAME_H = 720;
+
+    const overlay = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.5)
+      .setScrollFactor(0).setDepth(2000);
+
+    const mainText = scene.add.text(GAME_W / 2, GAME_H / 2 - 10, text, {
+      fontSize: isComplete ? '26px' : '22px',
+      fontFamily: 'Courier New',
+      color: '#00cc66',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+
+    scene.tweens.add({
+      targets: mainText, alpha: 1, scale: 1,
+      duration: 400, ease: 'Back.easeOut',
+    });
+
+    // Green sparkle particles
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2;
+      const px = GAME_W / 2 + Math.cos(angle) * 200;
+      const py = GAME_H / 2 + Math.sin(angle) * 40;
+      const spark = scene.add.circle(GAME_W / 2, GAME_H / 2, 2, 0x00cc66, 0.8);
+      spark.setScrollFactor(0).setDepth(2002);
+      scene.tweens.add({
+        targets: spark,
+        x: px, y: py, alpha: 0,
+        duration: 600, delay: 100 + i * 40,
+        ease: 'Cubic.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+
+    scene.time.delayedCall(2200, () => {
+      scene.tweens.add({
+        targets: [overlay, mainText],
+        alpha: 0, duration: 400,
+        onComplete: () => { overlay.destroy(); mainText.destroy(); },
+      });
+    });
+  },
+
   // ── Room Discovery Flash ──
   showRoomDiscovery(scene) {
     const GAME_W = 1280;

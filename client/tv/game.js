@@ -45,6 +45,8 @@ let gameState = {
   world: { monsters: [], groundItems: [], tiles: null, roomName: '', rooms: [] },
   events: [],
 };
+// Track active set bonuses per player for set completion announcements
+let _prevActiveSets = {}; // playerId → serialized active bonus keys
 
 // ─── Phaser Scenes ──────────────────────────────────────────────
 
@@ -809,6 +811,37 @@ socket.on('init', (data) => {
 });
 
 socket.on('state', (data) => {
+  // Detect new set bonuses for announcements
+  if (data.players && window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      for (const p of data.players) {
+        if (!p.activeSets || p.activeSets.length === 0) {
+          _prevActiveSets[p.id] = new Set();
+          continue;
+        }
+        const prev = _prevActiveSets[p.id] || new Set();
+        const curr = new Set();
+        for (const as of p.activeSets) {
+          for (const b of as.bonuses) {
+            if (b.active) {
+              const key = `${as.setId}:${b.threshold}`;
+              curr.add(key);
+              if (!prev.has(key)) {
+                // New set bonus activated!
+                const isComplete = as.pieces >= as.totalPieces;
+                const label = isComplete
+                  ? `\uD83C\uDFDB ${as.name} Set Complete! (${as.pieces}/${as.totalPieces})`
+                  : `\u2694 ${as.name} Set (${as.pieces}/${as.totalPieces}) \u2014 ${b.description}`;
+                HUD.showSetAnnouncement(scene, label, isComplete);
+              }
+            }
+          }
+        }
+        _prevActiveSets[p.id] = curr;
+      }
+    }
+  }
   gameState = data;
 });
 

@@ -22,6 +22,7 @@
   --rarity-rare: #4488ff;
   --rarity-epic: #bb44ff;
   --rarity-legendary: #ff8800;
+  --rarity-set: #00cc66;
 }
 
 /* ─── Reset & Base ─────────────────────────────────────────── */
@@ -512,6 +513,13 @@ html, body {
   border-color: rgba(255, 204, 0, 0.5);
   box-shadow: 0 0 25px rgba(255, 204, 0, 0.4);
   font-size: 16px;
+}
+
+.notification-toast.set_bonus {
+  background: rgba(0, 153, 77, 0.9);
+  border-color: rgba(0, 204, 102, 0.5);
+  box-shadow: 0 0 20px rgba(0, 204, 102, 0.4);
+  font-size: 15px;
 }
 
 /* Welcome back — shown after reconnect session restore */
@@ -1218,6 +1226,7 @@ html, body {
 .shop-item-name.rare { color: var(--rarity-rare); }
 .shop-item-name.epic { color: var(--rarity-epic); }
 .shop-item-name.legendary { color: var(--rarity-legendary); }
+.shop-item-name.set { color: var(--rarity-set); }
 
 .shop-item-type {
   font-size: 10px;
@@ -1539,6 +1548,7 @@ html, body {
 .quest-reward-item.rare { color: var(--rarity-rare); }
 .quest-reward-item.epic { color: var(--rarity-epic); }
 .quest-reward-item.legendary { color: var(--rarity-legendary); }
+.quest-reward-item.set { color: var(--rarity-set); }
 
 /* ===== Skill Tooltip ===== */
 .skill-tooltip {
@@ -1833,4 +1843,57 @@ html, body {
 @keyframes debuff-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+/* ─── Set Items ──────────────────────────────────────────────── */
+.set-item { color: #00cc66; }
+.set-bonus-active { color: #00cc66; font-size: 10px; margin-top: 2px; }
+.set-bonus-inactive { color: #666666; font-size: 10px; margin-top: 2px; }
+.set-piece-owned { color: #00cc66; font-size: 10px; }
+.set-piece-missing { color: #555555; font-size: 10px; }
+
+/* Tooltip set info */
+.tt-set-header {
+  color: #00cc66;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 204, 102, 0.2);
+}
+
+.tt-set-pieces {
+  margin-top: 2px;
+}
+
+.tt-set-bonuses {
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Stats panel — active sets section */
+.sets-section {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 204, 102, 0.15);
+}
+
+.sets-title {
+  color: #00cc66;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.set-row {
+  margin-bottom: 6px;
+}
+
+.set-row-name {
+  color: #00cc66;
+  font-size: 11px;
+  font-weight: bold;
 }

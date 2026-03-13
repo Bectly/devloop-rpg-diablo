@@ -433,6 +433,7 @@ window.Sprites = {
     sprite._baseY = gi.y;
     sprite._isLegendary = (gi.rarity === 'legendary' || gi.rarity === 'Legendary'
       || (gi.rarityColor && gi.rarityColor.toLowerCase() === '#ff8800'));
+    sprite._isSetItem = (gi.rarity === 'set' || gi.isSetItem);
 
     // Rarity-colored glow ring
     const glowColor = Sprites._parseColor(gi.rarityColor || '#aaaaaa');
@@ -461,6 +462,17 @@ window.Sprites = {
       }
     }
 
+    // Set item sparkle sprites (green, 6 sparkles, slightly larger radius)
+    if (sprite._isSetItem && !sprite._isLegendary) {
+      sprite._sparkles = [];
+      for (let si = 0; si < 6; si++) {
+        const sparkle = scene.add.graphics().setDepth(7);
+        sparkle._angle = (Math.PI * 2 / 6) * si;
+        sparkle._radius = 16;
+        sprite._sparkles.push(sparkle);
+      }
+    }
+
     return sprite;
   },
 
@@ -480,16 +492,17 @@ window.Sprites = {
     sprite.glow.lineStyle(1, sprite._glowColor, glowAlpha);
     sprite.glow.strokeCircle(sprite._glowX, sprite._baseY + bobOffset, 18);
 
-    // Legendary rotating sparkles
-    if (sprite._isLegendary && sprite._sparkles) {
+    // Legendary / Set rotating sparkles
+    if (sprite._sparkles) {
       const time = Date.now() / 800;
+      const sparkColor = sprite._isSetItem ? 0x00cc66 : 0xffcc00;
       for (const sparkle of sprite._sparkles) {
         sparkle.clear();
         const a = sparkle._angle + time;
         const sx = sprite._glowX + Math.cos(a) * sparkle._radius;
         const sy = sprite._baseY + bobOffset + Math.sin(a) * sparkle._radius;
         const sparkAlpha = 0.5 + Math.sin(time * 3 + sparkle._angle) * 0.5;
-        sparkle.fillStyle(0xffcc00, sparkAlpha);
+        sparkle.fillStyle(sparkColor, sparkAlpha);
         sparkle.fillRect(sx - 1, sy - 3, 2, 6);
         sparkle.fillRect(sx - 3, sy - 1, 6, 2);
       }

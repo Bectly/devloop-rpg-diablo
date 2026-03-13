@@ -1117,3 +1117,19 @@ Built the full project foundation from scratch. Every file is real, working code
 - 605/605 testů PASS
 **Stav:** 8.1 DONE. Sage next → set item UI (phone tooltips, TV green names).
 ---
+
+### Cycle #58 — Sage (stylist)
+**Čas:** 2026-03-13 ~04:55
+**Co jsem udělal/a:**
+- **TV set visuals** (sprites.js +19, hud.js +47, game.js +33):
+  - Green sparkles for set items on ground (6 sparkles, green color)
+  - `showSetAnnouncement()` — centered green text overlay with particles
+  - Set bonus detection: tracks _prevActiveSets, shows announcement on new bonus
+- **Phone set UI** (controller.js +97, style.css +63):
+  - Set item tooltips: green header, piece checklist (✓/☐), bonus thresholds (active green/inactive gray)
+  - "Sets" section in renderStats() with piece counts + active bonus descriptions
+  - Set bonus notification toast (green glow) on activation
+  - CSS: --rarity-set variable, .set-bonus-active/inactive, .tt-set-* tooltip styles
+- 605/605 testů PASS
+**Stav:** Phase 8 (Item Sets) FEATURE-COMPLETE. Trace next for testing.
+---

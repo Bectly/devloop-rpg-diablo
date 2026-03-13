@@ -98,7 +98,37 @@ socket.on('joined', (data) => {
   }
 });
 
+let _prevSetBonusKeys = new Set();
+
 socket.on('stats:update', (data) => {
+  // Detect newly activated set bonuses
+  if (data.activeSets && data.activeSets.length > 0) {
+    const currKeys = new Set();
+    for (const as of data.activeSets) {
+      for (const b of as.bonuses) {
+        if (b.active) currKeys.add(`${as.setId}:${b.threshold}`);
+      }
+    }
+    for (const key of currKeys) {
+      if (!_prevSetBonusKeys.has(key)) {
+        const [setId, threshold] = key.split(':');
+        const as = data.activeSets.find(s => s.setId === setId);
+        if (as) {
+          const isComplete = as.pieces >= as.totalPieces;
+          const bonus = as.bonuses.find(b => b.threshold === parseInt(threshold));
+          const text = isComplete
+            ? `\uD83C\uDFDB ${as.name} Set Complete! (${as.pieces}/${as.totalPieces})`
+            : `\u2694 ${as.name} (${as.pieces}/${as.totalPieces}) \u2014 ${bonus ? bonus.description : ''}`;
+          showNotification(text, 'set_bonus');
+          if (navigator.vibrate) navigator.vibrate([50, 30, 80]);
+        }
+      }
+    }
+    _prevSetBonusKeys = currKeys;
+  } else {
+    _prevSetBonusKeys = new Set();
+  }
+
   playerStats = data;
   updateHUD(data);
 });
@@ -813,6 +843,45 @@ function renderStats() {
 
     statList.parentNode.appendChild(resistSection);
   }
+
+  // Active sets display
+  if (playerStats.activeSets && playerStats.activeSets.length > 0) {
+    // Remove previous set section on re-render
+    const oldSets = statList.parentNode.querySelector('.sets-section');
+    if (oldSets) oldSets.remove();
+
+    const setsSection = document.createElement('div');
+    setsSection.className = 'sets-section';
+
+    const setsTitle = document.createElement('div');
+    setsTitle.className = 'sets-title';
+    setsTitle.textContent = 'Sets';
+    setsSection.appendChild(setsTitle);
+
+    for (const as of playerStats.activeSets) {
+      const setRow = document.createElement('div');
+      setRow.className = 'set-row';
+
+      const setName = document.createElement('div');
+      setName.className = 'set-row-name';
+      setName.textContent = `${as.name} (${as.pieces}/${as.totalPieces})`;
+      setRow.appendChild(setName);
+
+      for (const b of as.bonuses) {
+        const bonusEl = document.createElement('div');
+        bonusEl.className = b.active ? 'set-bonus-active' : 'set-bonus-inactive';
+        bonusEl.textContent = `(${b.threshold}) ${b.description}`;
+        setRow.appendChild(bonusEl);
+      }
+
+      setsSection.appendChild(setRow);
+    }
+
+    statList.parentNode.appendChild(setsSection);
+  } else {
+    const oldSets = statList.parentNode.querySelector('.sets-section');
+    if (oldSets) oldSets.remove();
+  }
 }
 
 // ─── Item Tooltip ───────────────────────────────────────────────
@@ -842,6 +911,34 @@ function showTooltip(item, anchor, isEquipped, slotName) {
     }
   }
   if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;
+
+  // Set item info
+  if (item.isSetItem && item.setId && playerStats && playerStats.activeSets) {
+    const setInfo = playerStats.activeSets.find(s => s.setId === item.setId);
+    const pieces = setInfo ? setInfo.pieces : 0;
+    const total = setInfo ? setInfo.totalPieces : 3;
+    html += `<div class="tt-set-header">Set: ${setInfo ? setInfo.name : item.setId} (${pieces}/${total})</div>`;
+
+    // Show set pieces from equipment
+    if (playerStats.equipment) {
+      html += '<div class="tt-set-pieces">';
+      for (const [slot, eq] of Object.entries(playerStats.equipment)) {
+        if (eq && eq.setId === item.setId) {
+          html += `<div class="set-piece-owned">\u2713 ${eq.name}</div>`;
+        }
+      }
+      html += '</div>';
+    }
+
+    // Show set bonuses (active = green, inactive = gray)
+    html += '<div class="tt-set-bonuses">';
+    const activeBonuses = setInfo ? setInfo.bonuses : [];
+    const b2 = activeBonuses.find(b => b.threshold === 2);
+    const b3 = activeBonuses.find(b => b.threshold === 3);
+    html += `<div class="${b2 ? 'set-bonus-active' : 'set-bonus-inactive'}">(2) ${b2 ? b2.description : '???'}</div>`;
+    html += `<div class="${b3 ? 'set-bonus-active' : 'set-bonus-inactive'}">(3) ${b3 ? b3.description : '???'}</div>`;
+    html += '</div>';
+  }
 
   html += '<div class="tt-actions">';
   if (isEquipped) {
