@@ -126,6 +126,11 @@ controllerNs.on('connection', (socket) => {
   socket.on('shop:buy', (data) => handlers.handleShopBuy(socket, data, ctx));
   socket.on('shop:sell', (data) => handlers.handleShopSell(socket, data, ctx));
   socket.on('shrine:use', () => handlers.handleShrineUse(socket, null, ctx));
+  socket.on('craft:info', (data) => handlers.handleCraftInfo(socket, data, ctx));
+  socket.on('craft:salvage', (data) => handlers.handleCraftSalvage(socket, data, ctx));
+  socket.on('craft:reforge', (data) => handlers.handleCraftReforge(socket, data, ctx));
+  socket.on('craft:reforge_accept', (data) => handlers.handleCraftReforgeAccept(socket, data, ctx));
+  socket.on('craft:upgrade', (data) => handlers.handleCraftUpgrade(socket, data, ctx));
   socket.on('quest:claim', (data) => handlers.handleQuestClaim(socket, data, ctx));
   socket.on('chest:open', (data) => handlers.handleChestOpen(socket, data, ctx));
 

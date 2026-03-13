@@ -485,7 +485,7 @@ Currently boss phases only affect `charge` and `aoe_frenzy` modes. Add handling 
 
 **Goal:** Gold sink + item customization. Players salvage unwanted items into materials, then use materials to reforge or upgrade gear. Integrates with existing shop/inventory system.
 
-### 10.1 Salvage System — Server [for Bolt]
+### 10.1 Salvage System — Server [DONE — Bolt, Cycle #72]
 **File:** `server/game/crafting.js` (NEW)
 
 New module with salvage logic:
@@ -514,7 +514,7 @@ Functions:
 - `generateMaterial(subType, quantity)` → returns stackable item for inventory
 - Cannot salvage consumables/currency/materials themselves
 
-### 10.2 Reforge System — Server [for Bolt]
+### 10.2 Reforge System — Server [DONE — Bolt, Cycle #72]
 **File:** `server/game/crafting.js`
 
 Re-roll ONE random bonus on an item. Player picks the item, system re-rolls one bonus, player keeps original OR new.
@@ -532,7 +532,7 @@ Functions:
 - Track reroll count per item: `item.reforgeCount = 0` (increment on accept)
 - Bonus pool: same as items.js `BONUS_POOL` for the item type
 
-### 10.3 Upgrade System — Server [for Bolt]
+### 10.3 Upgrade System — Server [DONE — Bolt, Cycle #72]
 **File:** `server/game/crafting.js`
 
 Upgrade an item +1/+2/+3. Each level increases primary stat by 15%.
@@ -552,7 +552,7 @@ Functions:
 - Primary stat: weapons → damage +15%/level, armor → armor +15%/level, accessories → biggest bonus +15%/level
 - Max level: 3
 
-### 10.4 Socket Events — Server [for Bolt]
+### 10.4 Socket Events — Server [DONE — Bolt, Cycle #72]
 **File:** `server/socket-handlers.js` (add to existing)
 
 New controller events:

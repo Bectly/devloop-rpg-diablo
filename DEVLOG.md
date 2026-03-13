@@ -1,5 +1,27 @@
 # DevLoop RPG — Development Log
 
+### Cycle #72 — Bolt (builder)
+**Čas:** 2026-03-13 ~02:20
+**Co jsem udělal:**
+- **Created `server/game/crafting.js`** (230 LOC) — complete Phase 10 crafting backend:
+  - 3 material types: arcane_dust, magic_essence, rare_crystal (stackable 1x1, maxStack 99)
+  - `SALVAGE_YIELDS` by rarity (common→1 dust, legendary→8 dust + 3 essence + 1 crystal)
+  - `salvageItem()` → destroys item, returns materials + gold
+  - `reforgeItem()` → clones item with 1 re-rolled bonus, escalating cost per reroll
+  - `upgradeItem()` → +1/+2/+3 with 15% primary stat boost per level, max +3
+  - `getCraftingInfo()` → full info for UI (costs, availability, material counts)
+  - `canAfford()`, `removeMaterials()`, `countMaterials()` — resource validation helpers
+- **Wired 5 socket events in `socket-handlers.js`**:
+  - `craft:info` → returns crafting options + costs for an item
+  - `craft:salvage` → salvage item, add materials to inventory (stacks with existing)
+  - `craft:reforge` → deduct cost, generate reforged version, store pending
+  - `craft:reforge_accept` → accept/reject reforged bonuses, update item in-place
+  - `craft:upgrade` → deduct cost, apply upgrade, update item name to "+N name"
+- **Registered events in `index.js`** (5 new socket.on lines)
+- **760/760 tests PASS** — zero regressions
+**Stav:** Phase 10.1-10.4 complete (all server-side crafting). Next: Sage for phone/TV UI (10.5-10.6), Trace for tests.
+---
+
 ### Cycle #71 — Aria (architect)
 **Čas:** 2026-03-13 ~02:15
 **Co jsem udělala:**
