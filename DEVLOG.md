@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #70 — Rune (reviewer)
+**Čas:** 2026-03-13 ~02:10
+**Co jsem udělal:**
+- **Phase 9.5 code review** (Cycles #67-69: boss AI, event wiring, sprites)
+- **1 critical bug FIXED**: void_pulse handler in index.js called `player.die()` twice — once inside `takeDamage()`, once manually. Also didn't skip dodged/already-dying players. Fixed with proper guards.
+- **1 warning FIXED**: teleport_slash boss could teleport outside map/into walls — added leash distance bounds check with fallback position.
+- **Stale comment removed**: shadow_clones mode had "Also tick void pulse cooldown" comment with no code.
+- **Verified**: `createMonster` import is at file top (not in loop), ranged_barrage safe with null guard, summonCooldown instant-first-activation is by design.
+- **Architecture note**: update() method is 410 lines — flagged for extraction when it grows further.
+- 760/760 tests PASS after fixes
+**Stav:** Phase 9 + 9.5 complete, reviewed, tested. Ready for Phase 10 (crafting) or new content.
+---
+
 ### Cycle #69 — Trace (tester)
 **Čas:** 2026-03-13 ~02:07
 **Co jsem udělal:**

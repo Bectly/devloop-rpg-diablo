@@ -694,8 +694,17 @@ class Monster {
             this.bossTeleportCooldown = this.teleportCooldownMax;
             // Teleport behind the player
             const behindAngle = Math.atan2(this.y - closest.y, this.x - closest.x);
-            this.x = closest.x + Math.cos(behindAngle) * 50;
-            this.y = closest.y + Math.sin(behindAngle) * 50;
+            let newX = closest.x + Math.cos(behindAngle) * 50;
+            let newY = closest.y + Math.sin(behindAngle) * 50;
+            // Clamp within leash distance of spawn to prevent out-of-bounds
+            const distFromSpawn = Math.sqrt((newX - this.spawnX) ** 2 + (newY - this.spawnY) ** 2);
+            if (distFromSpawn > this.leashDistance) {
+              // Fall back to teleporting near current position instead
+              newX = this.x + Math.cos(behindAngle) * 30;
+              newY = this.y + Math.sin(behindAngle) * 30;
+            }
+            this.x = newX;
+            this.y = newY;
             events.push({ type: 'teleport', monsterId: this.id, x: this.x, y: this.y });
             // Immediate attack after teleport
             this.attackCooldown = 0;
@@ -777,7 +786,6 @@ class Monster {
               attackType = 'melee';
             } else if (phase.mode === 'shadow_clones') {
               attackType = 'melee';
-              // Also tick void pulse cooldown for pre-phase 3
             } else if (phase.mode === 'void_storm') {
               dmg = Math.floor(this.damage * 1.2);
               attackType = 'melee';

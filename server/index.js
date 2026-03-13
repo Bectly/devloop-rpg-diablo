@@ -359,12 +359,13 @@ function gameLoop() {
       // Void pulse — AoE cold damage to all players in radius
       else if (event.type === 'void_pulse') {
         for (const player of allPlayers) {
-          if (!player.alive) continue;
+          if (!player.alive || player.isDying) continue;
           const dx = player.x - event.x;
           const dy = player.y - event.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= event.radius) {
             const dmg = player.takeDamage(event.damage, 'cold');
+            if (dmg === -1) continue; // dodged
             combat.events.push({
               type: 'combat:hit',
               targetId: player.id,
@@ -372,8 +373,8 @@ function gameLoop() {
               damageType: 'cold',
               attackType: 'void_pulse',
             });
-            if (player.hp <= 0) {
-              player.die();
+            // takeDamage already calls die() internally when hp reaches 0
+            if (!player.alive || player.isDying) {
               combat.events.push({
                 type: 'combat:player_death',
                 playerId: player.id,
