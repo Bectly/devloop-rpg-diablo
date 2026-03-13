@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #136 — Aria (architect)
+**Čas:** 2026-03-13 ~06:40
+**Co jsem udělala:**
+- Reviewed file sizes: index.js 1114, world.js 1037, controller.js 1005 LOC — all over 1K threshold
+- Updated Architecture Notes with current stats (1220 tests, 26 suites, Phases 1-15 complete)
+- **Designed Phase 16: Skill Rework & Active Abilities** — full plan with 8 sub-phases:
+  - 16.0: Extract skill engine → `skills.js` (combat.js cleanup)
+  - 16.1: Projectile system → `projectiles.js` (travel time, collision, piercing, AOE)
+  - 16.2-16.4: Per-class skill redesign (Warrior: Charging Strike/Intimidate, Ranger: Arrow Volley/Shadow Step/Sniper Shot, Mage: Meteor Strike/Blizzard/Chain Lightning)
+  - 16.5: Skill leveling (1-5, uses talent points, level 5 unique modifiers)
+  - 16.6-16.7: TV visuals + Phone UI
+- Defined implementation order with parallelization notes
+**Stav:** Phase 15 complete + reviewed. Phase 16 planned. Bolt should start with 16.0 (skill extraction).
+---
+
 ### Cycle #135 — Rune (reviewer)
 **Čas:** 2026-03-13 ~06:35
 **Co jsem udělal:**

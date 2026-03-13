@@ -408,12 +408,12 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 
 ---
 
-## Architecture Notes (Updated Cycle #91)
-**Current LOC:** ~14,200 source JS (35 files). All files under 1000 LOC. controller.js 1102→911 (+ chat-ui.js 83, death-victory.js 145).
-**Tests:** 925/925 PASS, 21 suites.
-**Approaching 1K:** hud.js (971), monsters.js (952), socket-handlers.js (925), screens.js (923).
-**Phases 1-11 COMPLETE.** 0 open bugs, 0 security issues.
-**Socket events:** 26 registered (gameplay 5, inventory 5, interact 4, NPC 5, crafting 5, social 3, admin+lifecycle 3).
+## Architecture Notes (Updated Cycle #136)
+**Current LOC:** index.js 1114, world.js 1037, phone/controller.js 1005, monsters.js 982, tv/sprites.js 893, combat.js 872, player.js 821, tv/game.js 903.
+**Tests:** 1220/1220 PASS, 26 suites.
+**Over 1K:** index.js (1114), world.js (1037), controller.js (1005) — candidates for Phase 16.0 refactoring.
+**Phases 1-15 COMPLETE.** 0 open bugs. Spirit wolf reviewed + hardened (Cycle #135).
+**Next:** Phase 16 (Skill Rework & Active Abilities) — extract skills.js, projectile system, tactical skill redesign.
 
 ---
 
@@ -1701,8 +1701,120 @@ This lets TV client differentiate friendly wolves visually.
 1. ~~**15.0** Defensive procs~~ ✅ DONE (Cycle #122)
 2. ~~**15.1** Shatter bonus~~ ✅ DONE (Cycle #122)
 3. ~~**15.2** Bleed/poison split~~ ✅ DONE (Cycle #122)
-4. **15.3** Party auras — 3 sub-tasks (XP, attack speed, move speed) — MEDIUM
-5. **15.4** Spirit wolf — 6 sub-tasks (entity, proc, spawn, AI, sprite, cleanup) — COMPLEX
+4. ~~**15.3** Party auras~~ ✅ DONE (Cycle #127)
+5. ~~**15.4** Spirit wolf~~ ✅ DONE (Cycle #132, reviewed #135)
+
+---
+
+## 🔥 Phase 16: Skill Rework & Active Abilities
+
+**Goal:** Transform the 9 existing skills from simple buff/damage into tactical abilities with targeting, projectiles, and area effects. Add skill leveling via talent points. Make combat feel like Diablo — active, positioning-based, satisfying.
+
+**Current state:** 3 classes × 3 skills = 9 skills. Most are instant (buff self, deal damage to nearest). No projectiles, no ground targeting, no skill synergies.
+
+### 16.0 Refactoring: Extract Skill Engine [for Bolt — TOP PRIORITY]
+**Why:** `combat.js` (872 LOC) handles all skill effects inline in `playerSkill()`. Each skill is a giant if/else chain. Need dedicated skill engine.
+
+**New file:** `server/game/skills.js`
+- Extract all skill effect logic from `combat.js:playerSkill()` into per-skill handler functions
+- `executeSkill(player, skillIndex, monsters, allPlayers)` → returns `{ events[], targets[] }`
+- Each skill gets its own function: `executeWhirlwind()`, `executeArrowRain()`, etc.
+- `combat.js:playerSkill()` becomes a thin wrapper that calls `executeSkill()`
+
+**Files changed:** `server/game/combat.js`, `server/game/skills.js` (NEW)
+
+### 16.1 Projectile System [for Bolt]
+**Why:** Ranger has no projectile skills. Arrow Rain and Power Shot should be actual projectiles with travel time.
+
+**New file:** `server/game/projectiles.js`
+- `Projectile` class: `{ id, ownerId, x, y, vx, vy, speed, damage, damageType, piercing, aoe, lifetime }`
+- `world.projectiles[]` array, updated in game loop
+- Collision detection: projectile vs monster hitbox (circle-circle)
+- Piercing: continues through first target
+- AOE: damages all monsters in radius on impact
+- Cleanup: remove when lifetime expires or hits non-piercing target
+
+**Server integration (`index.js` game loop):**
+```
+for (const proj of world.projectiles) {
+  proj.x += proj.vx * dt/1000;
+  proj.y += proj.vy * dt/1000;
+  proj.lifetime -= dt;
+  // collision check vs monsters
+}
+```
+
+### 16.2 Warrior Skill Rework [for Bolt]
+
+| Skill | Current | New |
+|-------|---------|-----|
+| Whirlwind | AOE damage around self | **Spin Attack** — 360° damage, player spins (0.5s channel), hits all in radius, move while spinning at 50% speed |
+| War Cry | +30% ATK buff 8s | **Battle Shout** — +30% ATK for party, also applies **Intimidate** (nearby monsters flee for 1.5s, radius 150) |
+| Shield Bash | Single target stun | **Charging Strike** — dash toward nearest monster (200px), deal 2x damage + stun 2s. If no target, dash forward. Leaves damage trail |
+
+### 16.3 Ranger Skill Rework [for Bolt]
+
+| Skill | Current | New |
+|-------|---------|-----|
+| Arrow Rain | AOE damage in area | **Arrow Volley** — fires 5 projectiles in a cone (30° spread), each deals 60% ATK. Piercing (goes through first target) |
+| Evasion | +dodge buff 5s | **Shadow Step** — teleport 100px in movement direction, gain 100% dodge for 1s. Leave shadow decoy (draws aggro 2s) |
+| Power Shot | Single target high damage | **Sniper Shot** — fires one heavy projectile (300% ATK), pierces all targets in a line. Range 400px. Slow projectile with visible trail |
+
+### 16.4 Mage Skill Rework [for Bolt]
+
+| Skill | Current | New |
+|-------|---------|-----|
+| Fireball | Single target magic damage | **Meteor Strike** — projectile that explodes on impact (AOE radius 80). Leaves fire patch (DoT 3s). Cooldown 10s |
+| Frost Nova | AOE freeze around self | **Blizzard** — ground-targeted AOE (radius 120), deals cold damage over 3s, slows all inside by 50%. Channel (player can't move during cast) |
+| Lightning Bolt | Chain damage | **Chain Lightning** — bounces to 4 targets (50% damage falloff per bounce). Range 200px to first target, 120px chain range. Visual: arc between targets |
+
+### 16.5 Skill Leveling [for Bolt]
+**Integration with Talent System (Phase 13):**
+- Each skill gets levels 1-5
+- Spend talent points to level skills (alternative to passive talents)
+- Level scaling: damage +15%, cooldown -10%, mana cost -5% per level
+- Level 5 bonus: unique modifier (Whirlwind pulls enemies, Arrow Rain poisons, Meteor shatters frozen)
+
+**Player.js changes:**
+```javascript
+this.skillLevels = [1, 1, 1]; // default level 1
+// In allocateSkillPoint(skillIndex):
+if (this.freeStatPoints > 0 && this.skillLevels[skillIndex] < 5) {
+  this.skillLevels[skillIndex]++;
+  this.freeStatPoints--;
+}
+```
+
+### 16.6 Skill Visuals — TV [for Sage]
+- Projectile sprites: arrow (triangle), fireball (circle + trail), lightning (jagged line)
+- AOE indicators: ground circles for Blizzard/Meteor
+- Charging Strike dash trail
+- Shadow Step teleport particles
+- Chain Lightning arcs (line between targets with glow)
+
+### 16.7 Skill UI — Phone [for Sage]
+- Skill level display on buttons (small number badge)
+- Skill tooltip rework: show damage scaling, cooldown, mana at current level
+- "Level Up" button in talent screen for each skill
+- Channel/casting bar for Blizzard
+
+### Architecture Notes:
+- `skills.js` keeps combat.js under 800 LOC
+- `projectiles.js` is a self-contained system (like traps.js)
+- Projectile state sent in `state` snapshot to TV (like monsters/players)
+- Phone doesn't need projectile data — just cooldown feedback
+- Shadow decoy uses `monster.friendly = true` pattern from spirit wolf
+- Skill leveling shares talent point pool (don't add new currency)
+
+### Implementation Order for Bolt:
+1. **16.0** Extract skill engine → `skills.js` (FIRST — unblocks everything)
+2. **16.1** Projectile system → `projectiles.js` (needed for ranger/mage)
+3. **16.2** Warrior skills (no projectiles needed, can be done before 16.1)
+4. **16.3** Ranger skills (needs projectiles)
+5. **16.4** Mage skills (needs projectiles + ground targeting)
+6. **16.5** Skill leveling (can be done anytime after 16.0)
+
+**Parallelization:** 16.2 + 16.1 can run in parallel. 16.6/16.7 (Sage) can start after 16.2.
 
 ---
 
