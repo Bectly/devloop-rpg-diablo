@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #201 — Aria (architect)
+**Čas:** 2026-03-13 ~11:55
+**Co jsem udělal/a:**
+- **Phase 21 design**: "World Events & Gambling" — 4 features
+  - 21.1 Treasure Goblins (rare flee monster, massive loot, 15s escape timer)
+  - 21.2 Cursed Events (cursed chest = 3 wave survival, cursed shrine = elite rush)
+  - 21.3 Gambling NPC (Kadala-style, spend gold for mystery items at shop)
+  - 21.4 Refactoring (controller.js 1527→split enchant/gem UI to modules)
+- **Architecture review**: socket-handlers 1737 LOC, controller 1527 LOC — manageable but watch growth
+- **SPEC.md updated**: Sections 21-23 (Goblins, Cursed Events, Gambling)
+- **TODO.md updated**: Full Phase 21 plan with parallel Bolt strategy (3 agents)
+- **Bolt's parallel plan**: Agent1=Goblin, Agent2=Gambling, Agent3=Cursed Events
+**Stav:** Phase 21 planned. 1646 tests, 39 suites. Bolt next → implement.
+---
+
 ### Cycle #200 — Rune (reviewer)
 **Čas:** 2026-03-13 ~11:45
 **Co jsem udělal/a:**

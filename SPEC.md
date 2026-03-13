@@ -429,3 +429,44 @@ Show damage breakdown on death screen. Helps players learn from mistakes.
 - On death: serialize damageLog, send with `player:died` event
 - Phone death screen shows: "Killed by [Monster] — [Damage] [Type] damage"
 - Damage entries: `{ source, amount, type, timestamp }`
+
+## 21. Treasure Goblins (Phase 21)
+
+Rare fleeing monsters that drop massive loot if killed before escaping.
+
+### Rules
+- 8% spawn chance per non-boss, non-start room
+- 200 HP, 0 damage, speed 3.5 (faster than players at 3.0)
+- Always flees — never attacks, zigzag pattern with random direction changes
+- 15-second escape timer. If not killed → teleports away (no loot)
+- On kill: drops 3-5 items (rare+ guaranteed), 200-500 gold, 50% gem, 10% legendary
+
+### AI Behavior
+- FLEE state: move away from nearest player
+- Zigzag: every 2s, add perpendicular offset to flee vector
+- Wall collision: pick random open direction
+- Escape: purple portal animation, `goblin:escaped` event
+
+## 22. Cursed Events (Phase 21)
+
+Random room events that challenge players for bonus rewards.
+
+### Event Types
+- **Cursed Chest**: Opening spawns 3 waves (4 → 6 → 2 elites). Survive all in 30s → epic+ item
+- **Cursed Shrine**: Activating spawns elite pack (3 elites, 2 affixes each). Kill in 20s → +2 random stat for floor
+
+### Rules
+- 15% chance on entering new combat room (not boss, not start)
+- One active event at a time
+- Timer-based: fail condition = time expires
+
+## 23. Gambling (Phase 21)
+
+Kadala-style system — spend gold for mystery items at shop NPC.
+
+### Rules
+- Cost: 50 × currentFloor gold per gamble
+- Player chooses equipment slot (weapon, helmet, chest, etc.)
+- Random item generated: 60% common, 25% uncommon, 10% rare, 4% epic, 1% legendary
+- Item level = current floor
+- Available at existing shop NPC (new "GAMBLE" tab)

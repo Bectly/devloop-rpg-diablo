@@ -2209,8 +2209,140 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 8. ~~**20.2 C**~~ ✅ Enchant handlers (preview + execute) — Bolt (Cycle #197)
 9. ~~**20.2 D**~~ ✅ Enchant phone UI — Bolt (Cycle #197)
 10. ~~**20.2 E**~~ ✅ TV enchant NPC sprite — Sage (Cycle #198)
-11. Testing — Trace
-12. Review — Rune
+11. ~~Testing~~ ✅ 27 enchanting tests — Trace (Cycle #199)
+12. ~~Review~~ ✅ Enchanting review, stale gold fix — Rune (Cycle #200)
+
+---
+
+## 🔥 Phase 21: World Events & Gambling
+
+**Goal:** Add dynamic gameplay variety with random events during dungeon runs + a gold sink gambling system. Refactor large files that crossed 1500 LOC.
+
+### 21.1 Treasure Goblins [for Bolt]
+**Rare fleeing monster that drops massive loot if killed before escaping. Classic Diablo feature.**
+
+**Step A: Goblin monster type** (`server/game/monsters.js`)
+- New monster type: `treasure_goblin`
+- Stats: 200 HP, 0 damage, FAST speed (3.5, faster than players at 3.0)
+- Behavior: **FLEE** — always runs away from nearest player, never attacks
+- Spawn chance: 8% per room entered (non-boss, non-start rooms)
+- Despawn: escapes after 15 seconds if not killed → teleport particle + gone
+- Drop table: 3-5 items (rare+ guaranteed), 200-500 gold, 50% chance gem, 10% chance legendary
+
+**Step B: Goblin AI** (`server/game/monsters.js` + `server/index.js`)
+- Override `updateBehavior()` for goblin type:
+  - Always in FLEE state — find nearest player, move in opposite direction
+  - Zigzag: every 2s, add random perpendicular offset to flee vector
+  - If cornered (wall collision): pick random open direction
+  - `escapeTimer`: 15s countdown from spawn. Timer expires → `goblin:escaped` event
+- On death: emit `goblin:killed` event, drop loot with bonus multiplier (2x normal)
+- Sound cue: jingling coins on spawn (high-pitched, distinct)
+
+**Step C: TV goblin visuals** (`client/tv/sprites.js`, `client/tv/effects.js`)
+- Sprite: small green creature with oversized sack (gold sparkles trailing behind)
+- Gold particle trail while running
+- "TREASURE GOBLIN!" announcement text on spawn (gold color)
+- Escape animation: purple portal opens, goblin jumps in, sparkle burst
+
+**Step D: Phone notification** (`client/phone/controller.js`)
+- On `goblin:spawned`: gold toast "Treasure Goblin spotted!" with coin icon
+- On `goblin:killed`: "Treasure Goblin slain! Massive loot dropped!"
+- On `goblin:escaped`: "The Goblin escaped..." (red, sad)
+- Escape timer bar on HUD (gold bar, 15s countdown)
+
+**Files:** `server/game/monsters.js`, `server/index.js`, `client/tv/sprites.js`, `client/tv/effects.js`, `client/phone/controller.js`
+
+### 21.2 Cursed Events [for Bolt]
+**Random room events that challenge players for bonus rewards.**
+
+**Step A: Event system** (`server/game/events.js` — NEW)
+- `CursedEvent` class: `{ type, room, active, timer, wavesRemaining, reward }`
+- Event types:
+  - **Cursed Chest**: chest appears, opening spawns 3 waves of monsters. Survive all → epic+ item
+  - **Cursed Shrine**: shrine appears, activating spawns elite pack. Kill all in 20s → permanent stat buff (+2 random stat for floor)
+- Trigger: 15% chance when entering a new combat room (not boss, not start)
+- Only one active event at a time
+- Event serialized in world state for TV display
+
+**Step B: Cursed Chest implementation** (`server/game/events.js`, `server/index.js`)
+- Interact with cursed chest → starts event
+- Wave 1: 4 normal monsters. Wave 2: 6 monsters. Wave 3: 2 elites
+- 30s total timer. All killed in time → chest opens with epic+ loot
+- Timer expires → chest vanishes, no reward
+- Emit `event:start`, `event:wave`, `event:complete`, `event:failed`
+
+**Step C: Cursed Shrine implementation** (`server/game/events.js`, `server/index.js`)
+- Interact with cursed shrine → spawns elite pack (3 elites with 2 affixes each)
+- 20s timer. Kill all → `event:complete` → +2 to random stat for rest of floor
+- Buff shown on phone HUD as "Cursed Blessing: +2 STR" (or whatever stat)
+
+**Step D: TV event visuals** (`client/tv/effects.js`, `client/tv/hud.js`)
+- Cursed chest: dark purple glow, skull icon floating above
+- Cursed shrine: red pulsing aura
+- Event timer bar at top of screen (red, counting down)
+- Wave counter: "Wave 2/3"
+- Completion: golden explosion particles + "EVENT COMPLETE!" text
+
+**Step E: Phone event UI** (`client/phone/controller.js`)
+- Event notification on start: "Cursed Chest activated! Survive the waves!"
+- Timer display in HUD area
+- Wave progress: "Wave 2/3 — 4 enemies remaining"
+- Reward notification on completion
+
+**Files:** `server/game/events.js` (NEW), `server/index.js`, `client/tv/effects.js`, `client/tv/hud.js`, `client/phone/controller.js`
+
+### 21.3 Gambling NPC [for Bolt]
+**Kadala-style gambling — spend gold for mystery items. Major gold sink.**
+
+**Step A: Gambling handler** (`server/socket-handlers.js`)
+- New handler: `handleGamble` `{ slot }` — slot is 'weapon', 'chest', 'helmet', etc.
+- Cost: 50 × currentFloor gold per gamble
+- Generate random item for that slot:
+  - Common: 60%, Uncommon: 25%, Rare: 10%, Epic: 4%, Legendary: 1%
+  - Item level = current floor
+  - Same generation as monster drops but player-chosen slot
+- Deduct gold, add item to inventory
+- Emit `gamble:result` with item data + `inventory:update`
+- Validation: enough gold, inventory has space
+
+**Step B: Gambling UI on Shop NPC** (`client/phone/controller.js`)
+- Add "GAMBLE" tab to existing shop panel (alongside BUY/SELL)
+- Show equipment slot grid: Weapon, Helmet, Chest, Gloves, Boots, Ring, Amulet
+- Each slot shows cost (50 × floor gold)
+- Tap slot → emit `gamble` → show result item with rarity reveal animation
+- Result: item name + rarity color flash, "Add to inventory" implicit
+
+**Step C: TV gambling visual** (`client/tv/effects.js`)
+- When player gambles: brief sparkle effect on shop NPC
+- Legendary result: big golden burst + "LEGENDARY!" callout (TV-wide)
+
+**Files:** `server/socket-handlers.js`, `server/index.js`, `client/phone/controller.js`, `client/phone/style.css`, `client/tv/effects.js`
+
+### 21.4 Refactoring: controller.js split [for Bolt]
+**controller.js at 1527 LOC — extract enchant + gem UI to separate module.**
+
+- [ ] Extract enchant panel (showEnchantPanel, showEnchantPreview, showEnchantResult) → `client/phone/enchant-ui.js`
+- [ ] Extract gem socket/combine UI → `client/phone/gem-ui.js` (if not already extracted)
+- [ ] Wire imports in controller.js (IIFE pattern like rift-ui.js)
+- [ ] Verify all functionality still works
+
+**Files:** `client/phone/controller.js`, `client/phone/enchant-ui.js` (NEW), `client/phone/gem-ui.js` (NEW)
+
+### Implementation Order:
+1. **21.1 A+B** — Treasure Goblin monster + AI (Bolt)
+2. **21.1 C+D** — TV + phone goblin visuals (Sage)
+3. **21.3 A** — Gambling handler (Bolt)
+4. **21.3 B** — Gambling shop tab (Bolt/Sage)
+5. **21.2 A+B+C** — Cursed events system + implementations (Bolt)
+6. **21.2 D+E** — TV + phone event UI (Sage)
+7. **21.4** — Refactoring (Bolt)
+8. Testing — Trace
+9. Review — Rune
+
+**Bolt's parallel plan for Cycle #202:**
+1. Agent 1: 21.1 A+B (Treasure Goblin monster type + AI)
+2. Agent 2: 21.3 A+B (Gambling handler + UI)
+3. Agent 3: 21.2 A+B+C (Cursed events system)
 
 ---
 
