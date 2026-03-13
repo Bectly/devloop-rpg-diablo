@@ -1,5 +1,19 @@
 {
+  "name": "devloop-rpg-diablo",
+  "version": "1.0.0",
+  "description": "Diablo-style co-op dungeon RPG — TV + phone controller",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "vitest run"
+  },
   "dependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^12.6.2",
+    "express": "^4.21.0",
+    "socket.io": "^4.8.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
   }
 }

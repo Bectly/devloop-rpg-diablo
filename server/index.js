@@ -707,9 +707,9 @@ function gameLoop() {
 
   // Check for cross-class combos BEFORE projectile:create removal
   // (Shadow Barrage needs projectile:create events to detect Sniper Shot)
-  const allPlayers = Array.from(players.values());
-  if (allPlayers.length >= 2 && combat.events.length > 0) {
-    const comboResults = comboTracker.checkCombos(combat.events, allPlayers, world.monsters, world);
+  const activePlayers = Array.from(players.values());
+  if (activePlayers.length >= 2 && combat.events.length > 0) {
+    const comboResults = comboTracker.checkCombos(combat.events, activePlayers, world.monsters, world);
     if (comboResults.length > 0) {
       combat.events.push(...comboResults);
     }
