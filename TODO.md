@@ -1554,37 +1554,56 @@ for (const player of players.values()) {
 ```
 Add `this.auraMoveBuff = 0;` to Player constructor.
 
-### 15.4 Spirit Wolf Summon (Ranger T4) [Bolt]
-**Files:** `server/game/combat.js`, `server/game/monsters.js`, `server/game/world.js`, `server/index.js`, `client/tv/sprites.js`
+### 15.4 Spirit Wolf Summon (Ranger T4) [Bolt] ✅ 15.3 DONE
+**Files:** `server/game/monsters.js`, `server/game/combat.js`, `server/index.js`, `server/game/player.js`
 
 Talent def in `talents.js:287-294`: `{ type: 'proc_chance', trigger: 'on_kill', effect: 'summon_spirit_wolf', chance: 0.25, damage_percent: 80, radius: 60, duration: 3000 }`
 
-**Step A — Wolf entity:** In `monsters.js`, add wolf factory function:
+**Step A — Wolf definition + constructor fields:** In `monsters.js`:
+
+A1. Add to `MONSTER_DEFS` (line ~270):
+```javascript
+spirit_wolf: {
+  name: 'Spirit Wolf',
+  hp: 60, damage: 14, armor: 2, speed: 200,
+  attackRange: 35, attackSpeed: 1000,
+  aggroRadius: 150, leashDistance: 300,
+  xpReward: 0, lootTier: 0,
+  behavior: 'melee',
+  damageType: 'physical',
+  color: 0xaabbff, size: 12,
+}
+```
+
+A2. Add fields to `Monster` constructor (line ~290-391):
+```javascript
+this.friendly = false;   // after this.alive = true;
+this.ownerId = null;     // owner player ID for summons
+this.expireTimer = 0;    // despawn timer in ms (0 = permanent)
+```
+
+A3. Add `createSpiritWolf()` factory (before exports, line ~950):
 ```javascript
 function createSpiritWolf(x, y, ownerPlayer) {
-  const wolf = new Monster('spirit_wolf', 1, 0, 0); // floor 0, no scaling
+  const wolf = new Monster('spirit_wolf', x, y, 0);
   wolf.friendly = true;
   wolf.ownerId = ownerPlayer.id;
   wolf.maxHp = Math.floor(ownerPlayer.maxHp * 0.3);
   wolf.hp = wolf.maxHp;
-  wolf.attackPower = Math.floor(ownerPlayer.attackPower * 0.8); // 80% player AP
-  wolf.attackCooldown = 1000;
-  wolf.moveSpeed = 200; // faster than player
-  wolf.x = x;
-  wolf.y = y;
+  wolf.damage = Math.floor(ownerPlayer.attackPower * 0.8);
+  wolf.speed = 200;
   wolf.expireTimer = 10000; // 10s duration
-  wolf.name = 'Spirit Wolf';
-  wolf.xpReward = 0; // no XP for killing
+  wolf.aiState = AI_STATES.ALERT;
   return wolf;
 }
 ```
-Export `createSpiritWolf`.
+Export: add `createSpiritWolf` to `module.exports`.
 
-**Step B — Proc handler:** In `combat.js` on-kill proc loop (line 250-260), add:
+**Step B — On-kill proc handler:** In `combat.js` on-kill proc loop (line ~259), add new effect:
 ```javascript
 if (proc.effect === 'summon_spirit_wolf') {
   this.events.push({
-    type: 'summon:wolf',
+    type: 'summon:spirit_wolf',
     playerId: player.id,
     x: nearest.x,
     y: nearest.y,
@@ -1592,43 +1611,91 @@ if (proc.effect === 'summon_spirit_wolf') {
 }
 ```
 
-**Step C — Spawn in game loop:** In `index.js`, handle `summon:wolf` event:
+**Step C — Game loop: handle summon event + spawn:** In `index.js`, in the combat events processing section (after line ~408, next to `boss_summon` handler):
 ```javascript
-if (event.type === 'summon:wolf') {
-  const owner = players.get(event.playerId);
-  if (owner && !owner.summonedWolf) {
-    const wolf = createSpiritWolf(event.x, event.y, owner);
-    world.monsters.push(wolf);
-    owner.summonedWolf = wolf;
-    gameNs.emit('monster:spawn', wolf.serialize());
+// Handle spirit wolf summon from on-kill proc
+for (const event of combatEvents) {
+  if (event.type === 'summon:spirit_wolf') {
+    const owner = findPlayer(event.playerId); // or players.get(socketId)
+    if (owner && !owner.summonedWolf) {
+      const wolf = createSpiritWolf(event.x, event.y, owner);
+      world.monsters.push(wolf);
+      owner.summonedWolf = wolf.id; // store ID, not reference
+    }
   }
 }
 ```
+Import `createSpiritWolf` from monsters.js at the top.
+Add `this.summonedWolf = null;` to Player constructor (player.js, near line 48).
 
-**Step D — Wolf AI in game loop:** Friendly monsters need different AI — target nearest enemy monster instead of player. In monster update section:
+**Step D — Wolf AI: friendly monster update in game loop.** In `index.js` monster update loop (line ~375), BEFORE calling `monster.update(dt, allPlayers)`:
 ```javascript
+// Friendly summon logic (spirit wolf)
 if (monster.friendly) {
-  // Target nearest non-friendly monster
+  // Expire timer
   monster.expireTimer -= dt;
-  if (monster.expireTimer <= 0) {
-    monster.alive = false; // despawn
-    const owner = players.get(monster.ownerId);
-    if (owner) owner.summonedWolf = null;
+  if (monster.expireTimer <= 0 || !monster.alive) {
+    monster.alive = false;
+    // Clean up owner reference
+    for (const p of allPlayers) {
+      if (p.summonedWolf === monster.id) p.summonedWolf = null;
+    }
     continue;
   }
-  // Simple chase + attack nearest enemy
-  const nearestEnemy = world.monsters.find(m => m.alive && !m.friendly && dist(monster, m) < 200);
-  if (nearestEnemy) {
-    // Move toward and attack
-    // ... (simplified wolf AI)
+  // Simple melee AI: find nearest hostile monster, move toward it, attack
+  let nearestEnemy = null;
+  let nearestDist = Infinity;
+  for (const m of world.monsters) {
+    if (m === monster || !m.alive || m.friendly) continue;
+    const dx = m.x - monster.x;
+    const dy = m.y - monster.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < nearestDist) { nearestDist = d; nearestEnemy = m; }
   }
-  continue; // skip normal hostile AI
+  if (nearestEnemy && nearestDist <= monster.attackRange) {
+    // Attack
+    monster.attackCooldown -= dt;
+    if (monster.attackCooldown <= 0) {
+      monster.attackCooldown = monster.attackSpeed;
+      const dealt = nearestEnemy.takeDamage(monster.damage);
+      combat.events.push({
+        type: 'combat:hit', attackerId: monster.id, targetId: nearestEnemy.id,
+        damage: dealt, attackType: 'wolf_bite',
+      });
+    }
+  } else if (nearestEnemy) {
+    // Move toward enemy
+    const dx = nearestEnemy.x - monster.x;
+    const dy = nearestEnemy.y - monster.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 0) {
+      monster.x += (dx / len) * monster.speed * (dt / 1000);
+      monster.y += (dy / len) * monster.speed * (dt / 1000);
+    }
+  }
+  continue; // skip normal hostile monster AI
 }
 ```
 
-**Step E — Wolf sprite:** In `client/tv/sprites.js`, add wolf draw function (small canine shape, blue-white ghost tint). On `monster:spawn` with `name === 'Spirit Wolf'`, use wolf sprite.
+**Step E — Owner death cleanup.** In `index.js` player update section (line ~287), after `player.update(dt)`:
+```javascript
+// Despawn spirit wolf when owner dies
+if (player.isDying && player.summonedWolf) {
+  for (const m of world.monsters) {
+    if (m.id === player.summonedWolf) { m.alive = false; m.expireTimer = 0; }
+  }
+  player.summonedWolf = null;
+}
+```
 
-**Step F — Cleanup:** On player death, despawn wolf. On floor transition, despawn all wolves. Add `this.summonedWolf = null;` to Player constructor.
+**Step F — serialize() include friendly fields.** In monsters.js `serialize()` method, add:
+```javascript
+friendly: this.friendly || false,
+ownerId: this.ownerId || null,
+```
+This lets TV client differentiate friendly wolves visually.
+
+**Step G (Sage):** TV sprite — ghostly blue tint for `friendly` monsters. In `sprites.js` monster sprite update, check `m.friendly` → set alpha 0.7 + blue tint. Nameplate in light blue.
 
 ### Implementation Order for Bolt:
 1. ~~**15.0** Defensive procs~~ ✅ DONE (Cycle #122)

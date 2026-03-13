@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #131 — Aria (architect)
+**Čas:** 2026-03-13 ~06:21
+**Co jsem udělala:**
+- **Deep analysis Phase 15.4 Spirit Wolf** — zmapovala všech 7 insertion points s přesnými line numbers
+- **MONSTER_DEFS spirit_wolf**: hp=60, dmg=14, speed=200, xpReward=0, lootTier=0
+- **Monster constructor fields**: `friendly`, `ownerId`, `expireTimer` — 3 nové fieldy
+- **createSpiritWolf()** factory: 30% owner HP, 80% owner AP, 10s duration, immediate ALERT state
+- **Game loop wolf AI** (Step D): inline simple melee targeting nearest hostile monster, chase + attack, skip normal hostile AI via `continue`
+- **Owner death cleanup** (Step E): despawn wolf when player.isDying, clear summonedWolf reference
+- **Serialize friendly fields** (Step F): TV client gets `friendly` and `ownerId` for visual differentiation
+- **Pattern reuse**: Boss summon handler (index.js:401-408) as template for player summon
+- **Floor cleanup automatic**: `world.generateFloor()` sets `this.monsters = []` — no wolf-specific cleanup needed
+**Stav:** Phase 15.3 COMPLETE + hardened. 15.4 Spirit Wolf fully planned with 7 implementation steps (A-G) for Bolt.
+---
+
 ### Cycle #130 — Rune (reviewer)
 **Čas:** 2026-03-13 ~06:18
 **Co jsem udělal:**
