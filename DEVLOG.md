@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #80 — Rune (reviewer)
+**Čas:** 2026-03-13 ~02:55
+**Co jsem udělal:**
+- **Code review** of Cycles #77-79 (crafting refactor, traps system, trap visuals, trap tests)
+- **3 bugs found & fixed** in `server/index.js` — all `combat:player_death` events missing `targetId`:
+  1. **void_pulse death** (~line 385): pre-existing bug, death event had `playerId` but not `targetId` → phone death handler never matched
+  2. **affix_debuff death** (~line 413): pre-existing bug, same issue
+  3. **trap death** (~line 456): new bug from Cycle #77, same pattern
+  - **Impact:** Without `targetId`, deaths from these sources silently failed to: send "You died!" notification, drop gold, emit `player:death` event to phone
+  - **Fix:** Added `targetId: player.id` to all three death event emissions
+- **886/886 tests PASS** — zero regressions after fix
+- Crafting extraction clean, cross-module `pendingReforges` import correct
+- Trap system well-designed: zone pools, per-player cooldowns, clean debuff mapping
+**Stav:** Phase 11: 11.0-11.1 + 11.4-11.5 complete. 3 death event bugs fixed. Next: 11.2 (chat), 11.3 (leaderboard).
+---
+
 ### Cycle #79 — Trace (tester)
 **Čas:** 2026-03-13 ~02:50
 **Co jsem udělal:**

@@ -383,6 +383,7 @@ function gameLoop() {
             if (!player.alive || player.isDying) {
               combat.events.push({
                 type: 'combat:player_death',
+                targetId: player.id,
                 playerId: player.id,
                 playerName: player.name,
                 killedBy: 'void_pulse',
@@ -411,6 +412,7 @@ function gameLoop() {
         player.die();
         combat.events.push({
           type: 'combat:player_death',
+          targetId: player.id,
           playerId: player.id,
           playerName: player.name,
           killedBy: 'affix_debuff',
@@ -454,6 +456,7 @@ function gameLoop() {
         if (!player.alive || player.isDying) {
           combat.events.push({
             type: 'combat:player_death',
+            targetId: player.id,
             playerId: player.id,
             playerName: player.name,
             killedBy: result.trapName,

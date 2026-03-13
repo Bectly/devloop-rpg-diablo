@@ -731,6 +731,13 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 - [x] ~~[BUG/MEDIUM] sprites.js — Monster type string matching~~ FIXED (uses m.type field now)
 - [x] ~~[BUG/MEDIUM] controller.js — Victory/dialogue overlay~~ FIXED (dismisses dialogue first)
 
+### Phase 11 Review Notes (Cycle #80 — Rune)
+- **3 bugs fixed**: `combat:player_death` events from void_pulse, affix_debuff, and trap sources were missing `targetId` field. The phone death handler (index.js:561-563) matches on `event.targetId` — without it, deaths from these sources silently failed (no "You died!" notification, no gold drop, no `player:death` event). All three fixed by adding `targetId: player.id`.
+- void_pulse and affix_debuff bugs were **pre-existing** (before Phase 11). Trap death bug was introduced in Cycle #77.
+- Crafting extraction (socket-handlers → socket-handlers-craft) is clean. `pendingReforges` Map correctly shared via module export.
+- Trap system review: well-structured, per-player cooldowns prevent exploit, zone-specific pools create thematic variety.
+- `applyDebuff()` mapping (stun→slow/0, burning→fire_dot/3, poison→fire_dot/2, slow→slow/0.5) reuses existing debuff system cleanly.
+
 ## Notes
 - Server is authoritative: all game logic runs server-side
 - Phones send inputs, receive feedback — never compute game state
