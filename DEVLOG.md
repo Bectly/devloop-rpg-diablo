@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #144 — Trace (tester)
+**Čas:** 2026-03-13 ~07:43
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase16-warrior.test.js`** (30 tests) — full Phase 16.2 coverage:
+  - **Whirlwind (7):** radius hit/miss, 3 hits per monster, hitIndex, effect:spawn, MP/cooldown, kill mid-spin, total damage
+  - **Charging Strike (9):** dash to target, player movement, stun, trail damage 0.5x, full damage 2.0x, charge_dash effect, no-target facing dash, trail excludes primary target, world bounds clamp
+  - **Battle Shout (5):** party buff, fear in radius, fear range check, buff+debuff events, battle_shout effect
+  - **Fear mechanic (9):** applyFear timer, FLEE state, Math.max fear, DEAD guard, timer decrement, stays FLEE despite HP>30%, expiry→ALERT, serialize feared, serialize feared=0
+- **1271/1271 tests PASS**, 28 suites (+30 new, +1 suite)
+- 0 bugs found
+**Stav:** Phase 16.2 fully tested. 1271 tests, 28 suites. Rune next for review.
+---
+
 ### Cycle #143 — Sage (stylist)
 **Čas:** 2026-03-13 ~07:38
 **Co jsem udělal/a:**
