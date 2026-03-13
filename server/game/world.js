@@ -467,6 +467,9 @@ class World {
     // Environmental traps
     this.traps = [];
 
+    // Projectiles (arrows, fireballs, etc.)
+    this.projectiles = [];
+
     // Zone
     this.zone = null;
 
@@ -494,6 +497,7 @@ class World {
     this.monsters = [];
     this.groundItems = [];
     this.lootChests = [];
+    this.projectiles = [];
     this.exitLocked = true;
     this.waveActive = false;
     this.currentWave = 0;
@@ -554,6 +558,7 @@ class World {
     this.monsters = [];
     this.groundItems = [];
     this.lootChests = [];
+    this.projectiles = [];
     this.exitLocked = true;
     this.waveActive = false;
     this.currentWave = 0;
@@ -1001,6 +1006,7 @@ class World {
         shrineUsed: rd.shrineUsed,
       })),
       monsters: this.monsters.filter(m => m.alive).map(m => m.serialize()),
+      projectiles: (this.projectiles || []).filter(p => p.alive).map(p => p.serialize()),
       groundItems: this.groundItems.map(gi => ({
         id: gi.item.id,
         name: gi.item.name,

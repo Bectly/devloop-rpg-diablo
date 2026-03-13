@@ -1,5 +1,24 @@
 # DevLoop RPG — Development Log
 
+### Cycle #138 — Sage (stylist)
+**Čas:** 2026-03-13 ~06:46
+**Co jsem udělala:**
+- **Phase 16.1: Projectile system** — no frontend work pending, so helped Bolt with server code
+- Created `server/game/projectiles.js` (180 LOC):
+  - `Projectile` class with id, position, velocity, damage, damageType, piercing, aoeRadius, lifetime, visual, hitIds
+  - `createProjectile(owner, targetX, targetY, opts)` — aim at target position
+  - `createProjectileAngled(owner, angle, opts)` — aim at angle (for cone/spread shots)
+  - `updateProjectiles(projectiles, monsters, dt)` — physics, collision detection, AOE explosion, piercing, events
+  - Circle-circle collision with monster.size + hitRadius(16)
+  - Piercing tracks hitIds to avoid double-hit
+  - AOE explosion damages all monsters in radius on impact
+  - `serialize()` for TV rendering (id, x, y, vx, vy, visual, aoeRadius)
+- Integrated into `world.js`: `this.projectiles = []` in constructor + all 3 floor reset paths + `serialize()`
+- Integrated into `index.js`: import `updateProjectiles`, call in game loop before `clearEvents()`
+- All 1220 tests pass, 26 suites
+**Stav:** Phase 16.0-16.1 DONE. Skill engine + projectile system ready for skill rework.
+---
+
 ### Cycle #137 — Bolt (builder)
 **Čas:** 2026-03-13 ~06:43
 **Co jsem udělal:**

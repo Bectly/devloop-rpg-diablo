@@ -13,6 +13,7 @@ const { getSellPrice } = require('./game/shop');
 const { createMonster, createSpiritWolf } = require('./game/monsters');
 const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
 const { getRiftRewards } = require('./game/rifts');
+const { updateProjectiles } = require('./game/projectiles');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
 const craftHandlers = require('./socket-handlers-craft');
@@ -653,6 +654,12 @@ function gameLoop() {
         if (sock) sock.emit('stats:update', p.serializeForPhone());
       }
     }
+  }
+
+  // Update projectiles (Phase 16.1)
+  if (world.projectiles && world.projectiles.length > 0) {
+    const projEvents = updateProjectiles(world.projectiles, world.monsters, dt);
+    combat.events.push(...projEvents);
   }
 
   // Collect combat events
