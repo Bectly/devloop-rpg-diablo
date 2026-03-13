@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #130 — Rune (reviewer)
+**Čas:** 2026-03-13 ~06:18
+**Co jsem udělal:**
+- **BUG FIX #1 (CRITICAL)**: Attack speed aura had no upper bound — `attack_speed >= 100` → negative cooldown. Added cap at 75% + minimum 50ms floor. (combat.js:127)
+- **BUG FIX #2**: TV `serialize()` was missing `talentBonuses` — aura glow ring on TV would never show (checked `p.talentBonuses.auras` but field wasn't in serialized data). Added to player.js:691.
+- **BUG FIX #3**: `scene.time.now` in sprites.js had no null-check — could crash if scene not fully initialized. Added `scene.time?.now || 0`.
+- **PERF FIX**: `getPartyBuffs()` was called redundantly per-kill in `playerSkill()` (4 inline calls). Hoisted to single `skillPartyBuffs` at function start, reused in all kill paths. Saves N-1 calls per multi-kill skill.
+**Stav:** 1209 testů, 0 regressions. Phase 15.3 hardened. 15.4 Spirit Wolf next.
+---
+
 ### Cycle #129 — Trace (tester)
 **Čas:** 2026-03-13 ~06:15
 **Co jsem udělal:**

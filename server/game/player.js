@@ -689,6 +689,7 @@ class Player {
       paragonLevel: this.paragonLevel,
       paragonXp: this.paragonXp,
       paragonXpToNext: (this.paragonLevel + 1) * 1000,
+      talentBonuses: this.talentBonuses,
     };
   }
 

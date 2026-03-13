@@ -102,7 +102,7 @@ window.Sprites = {
       }
       sprite.auraGlow.setPosition(sprite.x, sprite.y + 4);
       // Subtle pulse via alpha oscillation
-      const pulse = 0.1 + Math.sin(scene.time.now / 600) * 0.08;
+      const pulse = 0.1 + Math.sin((scene.time?.now || 0) / 600) * 0.08;
       sprite.auraGlow.setAlpha(pulse);
     } else if (sprite.auraGlow) {
       sprite.auraGlow.destroy();

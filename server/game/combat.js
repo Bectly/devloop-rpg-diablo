@@ -122,9 +122,10 @@ class CombatSystem {
     if (partyBuffs && partyBuffs.str > 0) {
       damage += partyBuffs.str;
     }
-    // Attack speed aura: reduce cooldown (Warlord Commanding Presence)
+    // Attack speed aura: reduce cooldown (Warlord Commanding Presence), capped at 75%
     if (partyBuffs && partyBuffs.attack_speed > 0) {
-      player.attackCooldown = Math.floor(player.attackCooldown * (1 - partyBuffs.attack_speed / 100));
+      const haste = Math.min(partyBuffs.attack_speed, 75);
+      player.attackCooldown = Math.max(50, Math.floor(player.attackCooldown * (1 - haste / 100)));
     }
 
     // Shatter bonus: extra damage to frozen/stunned targets (Phase 15.1)
@@ -288,6 +289,7 @@ class CombatSystem {
 
     const skillDamageType = getSkillDamageType(skill.name);
     const results = [];
+    const skillPartyBuffs = allPlayers ? this.getPartyBuffs(allPlayers) : null;
 
     switch (skill.type) {
       case 'aoe': {
@@ -384,9 +386,8 @@ class CombatSystem {
                 xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
               }
               // Party aura: XP bonus (Warlord Inspire)
-              if (allPlayers) {
-                const pb = this.getPartyBuffs(allPlayers);
-                if (pb.xp_percent > 0) xpReward = Math.floor(xpReward * (1 + pb.xp_percent / 100));
+              if (skillPartyBuffs && skillPartyBuffs.xp_percent > 0) {
+                xpReward = Math.floor(xpReward * (1 + skillPartyBuffs.xp_percent / 100));
               }
               const levelResult = player.gainXp(xpReward);
               if (levelResult) {
