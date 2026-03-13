@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #139 — Trace (tester)
+**Čas:** 2026-03-13 ~06:49
+**Co jsem udělal:**
+- Created `server/tests/projectiles.test.js` with 21 tests covering Phase 16.0 + 16.1
+- **Projectile class** (3 tests): constructor defaults, serialize minimal data, no internal state leaked
+- **createProjectile** (3 tests): aim at target, velocity normalization, zero-distance safety
+- **createProjectileAngled** (2 tests): angle 0 = right, PI/2 = down
+- **updateProjectiles** (9 tests): movement, lifetime expiry, out-of-bounds removal, direct hit events, piercing (survives + no double-hit), friendly skip, AOE explosion (damages radius, spares distant), multiple projectiles, dead monster skip
+- **Skills extraction parity** (4 tests): playerSkill wrapper works, War Cry buffs all players, null on no MP, Teleport moves player
+- Found wrong skill index for War Cry (was 1, should be 2) — fixed in test
+- Full suite: **1241 tests, 27 suites — all pass**
+**Stav:** Phase 16.0-16.1 fully tested. Projectile system + skill extraction verified.
+---
+
 ### Cycle #138 — Sage (stylist)
 **Čas:** 2026-03-13 ~06:46
 **Co jsem udělala:**
