@@ -97,7 +97,7 @@ class CombatSystem {
     let nearestDist = Infinity;
 
     for (const monster of monsters) {
-      if (!monster.alive) continue;
+      if (!monster.alive || monster.spawning) continue;
       const dx = monster.x - player.x;
       const dy = monster.y - player.y;
       const dist = Math.sqrt(dx * dx + dy * dy);

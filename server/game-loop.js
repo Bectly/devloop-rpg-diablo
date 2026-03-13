@@ -301,7 +301,7 @@ function createGameLoop(ctx) {
         let nearestEnemy = null;
         let nearestDist = Infinity;
         for (const m of world.monsters) {
-          if (m === monster || !m.alive || m.friendly) continue;
+          if (m === monster || !m.alive || m.friendly || m.spawning) continue;
           const dx = m.x - monster.x;
           const dy = m.y - monster.y;
           const d = Math.sqrt(dx * dx + dy * dy);
@@ -395,6 +395,10 @@ function createGameLoop(ctx) {
           gameNs.emit('goblin:escaped', { monsterId: event.monsterId });
           controllerNs.emit('goblin:escaped', { monsterId: event.monsterId });
           controllerNs.emit('notification', { text: 'The Treasure Goblin escaped!', type: 'warning' });
+        }
+        // Monster finished spawning (staggered spawn delay expired)
+        else if (event.type === 'monster:spawned') {
+          combat.events.push(event);
         }
         // Visual events — forward to combat events for TV broadcast
         else if (event.type === 'boss_phase' || event.type === 'teleport' || event.type === 'stealth_reveal' || event.type === 'boss_shadow_clones') {
@@ -904,7 +908,7 @@ function createGameLoop(ctx) {
 
         if (event.comboId === 'shatter_blast' && event.damage) {
           for (const m of world.monsters) {
-            if (!m.alive) continue;
+            if (!m.alive || m.spawning) continue;
             const dx = m.x - event.x, dy = m.y - event.y;
             if (dx * dx + dy * dy <= r2) {
               const dealt = applyArmor(event.damage, m.armor || 0);
@@ -920,7 +924,7 @@ function createGameLoop(ctx) {
 
         if (event.comboId === 'battle_fury') {
           for (const m of world.monsters) {
-            if (!m.alive) continue;
+            if (!m.alive || m.spawning) continue;
             const dx = m.x - event.x, dy = m.y - event.y;
             if (dx * dx + dy * dy <= r2) {
               const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -933,7 +937,7 @@ function createGameLoop(ctx) {
 
         if (event.comboId === 'firestorm') {
           for (const m of world.monsters) {
-            if (!m.alive) continue;
+            if (!m.alive || m.spawning) continue;
             const dx = m.x - event.x, dy = m.y - event.y;
             if (dx * dx + dy * dy <= r2) {
               m.stunned = Math.max(m.stunned || 0, event.duration || 3000);
@@ -943,7 +947,7 @@ function createGameLoop(ctx) {
 
         if (event.comboId === 'chain_reaction') {
           for (const m of world.monsters) {
-            if (!m.alive) continue;
+            if (!m.alive || m.spawning) continue;
             const dx = m.x - event.x, dy = m.y - event.y;
             if (dx * dx + dy * dy <= r2) {
               const dealt = applyArmor(30, m.armor || 0);

@@ -432,6 +432,10 @@ class Monster {
       this.aiState = AI_STATES.FLEE; // always fleeing
     }
 
+    // Staggered spawn delay — monster is invulnerable and invisible until delay expires
+    this.spawning = false;
+    this.spawnDelay = 0;
+
     // Store floor for reference
     this.floor = floor;
   }
@@ -531,6 +535,17 @@ class Monster {
 
   update(dt, players) {
     if (!this.alive) return [];
+
+    // Staggered spawn: count down delay, emit spawned event when ready
+    if (this.spawning) {
+      this.spawnDelay -= dt;
+      if (this.spawnDelay <= 0) {
+        this.spawning = false;
+        return [{ type: 'monster:spawned', monsterId: this.id, x: this.x, y: this.y, monsterType: this.type }];
+      }
+      return [];
+    }
+
     const events = [];
 
     // ── Treasure Goblin AI (Phase 21.1) ───────────────────────────
@@ -1074,6 +1089,7 @@ class Monster {
 
   takeDamage(amount, damageType = 'physical') {
     if (!this.alive) return 0;
+    if (this.spawning) return 0; // invulnerable while spawning
     if (amount <= 0) return 0;
 
     // Taking damage always triggers aggro (Phase 23.2)
@@ -1137,6 +1153,7 @@ class Monster {
       hp: this.hp,
       maxHp: this.maxHp,
       alive: this.alive,
+      spawning: this.spawning,
       aiState: this.aiState,
       isBoss: this.isBoss,
       color: this.color,

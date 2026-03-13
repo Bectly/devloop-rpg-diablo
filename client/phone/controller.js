@@ -1019,7 +1019,7 @@ function showSaveToast(text) {
 }
 
 // ─── Chat — delegated to chat-ui.js (window.ChatUI) ──────────
-ChatUI.init(socket);
+// ChatUI.init(socket) called at top with other module inits (line 61)
 
 // ─── Inventory ──────────────────────────────────────────────────
 function openInventory() {

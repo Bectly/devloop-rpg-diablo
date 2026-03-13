@@ -183,7 +183,7 @@ function executeAoe(player, skill, monsters, partyBuffs, skillDamageType, skillL
   const results = [];
 
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dx = monster.x - player.x;
     const dy = monster.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -234,7 +234,7 @@ function executeSingle(player, skill, monsters, partyBuffs, skillDamageType, ski
   let nearest = null;
   let nearestDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= player.attackRange * 1.5 && dist < nearestDist) {
       nearest = monster;
@@ -278,7 +278,7 @@ function executeMulti(player, skill, monsters, partyBuffs, skillDamageType, skil
 
   const targets = [];
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= 200) targets.push({ monster, dist });
   }
@@ -321,7 +321,7 @@ function executeDot(player, skill, monsters, partyBuffs, skillDamageType, skillL
   let nearest = null;
   let nearestDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= 200 && dist < nearestDist) {
       nearest = monster;
@@ -406,7 +406,7 @@ function executeSpin(player, skill, monsters, partyBuffs, skillDamageType, skill
   });
 
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dx = monster.x - player.x;
     const dy = monster.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -454,7 +454,7 @@ function executeCharge(player, skill, monsters, partyBuffs, skillDamageType, ski
   let target = null;
   let targetDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= skill.range && dist < targetDist) {
       target = monster;
@@ -598,7 +598,7 @@ function executeBuffDebuff(player, skill, monsters, allPlayers, skillLevel = 1) 
 
   if (skill.fearRadius && skill.fearDuration) {
     for (const monster of monsters) {
-      if (!monster.alive) continue;
+      if (!monster.alive || monster.spawning) continue;
       const dx = monster.x - player.x;
       const dy = monster.y - player.y;
       if (Math.sqrt(dx * dx + dy * dy) <= skill.fearRadius) {
@@ -640,7 +640,7 @@ function executeVolley(player, skill, monsters, partyBuffs, skillDamageType, ski
   let nearest = null;
   let nearestDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= skill.range && dist < nearestDist) {
       nearest = monster;
@@ -704,7 +704,7 @@ function executeSniper(player, skill, monsters, partyBuffs, skillDamageType, ski
   let nearest = null;
   let nearestDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= skill.range && dist < nearestDist) {
       nearest = monster;
@@ -822,7 +822,7 @@ function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType, ski
   let nearest = null;
   let nearestDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= skill.range && dist < nearestDist) {
       nearest = monster;
@@ -889,7 +889,7 @@ function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType, s
   });
 
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dx = monster.x - player.x;
     const dy = monster.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -947,7 +947,7 @@ function executeChain(player, skill, monsters, partyBuffs, skillDamageType, skil
   let current = null;
   let currentDist = Infinity;
   for (const monster of monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.spawning) continue;
     const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
     if (dist <= skill.range && dist < currentDist) {
       current = monster;

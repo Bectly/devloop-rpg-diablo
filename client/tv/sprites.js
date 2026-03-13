@@ -541,6 +541,22 @@ window.Sprites = {
     if (sprite.nameText) sprite.nameText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 16);
     if (sprite.affixText) sprite.affixText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 6);
 
+    // ── Spawn animation: rising from ground ──
+    if (m.spawning) {
+      sprite.setAlpha(0.3);
+      sprite.setScale(0.3);
+      if (sprite.nameText) sprite.nameText.setAlpha(0);
+      if (sprite.hpBar) sprite.hpBar.setAlpha(0);
+      return;
+    }
+    // Transition from spawning → alive
+    if (sprite.alpha < 0.9 && !sprite._spawnDone) {
+      sprite._spawnDone = true;
+      scene.tweens.add({ targets: sprite, alpha: 1, scaleX: 1, scaleY: 1, duration: 300, ease: 'Back.easeOut' });
+      if (sprite.nameText) scene.tweens.add({ targets: sprite.nameText, alpha: 1, duration: 300 });
+      if (sprite.hpBar) scene.tweens.add({ targets: sprite.hpBar, alpha: 1, duration: 300 });
+    }
+
     // ── Treasure Goblin: gold trail particles + return early ──
     if (sprite._isTreasureGoblin) {
       sprite._goblinFrame = (sprite._goblinFrame || 0) + 1;

@@ -2534,15 +2534,15 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 24.1 Multiplayer Connectivity [for Bolt — PRIORITY]
 **Problem:** Players connect from different devices on LAN. Connection needs to be bulletproof.
 
-- [ ] **A:** Connection status indicator on phone — show socket state (connected/reconnecting/disconnected) in HUD corner. Green dot = connected, yellow = reconnecting, red = disconnected.
-- [ ] **B:** Ping display — measure round-trip latency every 5s, show in phone HUD (e.g. "42ms"). Server responds to `ping` with `pong`.
+- [x] **A:** Connection status indicator on phone — show socket state (connected/reconnecting/disconnected) in HUD corner. Green dot = connected, yellow = reconnecting, red = disconnected.
+- [x] **B:** Ping display — measure round-trip latency every 5s, show in phone HUD (e.g. "42ms"). Server responds to `ping` with `pong`.
 - [ ] **C:** Auto-reconnect toast — when socket reconnects, show brief "Reconnected!" toast instead of silent recovery.
 
 ### 24.2 Staggered Monster Spawns [for Bolt — carried from 23.2A]
 **Problem:** All monsters in a room appear instantly when floor loads. Feels artificial.
 
-- [ ] **A:** Server-side spawn delay — when spawning room monsters, assign `spawnDelay` (0, 200ms, 400ms...) per monster. Monster with delay is `spawning=true` (invulnerable, no AI, no collision). After delay → `spawning=false`, emit `monster:spawned` event.
-- [ ] **B:** TV spawn animation — on `monster:spawned` event, play "rising from ground" effect: sprite scales from 0→1 over 300ms with shadow expanding, dust particles at feet.
+- [x] **A:** Server-side spawn delay — when spawning room monsters, assign `spawnDelay` (0, 200ms, 400ms...) per monster. Monster with delay is `spawning=true` (invulnerable, no AI, no collision). After delay → `spawning=false`, emit `monster:spawned` event.
+- [x] **B:** TV spawn animation — on `monster:spawned` event, play "rising from ground" effect: sprite scales from 0→1 over 300ms with shadow expanding, dust particles at feet.
 - [ ] **C:** Cursed event waves also use staggered spawns — each wave spawns monsters 0.3s apart.
 
 ### 24.3 Balancing Pass [for Bolt]
@@ -2569,7 +2569,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 24.6 Code Quality [for Rune — from 22.4]
 - [ ] **A:** Consolidate armor formula — combat.js and monsters.js both have `1 - armor/(armor+50)`. Extract to `damage-types.js:applyArmor()` (already exists, just unused).
 - [ ] **B:** Replace magic numbers in game-loop.js — `20` → `TICK_RATE`, `50` → `TICK_MS`, define at top.
-- [ ] **C:** ChatUI.init(socket) missing in controller.js — chat module never gets socket reference, chat send is silently broken.
+- [x] **C:** ChatUI.init(socket) missing in controller.js — chat module never gets socket reference, chat send is silently broken.
 
 **Agent assignments:**
 1. Bolt: 24.1 (connectivity) + 24.2 (staggered spawns) + 24.3 (balancing)

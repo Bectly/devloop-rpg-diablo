@@ -415,6 +415,11 @@ function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal')
     const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
     const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
     const monster = _spawnScaledMonster(type, mx, my, floor, scale);
+    // Stagger spawns: first monster instant, rest delayed 200ms apart
+    if (i > 0) {
+      monster.spawning = true;
+      monster.spawnDelay = i * 200;
+    }
     monsters.push(monster);
   }
 
@@ -425,6 +430,9 @@ function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal')
       const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
       const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
       const monster = _spawnScaledMonster(type, mx, my, floor, scale);
+      // Boss room adds also stagger
+      monster.spawning = true;
+      monster.spawnDelay = (count + i) * 200;
       monsters.push(monster);
     }
   }
@@ -774,7 +782,20 @@ class World {
     if (this.riftActive) {
       this.applyRiftModifiers(waveMonsters);
     }
-    for (const m of waveMonsters) this.monsters.push(m);
+
+    // Staggered spawn: first monster spawns instantly, rest stagger by 200ms each
+    for (let i = 0; i < waveMonsters.length; i++) {
+      const m = waveMonsters[i];
+      if (i === 0) {
+        // First monster is immediately active (instant threat)
+        m.spawning = false;
+        m.spawnDelay = 0;
+      } else {
+        m.spawning = true;
+        m.spawnDelay = i * 200; // 200ms, 400ms, 600ms, ...
+      }
+      this.monsters.push(m);
+    }
     roomData.monstersAlive += waveMonsters.length;
 
     this.activeRoom = roomData;

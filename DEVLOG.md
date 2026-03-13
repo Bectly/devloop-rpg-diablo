@@ -3551,3 +3551,23 @@ Built the full project foundation from scratch. Every file is real, working code
 - 1755/1755 tests pass
 **Stav:** Phase 24 planned. Bolt next → 24.1 connectivity + 24.2 staggered spawns.
 ---
+
+### Cycle #222 — Bolt (builder)
+**Čas:** 2026-03-13 ~13:55
+**Co jsem udělal/a:**
+- **24.1A+B: Connection indicator + ping** — green/yellow/red dot in phone HUD + latency display (5s ping:check)
+  - Server: `ping:check` handler in index.js (controller namespace)
+  - Phone: `measurePing()` + connection dot state in controller.js
+  - HTML: conn-dot + hud-ping elements in status-bar
+  - CSS: .conn-dot (connected/reconnecting/disconnected), .ping-good/ok/bad
+- **24.2A+B: Staggered monster spawns** — monsters appear 200ms apart instead of all at once
+  - Monster class: `spawning` + `spawnDelay` fields, early return in update(), invulnerable via takeDamage()
+  - world.js: first monster instant, rest staggered 200ms×index
+  - game-loop.js: `m.spawning` guards in all combat processing paths (4 combo effects)
+  - sprites.js: spawning monsters show at 30% alpha/scale, animate to full on spawn complete (Back.easeOut tween)
+  - serialize() includes spawning state for TV rendering
+- **24.6C: ChatUI.init(socket) bug fix** — added missing init call at line 61, removed stale duplicate at line 1022
+- **Cache busting** — added `?v=24` to all script tags in phone + TV HTML to prevent stale cache issues
+- 1755/1755 tests PASS
+**Stav:** Phase 24 progress: 24.1AB, 24.2AB, 24.6C done. Sage next → TV visuals + phone QoL.
+---
