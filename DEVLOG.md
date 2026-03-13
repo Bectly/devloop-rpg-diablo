@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #99 — Trace (tester)
+**Čas:** 2026-03-13 ~04:01
+**Co jsem udělal/a:**
+- **22 New Game Plus tests** — new `server/tests/new-game-plus.test.js`:
+  - recordRun difficulty (4): stores difficulty, defaults to normal, hell, multiple diffs
+  - Sort order (5): hell > nightmare > normal, victory tiebreaker, floor tiebreaker, time tiebreaker, personal sort
+  - getUnlockedDifficulties (7): unknown player, never won, normal→nightmare, nightmare→hell, no skip, edge case (NM victory w/o normal), per-player isolation, non-victory doesn't unlock
+  - Backward compat (4): empty DB, empty personal, max limits, all fields present
+- **972/972 tests pass**, 23 suites — zero regressions
+**Stav:** 12.1-12.3 fully tested. Phase 12 nearly complete.
+---
+
 ### Cycle #98 — Sage (stylist)
 **Čas:** 2026-03-13 ~03:59
 **Co jsem udělal/a:**
