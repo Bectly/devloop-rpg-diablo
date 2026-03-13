@@ -221,10 +221,10 @@ Diablo-style item sets — wear multiple pieces for escalating bonuses.
 - [x] **Set announcement:** "Ironwall Set (2/3)" or "Complete! (3/3)" with green text + particles
 
 ### Future (not this phase)
-- [ ] Leaderboard / stats tracking
+- [x] Crafting / enchant system — DONE Phase 10
 - [ ] Sprite assets via ComfyUI generation
 - [ ] Skill synergies / cross-class combos
-- [ ] Crafting / enchant system
+- [ ] PvP arena mode
 
 ---
 
@@ -592,6 +592,131 @@ Add "Craft" tab/section to the NPC shop interaction (merchant already has shop):
 3. **10.3** `crafting.js` — `upgradeItem()`, `getUpgradeCost()` (20 min)
 4. **10.4** Socket events in socket-handlers.js — wire all 5 events (30 min)
 5. **10.5-10.6** Sage: phone UI + TV visuals (separate cycle)
+
+---
+
+## 🔥 NEXT PRIORITIES (Phase 11: Traps, Chat & Leaderboard)
+
+**Goal:** Three quick-win features that add gameplay depth (traps), social layer (chat), and replayability (leaderboard). Plus refactoring to keep code healthy.
+
+### 11.0 Refactoring: socket-handlers.js split [for Bolt]
+**Why:** socket-handlers.js hit 1100 LOC. Extract crafting handlers.
+- [ ] Extract crafting handlers → `server/socket-handlers-craft.js` (~210 LOC)
+- [ ] Update imports in index.js
+- [ ] Verify 830/830 tests still pass
+
+### 11.1 Environmental Traps — Server [for Bolt]
+**File:** `server/game/world.js` (modify room generation) + `server/game/traps.js` (NEW)
+
+Traps are floor hazards placed during dungeon generation. Step on them → take damage or get debuffed.
+
+**4 trap types:**
+| Trap | Zone | Damage | Effect | Visual |
+|------|------|--------|--------|--------|
+| Spike Trap | Catacombs | 15 physical | Stuns 0.5s | Metal grate |
+| Fire Grate | Inferno | 20 fire | Burning DoT 3s | Glowing red floor |
+| Poison Pool | Any | 10 poison | Poison DoT 5s | Green bubbles |
+| Void Rift | Abyss | 25 cold | Slows 50% for 3s | Purple swirl |
+
+**Mechanics:**
+- 2-4 traps per room (placed during `generateRoom()`, not in start/boss rooms)
+- Traps have position (x, y) and radius (20px)
+- Player enters radius → trap triggers → cooldown 5s before re-trigger
+- Traps are visible but can be walked through (risk/reward for shortcuts)
+- `trap.triggered` Map tracks per-player cooldown
+
+**Server data:**
+```javascript
+const TRAP_DEFS = {
+  spike:  { damage: 15, damageType: 'physical', effect: 'stun', effectDuration: 500, cooldown: 5000 },
+  fire:   { damage: 20, damageType: 'fire', effect: 'burning', effectDuration: 3000, cooldown: 5000 },
+  poison: { damage: 10, damageType: 'poison', effect: 'poison', effectDuration: 5000, cooldown: 5000 },
+  void:   { damage: 25, damageType: 'cold', effect: 'slow', effectDuration: 3000, cooldown: 5000 },
+};
+```
+
+**Trap check in game loop** (index.js update loop):
+```javascript
+for (const trap of world.getTrapsForCurrentRoom()) {
+  for (const [sid, player] of players) {
+    if (player.alive && !player.isDying && trap.canTrigger(player)) {
+      trap.trigger(player); // applies damage + effect
+      // emit to phone: debuff indicator
+      // emit to TV: trap animation
+    }
+  }
+}
+```
+
+### 11.2 Multiplayer Chat — Server + Client [for Bolt]
+**Files:** `server/socket-handlers.js` (add handler), `client/phone/controller.js`, `client/tv/hud.js`
+
+Simple text chat between players. Tiny feature, big co-op impact.
+
+**Server:**
+- `chat:send` → `{ text: string }` — validate (max 100 chars, trim, non-empty)
+- Broadcast: `gameNs.emit('chat:message', { name: player.name, text, timestamp })`
+- Rate limit: max 1 message per second per player
+
+**Phone:**
+- Text input field (bottom of screen, collapsed by default)
+- Tap → expand → type → send → collapse
+- Show last 3 messages as floating text above joystick area
+
+**TV:**
+- Chat messages as floating text above player sprites (speech bubble, fade after 4s)
+- HUD chat log: last 5 messages, bottom-left corner
+
+### 11.3 Leaderboard — Server + Client [for Bolt]
+**Files:** `server/game/database.js` (add queries), `server/socket-handlers.js`, `client/phone/screens.js`
+
+Track run stats and show top players. Drives replayability.
+
+**Database schema** (add to existing SQLite):
+```sql
+CREATE TABLE IF NOT EXISTS leaderboard (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_name TEXT NOT NULL,
+  character_class TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  floor_reached INTEGER NOT NULL,
+  kills INTEGER NOT NULL,
+  gold_earned INTEGER NOT NULL,
+  time_seconds INTEGER NOT NULL,
+  victory INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Server:**
+- On victory: insert leaderboard row with run stats
+- On game over (death on final boss?): also insert (optional)
+- `leaderboard:get` → returns top 10 entries sorted by: victory first, then floor_reached, then time
+- `leaderboard:get_personal` → returns player's best 5 runs
+
+**Phone:**
+- "LDB" button in util-row (or accessible from victory screen)
+- Leaderboard screen (same overlay pattern as quest/shop/craft)
+- Columns: Rank, Name, Class, Level, Floor, Kills, Time, Victory badge
+- Personal best tab
+
+### 11.4 Trap Visuals — TV [for Sage]
+- Spike: gray metallic grate with light shine
+- Fire: animated orange glow with occasional spark particles
+- Poison: green bubbles with alpha pulse
+- Void: purple swirl with rotating particles
+- Trigger effect: flash + screen shake (small)
+
+### 11.5 Trap Indicators — Phone [for Sage]
+- Debuff pills when affected (same as cold/fire from affixes)
+- "Trap!" toast notification on first trigger
+
+### Implementation Order:
+1. **11.0** Refactoring (Bolt, 15 min) — split socket-handlers
+2. **11.1** Traps (Bolt, 30 min) — traps.js + world integration + game loop check
+3. **11.2** Chat (Bolt, 20 min) — socket event + phone input + TV display
+4. **11.3** Leaderboard (Bolt, 30 min) — DB schema + queries + phone screen
+5. **11.4-11.5** Visuals (Sage) — trap sprites + chat UI + leaderboard styling
 
 ---
 
