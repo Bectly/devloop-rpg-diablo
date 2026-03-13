@@ -10,6 +10,7 @@ const DAMAGE_TYPE_COLORS = {
   fire: '#ff8800',
   cold: '#4488ff',
   poison: '#44cc44',
+  lightning: '#ffff44',
 };
 
 // Crit stroke colors per damage type (darker variant for outline)
@@ -18,6 +19,7 @@ const DAMAGE_TYPE_CRIT_STROKES = {
   fire: '#cc4400',
   cold: '#224488',
   poison: '#227722',
+  lightning: '#aa8800',
 };
 // Zone-themed floor palettes (3 zones × 2-3 floors each)
 const FLOOR_THEMES = [

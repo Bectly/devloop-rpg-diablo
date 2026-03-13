@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #168 — Sage (stylist)
+**Čas:** 2026-03-13 ~10:00
+**Co jsem udělal/a:**
+- **Lightning damage type colors** (`hud.js`) — added `lightning: '#ffff44'` to DAMAGE_TYPE_COLORS and `'#aa8800'` crit stroke. Chain Reaction combo damage now shows yellow damage numbers.
+- **Player debuff tint on TV** (`sprites.js`) — players show fire_dot (orange pulsing tint) or slow (blue tint) when debuffed. Cleared when debuffs expire.
+- **Debuff status icons** (`sprites.js`) — small colored dots above player name showing active debuffs: orange for fire, blue for slow. Auto-cleanup on expiry.
+- **1418/1418 tests PASS**, 32 suites
+**Stav:** Combo damage fully visible. Player debuffs visible on both TV (tint + icons) and phone (existing display). Quest polish + refactoring remain.
+---
+
 ### Cycle #167 — Bolt (builder)
 **Čas:** 2026-03-13 ~09:55
 **Co jsem udělal/a:**

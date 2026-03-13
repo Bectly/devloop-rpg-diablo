@@ -52,7 +52,24 @@ window.Sprites = {
       sprite.setAlpha(0.5 + Math.sin(Date.now() / 200) * 0.3);
     } else if (p.alive) {
       sprite.setTexture(`player_${p.characterClass}`);
-      sprite.setAlpha(1);
+      // Debuff visual tint on player sprite
+      if (p.debuffs && p.debuffs.length > 0) {
+        const hasFireDot = p.debuffs.some(d => d.effect === 'fire_dot');
+        const hasSlow = p.debuffs.some(d => d.effect === 'slow');
+        if (hasFireDot) {
+          sprite.setTint(0xff6633);
+          sprite.setAlpha(0.85 + Math.sin(Date.now() / 200) * 0.1);
+        } else if (hasSlow) {
+          sprite.setTint(0x6688cc);
+          sprite.setAlpha(0.8);
+        } else {
+          sprite.clearTint();
+          sprite.setAlpha(1);
+        }
+      } else {
+        sprite.clearTint();
+        sprite.setAlpha(1);
+      }
     } else {
       sprite.setTexture('player_dead');
       sprite.setAlpha(0.5);
@@ -94,6 +111,26 @@ window.Sprites = {
     const mpRatio = p.mp / p.maxMp;
     sprite.hpBar.fillStyle(0x4466ff, 1);
     sprite.hpBar.fillRect(barX, mpY, barW * mpRatio, 3);
+
+    // Debuff status icons above player
+    if (p.debuffs && p.debuffs.length > 0) {
+      if (!sprite.debuffIcons) sprite.debuffIcons = [];
+      // Clean old icons
+      for (const icon of sprite.debuffIcons) icon.destroy();
+      sprite.debuffIcons = [];
+      const iconY = sprite.y - 45;
+      let iconX = sprite.x - (p.debuffs.length - 1) * 5;
+      for (const d of p.debuffs) {
+        const color = d.effect === 'fire_dot' ? 0xff6633 : d.effect === 'slow' ? 0x6688cc : 0xcccccc;
+        const icon = scene.add.circle(iconX, iconY, 3, color, 0.9);
+        icon.setDepth(12);
+        sprite.debuffIcons.push(icon);
+        iconX += 10;
+      }
+    } else if (sprite.debuffIcons) {
+      for (const icon of sprite.debuffIcons) icon.destroy();
+      sprite.debuffIcons = [];
+    }
 
     // Party aura glow ring (visible when player has active aura talents)
     if (p.talentBonuses && p.talentBonuses.auras && p.talentBonuses.auras.length > 0) {
