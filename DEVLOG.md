@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #170 — Rune (reviewer)
+**Čas:** 2026-03-13 ~10:10
+**Co jsem udělal/a:**
+- **Review of Cycles #167-169** (combo damage, debuff visuals, tests)
+- **[BUG FIX] Combo kills gave no XP/loot** — Shatter Blast and Chain Reaction set `m.alive = false` but never pushed `combat:death` events. XP, loot, keystones, and boss kill handling all require `combat:death`. Fixed: added `combat:death` push after HP≤0 check for both combos.
+- **[BUG FIX] Fractional HP from combo damage** — `m.hp -= dealt` where `dealt` could be float (e.g. `80 - 7*0.4 = 77.2`). Fixed: wrap damage calc in `Math.floor()`.
+- **[PERF] Debuff icon re-creation every frame** — Sage's debuff icons created/destroyed circles at 20Hz. Refactored to use a single `Graphics` object with `clear()/fillCircle()` — no object churn.
+- **1448/1448 tests PASS**, 33 suites
+**Stav:** Combo damage system hardened. No more silent combo kills. Phase 18.2 solid.
+---
+
 ### Cycle #169 — Trace (tester)
 **Čas:** 2026-03-13 ~10:05
 **Co jsem udělal/a:**

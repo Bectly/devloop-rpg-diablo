@@ -112,24 +112,21 @@ window.Sprites = {
     sprite.hpBar.fillStyle(0x4466ff, 1);
     sprite.hpBar.fillRect(barX, mpY, barW * mpRatio, 3);
 
-    // Debuff status icons above player
+    // Debuff status icons above player (drawn via Graphics to avoid create/destroy churn)
+    if (!sprite.debuffGfx) {
+      sprite.debuffGfx = scene.add.graphics();
+      sprite.debuffGfx.setDepth(12);
+    }
+    sprite.debuffGfx.clear();
     if (p.debuffs && p.debuffs.length > 0) {
-      if (!sprite.debuffIcons) sprite.debuffIcons = [];
-      // Clean old icons
-      for (const icon of sprite.debuffIcons) icon.destroy();
-      sprite.debuffIcons = [];
       const iconY = sprite.y - 45;
       let iconX = sprite.x - (p.debuffs.length - 1) * 5;
       for (const d of p.debuffs) {
         const color = d.effect === 'fire_dot' ? 0xff6633 : d.effect === 'slow' ? 0x6688cc : 0xcccccc;
-        const icon = scene.add.circle(iconX, iconY, 3, color, 0.9);
-        icon.setDepth(12);
-        sprite.debuffIcons.push(icon);
+        sprite.debuffGfx.fillStyle(color, 0.9);
+        sprite.debuffGfx.fillCircle(iconX, iconY, 3);
         iconX += 10;
       }
-    } else if (sprite.debuffIcons) {
-      for (const icon of sprite.debuffIcons) icon.destroy();
-      sprite.debuffIcons = [];
     }
 
     // Party aura glow ring (visible when player has active aura talents)

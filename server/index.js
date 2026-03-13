@@ -929,10 +929,13 @@ function gameLoop() {
           if (!m.alive) continue;
           const dx = m.x - event.x, dy = m.y - event.y;
           if (dx * dx + dy * dy <= r2) {
-            const dealt = Math.max(1, event.damage - (m.armor || 0) * 0.4);
+            const dealt = Math.floor(Math.max(1, event.damage - (m.armor || 0) * 0.4));
             m.hp -= dealt;
-            if (m.hp <= 0) { m.hp = 0; m.alive = false; }
-            combat.events.push({ type: 'combat:hit', targetId: m.id, damage: Math.floor(dealt), damageType: 'cold', skillName: 'Shatter Blast' });
+            combat.events.push({ type: 'combat:hit', targetId: m.id, damage: dealt, damageType: 'cold', skillName: 'Shatter Blast' });
+            if (m.hp <= 0) {
+              m.hp = 0; m.alive = false;
+              combat.events.push({ type: 'combat:death', entityId: m.id, killedBy: event.triggerId });
+            }
           }
         }
       }
@@ -965,10 +968,13 @@ function gameLoop() {
           if (!m.alive) continue;
           const dx = m.x - event.x, dy = m.y - event.y;
           if (dx * dx + dy * dy <= r2) {
-            const dealt = Math.max(1, 30 - (m.armor || 0) * 0.4);
+            const dealt = Math.floor(Math.max(1, 30 - (m.armor || 0) * 0.4));
             m.hp -= dealt;
-            if (m.hp <= 0) { m.hp = 0; m.alive = false; }
-            combat.events.push({ type: 'combat:hit', targetId: m.id, damage: Math.floor(dealt), damageType: 'lightning', skillName: 'Chain Reaction' });
+            combat.events.push({ type: 'combat:hit', targetId: m.id, damage: dealt, damageType: 'lightning', skillName: 'Chain Reaction' });
+            if (m.hp <= 0) {
+              m.hp = 0; m.alive = false;
+              combat.events.push({ type: 'combat:death', entityId: m.id, killedBy: event.triggerId });
+            }
           }
         }
       }
