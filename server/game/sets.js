@@ -15,7 +15,7 @@ const ITEM_SETS = {
     },
     bonuses: {
       2: { armor: 30, maxHpPercent: 15, description: '+30 Armor, +15% Max HP' },
-      3: { damagePercent: 25, description: '+25% Damage, Shield Bash stuns 2s' },
+      3: { damagePercent: 25, description: '+25% Damage, Charging Strike stuns 2s' },
     },
   },
   shadowweave: {

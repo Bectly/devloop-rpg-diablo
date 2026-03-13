@@ -350,13 +350,13 @@ function executeDot(player, skill, monsters, partyBuffs, skillDamageType) {
 }
 
 /**
- * Buff skill: 'War Cry' targets allPlayers, others target [player].
+ * Buff skill: self-targeted buff (Evasion, etc.).
  * Pushes buff to target.buffs[].
  */
 function executeBuff(player, skill, allPlayers) {
   const results = [];
 
-  const targets = skill.name === 'War Cry' ? allPlayers : [player];
+  const targets = [player];
   for (const target of targets) {
     if (!target.alive) continue;
     target.buffs.push({

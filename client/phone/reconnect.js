@@ -134,7 +134,7 @@ window.Reconnect = {
     if (stats.buffs) {
       for (const b of stats.buffs) {
         const secs = Math.ceil((b.remaining || 0) / 1000);
-        if (b.effect === 'war_cry') items.push({ cls: 'buff-warcry', html: `\u2694\uFE0F ${secs}s` });
+        if (b.effect === 'attack_up') items.push({ cls: 'buff-warcry', html: `\u2694\uFE0F ${secs}s` });
         else if (b.effect === 'evasion') items.push({ cls: 'buff-evasion', html: `\u{1F4A8} ${secs}s` });
         else items.push({ cls: 'buff-generic', html: `\u2728 ${secs}s` });
       }

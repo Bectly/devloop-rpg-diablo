@@ -140,11 +140,11 @@ const WARRIOR_TREE = {
       {
         id: 'warrior_warlord_t4',
         name: 'Rallying Cry',
-        description: 'War Cry also heals party for 20% of their max HP.',
+        description: 'Battle Shout also heals party for 20% of their max HP.',
         tier: 4,
         maxRank: 1,
         effects: [
-          { type: 'skill_upgrade', skill: 'War Cry', property: 'heal_party_percent', value: 20, per_rank: false }
+          { type: 'skill_upgrade', skill: 'Battle Shout', property: 'heal_party_percent', value: 20, per_rank: false }
         ]
       }
     ]
@@ -576,7 +576,7 @@ function allocateTalent(characterClass, playerTalents, talentId, playerLevel) {
  *   passives: { damage_percent, spell_damage_percent, crit_chance, ... },
  *   procs: [ { trigger, effect, chance, ... } ],
  *   auras: [ { stat, value, party } ],
- *   skillUpgrades: { 'Cleave': { damage: 0.30 }, ... }
+ *   skillUpgrades: { 'Whirlwind': { damage: 0.30 }, ... }
  * }
  */
 function computeTalentBonuses(playerTalents, characterClass) {

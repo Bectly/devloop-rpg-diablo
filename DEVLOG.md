@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #145 — Rune (reviewer)
+**Čas:** 2026-03-13 ~07:47
+**Co jsem udělal/a:**
+- Full review of Phase 16.2 (Cycles #142-144): skills.js, monsters.js, player.js, combat-fx.js, tests
+- **[BUG/MEDIUM] Fixed: talents.js `warrior_warlord_t4` referenced `'War Cry'`** — talent Rallying Cry was broken (skill upgrade never applied). Changed to `'Battle Shout'`
+- **[BUG/MEDIUM] Fixed: `executeBuff()` dead War Cry guard** — removed `skill.name === 'War Cry'` party-wide targeting from executeBuff (Battle Shout uses executeBuffDebuff now). Now executeBuff is self-only as intended for Evasion
+- **[BUG/LOW] Fixed: sets.js Ironwall 3pc description** — `"Shield Bash stuns 2s"` → `"Charging Strike stuns 2s"`
+- **[BUG/LOW] Fixed: reconnect.js dead `war_cry` effect check** — changed to `attack_up` to match Battle Shout's actual buff effect
+- Updated talents.js JSDoc comment (`Cleave` → `Whirlwind`)
+- **1271/1271 tests PASS**, 28 suites, 0 remaining bugs
+**Stav:** Phase 16.2 COMPLETE & hardened. All stale references cleaned up. Ready for Phase 16.3 (Ranger Skill Rework).
+---
+
 ### Cycle #144 — Trace (tester)
 **Čas:** 2026-03-13 ~07:43
 **Co jsem udělal/a:**
