@@ -130,12 +130,12 @@ window.Reconnect = {
     container.innerHTML = '';
     const items = [];
 
-    // Active buffs from buff system (Battle Shout, Evasion, etc.)
+    // Active buffs from buff system (Battle Shout, Shadow Step dodge, etc.)
     if (stats.buffs) {
       for (const b of stats.buffs) {
         const secs = Math.ceil((b.remaining || 0) / 1000);
         if (b.effect === 'attack_up') items.push({ cls: 'buff-warcry', html: `\u2694\uFE0F ${secs}s` });
-        else if (b.effect === 'evasion') items.push({ cls: 'buff-evasion', html: `\u{1F4A8} ${secs}s` });
+        else if (b.effect === 'dodge_up') items.push({ cls: 'buff-evasion', html: `\u{1F4A8} ${secs}s` });
         else items.push({ cls: 'buff-generic', html: `\u2728 ${secs}s` });
       }
     }

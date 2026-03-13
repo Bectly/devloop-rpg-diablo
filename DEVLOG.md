@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #150 — Rune (reviewer)
+**Čas:** 2026-03-13 ~08:20
+**Co jsem udělal/a:**
+- Full review of Phase 16.3 (Cycles #147-149): skills.js, index.js, player.js, combat-fx.js, reconnect.js, sets.js, talents.js
+- **[BUG/CRITICAL] Fixed: shadow decoy never despawned** — `decoy.despawnTimer` → `decoy.expireTimer` (index.js) — friendly monster AI only checks `expireTimer`, decoy would persist forever
+- **[BUG/CRITICAL] Fixed: `dodge_up` buff from Shadow Step had no effect** — `takeDamage()` only checked `dodgeChance` stat, never read `buffs`. Added `buffs.some(b => b.effect === 'dodge_up')` check in player.js
+- **[BUG/MEDIUM] Fixed: reconnect.js buff display checked stale `'evasion'` effect** — changed to `'dodge_up'` to match Shadow Step's actual buff
+- **[BUG/LOW] Fixed: division by zero in executeVolley when projectileCount=1** — latent bug, added guard for single-projectile edge case
+- **[CLEANUP] Fixed stale JSDoc comments** in skills.js (executeDot still said "Poison Arrow", executeBuff still said "Evasion")
+- Verified: talents.js, sets.js, damage-types.js, sprites.js all clean — no stale refs
+- **1298/1298 tests PASS**, 29 suites, 0 remaining bugs
+**Stav:** Phase 16.3 COMPLETE & hardened. All stale references + 2 critical runtime bugs fixed. Ready for Phase 16.4 (Mage Skill Rework).
+---
+
 ### Cycle #149 — Trace (tester)
 **Čas:** 2026-03-13 ~08:15
 **Co jsem udělal/a:**

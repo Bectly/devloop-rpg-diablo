@@ -1733,41 +1733,14 @@ This lets TV client differentiate friendly wolves visually.
 - [x] 30 tests (phase16-warrior.test.js), 1271/1271 PASS
 - [x] Review: talents.js, sets.js, reconnect.js stale refs fixed
 
-### 16.3 Ranger Skill Rework [for Bolt — TOP PRIORITY]
-
-| Old Skill | New Skill | Type | Key Change |
-|-----------|-----------|------|------------|
-| Multi-Shot (projectile, 3 arrows) | **Arrow Volley** (volley, 5 projectiles, 30° cone, piercing) | NEW `volley` | 5 arrows, 60% ATK each, pierce first target |
-| Power Shot (single target high) | **Sniper Shot** (sniper, heavy piercing projectile) | NEW `sniper` | 300% ATK, pierces ALL targets, range 400, slow + visible trail |
-| Evasion (+dodge buff 5s) | **Shadow Step** (shadow_step, teleport + dodge) | NEW `shadow_step` | Teleport 100px, 100% dodge 1s, shadow decoy (aggro 2s) |
-
-**Implementation order for Bolt:**
-1. `player.js` — Replace 3 ranger skill definitions:
-   ```
-   Arrow Volley:  { type: 'volley', mpCost: 18, cooldown: 3000, damage: 0.6, projectileCount: 5, spreadAngle: 30, piercing: true, range: 300 }
-   Sniper Shot:   { type: 'sniper', mpCost: 25, cooldown: 8000, damage: 3.0, piercing: true, range: 400, speed: 200 }
-   Shadow Step:   { type: 'shadow_step', mpCost: 20, cooldown: 7000, range: 100, dodgeDuration: 1000, decoyDuration: 2000 }
-   ```
-2. `damage-types.js` — Update ranger skill entries (Arrow Volley, Sniper Shot, Shadow Step)
-3. `skills.js` — Add 3 new handlers:
-   - `executeVolley(player, skill, monsters)` — emit `projectile:create` events for 5 angled projectiles
-   - `executeSniper(player, skill, monsters)` — emit `projectile:create` for single heavy piercing projectile
-   - `executeShadowStep(player, skill, monsters, allPlayers)` — teleport player, apply dodge buff, spawn shadow decoy
-   - Add 3 switch cases: `'volley'`, `'sniper'`, `'shadow_step'`
-   - Import `createProjectileAngled` from projectiles.js for angle math
-4. `index.js` — Add `projectile:create` event handler in game loop:
-   ```
-   // In results processing: if (ev.type === 'projectile:create') { createProjectileAngled(ev.ownerId, ev.x, ev.y, ev.angle, ev.speed, ev.damage, ev.damageType, ev.piercing); }
-   ```
-5. `client/tv/combat-fx.js` — Update ranger skill visual references
-6. `client/phone/screens.js` — Update ranger skill tooltips
-7. Update existing tests (skill names changed)
-
-**Architecture: projectile:create events**
-- Skill handlers DON'T create Projectile objects directly (no access to world state)
-- Instead, they emit `{ type: 'projectile:create', ownerId, x, y, angle, speed, damage, damageType, piercing }` events
-- Game loop in index.js catches these and calls `createProjectileAngled()` to spawn actual projectiles
-- This keeps skills.js decoupled from world/projectile state
+### 16.3 Ranger Skill Rework ✅ DONE (Bolt #147, Sage #148, Trace #149, Rune #150)
+- [x] 3 new skill types: `volley` (Arrow Volley), `sniper` (Sniper Shot), `shadow_step` (Shadow Step)
+- [x] `projectile:create` event bridge (skills.js → index.js → projectiles.js)
+- [x] Shadow decoy system (friendly monster with expireTimer)
+- [x] dodge_up buff wired in player.takeDamage()
+- [x] TV visuals: arrow volley fan, sniper trail, shadow step smoke/decoy sprite
+- [x] 27 tests (phase16-ranger.test.js), 1298/1298 PASS
+- [x] Review: 2 critical bugs fixed (decoy despawn, dodge buff), stale refs cleaned
 
 ### 16.4 Mage Skill Rework [for Bolt]
 

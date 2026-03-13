@@ -865,7 +865,7 @@ function gameLoop() {
       decoy.hp = 1;
       decoy.maxHp = 1;
       decoy.name = 'Shadow Decoy';
-      decoy.despawnTimer = event.duration || 2000;
+      decoy.expireTimer = event.duration || 2000;
       world.monsters.push(decoy);
     }
 

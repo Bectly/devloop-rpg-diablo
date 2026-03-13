@@ -302,7 +302,7 @@ function executeMulti(player, skill, monsters, partyBuffs, skillDamageType) {
 }
 
 /**
- * DoT skill (Poison Arrow): nearest monster within 200.
+ * DoT skill: nearest monster within 200.
  * Sets poisonTick / poisonDamage on target. Adds effect: 'poison' to hit event.
  */
 function executeDot(player, skill, monsters, partyBuffs, skillDamageType) {
@@ -350,7 +350,7 @@ function executeDot(player, skill, monsters, partyBuffs, skillDamageType) {
 }
 
 /**
- * Buff skill: self-targeted buff (Evasion, etc.).
+ * Buff skill: self-targeted buff.
  * Pushes buff to target.buffs[].
  */
 function executeBuff(player, skill, allPlayers) {
@@ -647,7 +647,7 @@ function executeVolley(player, skill, monsters, partyBuffs, skillDamageType) {
   const spreadRad = (skill.spreadAngle * Math.PI) / 180;
   const count = skill.projectileCount || 5;
   for (let i = 0; i < count; i++) {
-    const offset = spreadRad * ((i / (count - 1)) - 0.5);
+    const offset = count <= 1 ? 0 : spreadRad * ((i / (count - 1)) - 0.5);
     const angle = targetAngle + offset;
     const projDamage = Math.floor(player.attackPower * skill.damage);
 

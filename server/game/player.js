@@ -401,8 +401,9 @@ class Player {
   takeDamage(amount, damageType = 'physical') {
     if (!this.alive || this.isDying) return 0;
 
-    // Dodge check
-    if (Math.random() * 100 < this.dodgeChance) {
+    // Dodge check — dodge_up buff (Shadow Step) guarantees dodge
+    const hasDodgeBuff = this.buffs.some(b => b.effect === 'dodge_up');
+    if (hasDodgeBuff || Math.random() * 100 < this.dodgeChance) {
       return -1; // dodged
     }
 
