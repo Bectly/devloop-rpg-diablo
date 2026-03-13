@@ -83,6 +83,8 @@ function generateGem(type, tier) {
     bonuses: { ...data.bonuses },
     stackable: true,
     quantity: 1,
+    gridW: 1,
+    gridH: 1,
     color: data.color,
     rarity: TIER_RARITY[tier] || 'uncommon',
   };

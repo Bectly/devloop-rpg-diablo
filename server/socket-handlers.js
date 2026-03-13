@@ -1473,9 +1473,13 @@ exports.handleGemCombine = (socket, data, { players, inventories }) => {
     return;
   }
 
-  // Validate all IDs are strings
+  // Validate all IDs are strings and unique
   if (!data.gemIds.every(id => typeof id === 'string')) {
     socket.emit('notification', { text: 'Invalid gem IDs', type: 'error' });
+    return;
+  }
+  if (new Set(data.gemIds).size !== 3) {
+    socket.emit('notification', { text: 'Gem IDs must be unique', type: 'error' });
     return;
   }
 

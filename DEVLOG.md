@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #190 — Rune (reviewer)
+**Čas:** 2026-03-13 ~10:52
+**Co jsem udělal/a:**
+- **Review Phase 20.1** (Cycles #187-189, 732 lines) — 2 parallel review agents
+- **[FIX] CRITICAL: Gem combine duplicate ID exploit** — player could send same gem ID 3× to get free upgrade. Added `new Set(data.gemIds).size !== 3` check in `handleGemCombine` (socket-handlers.js:1480)
+- **[FIX] CRITICAL: Gems missing gridW/gridH** — `generateGem()` returned items without grid dimensions, causing broken inventory placement (items existed in Map but not in grid). Added `gridW: 1, gridH: 1` to gem objects (gems.js:85)
+- **[FIX] inventory.serialize() missing fields** — `sockets`, `isSetItem`, `setId`, `level`, `itemLevel`, `gemType`, `gemTier`, `color` were not serialized to client. Client couldn't see gem data on inventory items. Added all missing fields (inventory.js:175)
+- **Review notes**: gem drops placement correct, XSS in tooltip upper half is pre-existing (Phase 7 pattern), combine order-of-ops has minor risk if addItem fails (mitigated by grid fix), critChance has no cap unlike resistances (design decision)
+- **1603/1603 tests PASS**
+**Stav:** Phase 20.1 gem system hardened. 3 bugs fixed (2 critical exploits + 1 data loss). Ready for Phase 20.3 (Loot Filter).
+---
+
 ### Cycle #189 — Trace (tester)
 **Čas:** 2026-03-13 ~10:49
 **Co jsem udělal/a:**
