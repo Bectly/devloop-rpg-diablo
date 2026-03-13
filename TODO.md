@@ -2214,6 +2214,63 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 ---
 
+## 🔥🔥 PRIORITY: Phone UX Overhaul + TV Visual Polish
+
+**User feedback:** Phone controls unintuitive, too many buttons visible, movement too sensitive. TV visuals need polish.
+
+### P.1 Phone Layout Redesign [for Bolt — PRIORITY]
+**Problem:** 14 buttons crammed on right side. ATK + S1/S2/S3 + HP/NPC/LOOT/INV/QST/CRF/MSG/TLN/RIFT/LDB. Overwhelming.
+
+**New layout — 3 tiers:**
+
+```
+┌─────────────────────────────────────────────┐
+│ [Name Lv.5]  [HP ████████] [MP ████] [F3]  │  ← Status bar (keep)
+├──────────────────┬──────────────────────────┤
+│                  │                    [ATK] │  ← Big red attack
+│                  │              [S1][S2][S3]│  ← Skill row
+│    JOYSTICK      │             [HP] [LOOT]  │  ← Quick actions
+│     (left)       │               [≡ MENU]   │  ← Menu button → drawer
+│                  │                          │
+└──────────────────┴──────────────────────────┘
+```
+
+**Core buttons (always visible):** ATK, S1, S2, S3, HP (potion), LOOT (pickup)
+**Menu drawer (tap ≡ to open):** INV, QST, CRF, MSG, TLN, RIFT, LDB, STASH, GEMS, FILTER
+**Contextual:** NPC/INTERACT button appears ONLY when near interactive object
+
+**Implementation:**
+- [ ] **Step A: Menu drawer** — new `#menu-drawer` element, slides up from bottom
+  - Grid of icon buttons: 🎒INV, ⚔️QST, 🔨CRF, 💬MSG, ⚡TLN, 🌀RIFT, 🏆LDB
+  - Tap ≡ to toggle, tap outside or any button to close
+  - CSS: `transform: translateY(100%)` → `translateY(0)` transition
+- [ ] **Step B: Remove util-row** — delete the 10-button util-row from HTML
+  - Replace with single `≡ MENU` button
+  - Keep ATK, S1-S3, HP, LOOT as direct buttons
+- [ ] **Step C: Contextual NPC button** — show INTERACT only when server sends `npc:nearby` event
+  - Appears as floating button near center-right
+  - Auto-hides after 2s or when player moves away
+- [ ] **Step D: Button sizing** — increase touch targets
+  - ATK: 84→96px
+  - Skills: 56→64px
+  - HP/LOOT: 50→56px
+  - MENU: 50×50px
+
+**Files:** `client/phone/index.html`, `client/phone/style.css`, `client/phone/controller.js`
+
+### P.2 TV Visual Improvements [for Sage]
+**Problem:** Procedural textures look basic. Dungeon is functional but not atmospheric.
+
+- [ ] **Step A: Better player sprites** — add idle bounce animation, weapon held visually, class-color tint
+- [ ] **Step B: Dungeon atmosphere** — dark overlay on unexplored areas, torch light around players (radial gradient), ambient particles (dust motes)
+- [ ] **Step C: Monster death animation** — fade + shrink + particle burst instead of instant disappear
+- [ ] **Step D: Floor tiles variation** — 2-3 floor tile variants (random per tile), crack patterns, debris
+- [ ] **Step E: Wall depth** — darker wall tops, slight 3D shadow effect
+
+**Files:** `client/tv/game.js`, `client/tv/sprites.js`, `client/tv/effects.js`
+
+---
+
 ## 🔥 Phase 21: World Events & Gambling
 
 **Goal:** Add dynamic gameplay variety with random events during dungeon runs + a gold sink gambling system. Refactor large files that crossed 1500 LOC.

@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #206 — Aria (architect)
+**Čas:** 2026-03-13 ~12:20
+**Co jsem udělal/a:**
+- **User feedback analysis**: Phone has 14 buttons crammed on right side — overwhelming
+- **Phone UX redesign plan** (P.1 in TODO): 3-tier layout
+  - Core buttons always visible: ATK, S1-S3, HP, LOOT (6 buttons)
+  - Menu drawer for everything else: INV, QST, CRF, MSG, TLN, RIFT, LDB (7 items in slide-up drawer)
+  - Contextual NPC button: only appears when near interactable
+  - Bigger touch targets (ATK 96px, skills 64px)
+- **TV visual polish plan** (P.2 in TODO): player animations, dungeon atmosphere, death anims, tile variation, wall depth
+- These are PRIORITY over Phase 21.4 refactoring — user experience first
+**Stav:** UX overhaul planned. Bolt next → implement phone layout redesign.
+---
+
 ### Cycle #205 — Rune (reviewer)
 **Čas:** 2026-03-13 ~12:15
 **Co jsem udělal/a:**
