@@ -179,7 +179,10 @@ socket.on('hardcore:death', (data) => {
 
 socket.on('stash:update', (data) => {
   stashData = data.items || [];
-  renderStash();
+  const stashScreen = document.getElementById('stash-screen');
+  if (stashScreen && !stashScreen.classList.contains('hidden')) {
+    renderStash();
+  }
 });
 
 let _prevSetBonusKeys = new Set();
@@ -229,52 +232,53 @@ socket.on('inventory:update', (data) => {
 });
 
 // ── Stash ──────────────────────────────────────────────────────
-let stashData = null;
-
-socket.on('stash:update', (data) => {
-  stashData = data.items || [];
-  const stashScreen = document.getElementById('stash-screen');
-  if (stashScreen && !stashScreen.classList.contains('hidden')) {
-    renderStash();
-  }
-});
 
 function renderStash() {
+  const grid = document.getElementById('stash-grid');
   const countEl = document.getElementById('stash-count');
-  const gridEl = document.getElementById('stash-grid');
-  if (!gridEl) return;
+  if (!grid) return;
 
   const items = stashData || [];
-  const occupiedSlots = new Map(items.map(e => [e.slot, e.item]));
-
-  if (countEl) countEl.textContent = `${items.length} / 20`;
-
-  gridEl.innerHTML = '';
-
-  // Render 20 slots in a 4×5 grid
-  for (let slot = 0; slot < 20; slot++) {
-    const item = occupiedSlots.get(slot);
-    const cell = document.createElement('div');
-    cell.dataset.slot = slot;
-
-    if (item) {
-      cell.className = `stash-slot filled rarity-${item.rarity || 'common'}`;
-      cell.innerHTML = `<span class="slot-num">${slot + 1}</span><span class="item-name">${item.name}</span>`;
-      cell.addEventListener('click', () => {
-        if (confirm(`Retrieve "${item.name}"?`)) {
-          socket.emit('stash:retrieve', { slot });
-        }
-      });
-    } else {
-      cell.className = 'stash-slot empty';
-      cell.innerHTML = `<span class="slot-num">${slot + 1}</span>`;
-      cell.addEventListener('click', () => _showStoreMenu(slot));
-    }
-
-    gridEl.appendChild(cell);
+  const slotMap = new Map();
+  for (const entry of items) {
+    slotMap.set(entry.slot, entry.item);
   }
 
-  // Also render inventory items below for quick store access
+  if (countEl) countEl.textContent = items.length + ' / 20';
+  grid.innerHTML = '';
+
+  for (let i = 0; i < 20; i++) {
+    const slotEl = document.createElement('div');
+    slotEl.className = 'stash-slot';
+
+    const item = slotMap.get(i);
+    if (item) {
+      slotEl.classList.add('filled');
+      const nameEl = document.createElement('div');
+      nameEl.className = 'item-name';
+      nameEl.textContent = item.name || 'Item';
+      nameEl.style.color = item.rarityColor || '#aaa';
+      slotEl.appendChild(nameEl);
+
+      slotEl.addEventListener('click', () => {
+        socket.emit('stash:retrieve', { slot: i });
+      });
+      slotEl.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        socket.emit('stash:retrieve', { slot: i });
+      });
+    } else {
+      slotEl.classList.add('empty');
+      const emptyEl = document.createElement('div');
+      emptyEl.className = 'item-name';
+      emptyEl.textContent = '\u2014';
+      slotEl.appendChild(emptyEl);
+    }
+
+    grid.appendChild(slotEl);
+  }
+
+  // Render inventory items below for quick store access
   _renderStashInvPanel();
 }
 
@@ -283,7 +287,12 @@ function _renderStashInvPanel() {
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'stash-inv-panel';
-    panel.innerHTML = '<h3>Store from Inventory</h3><div id="stash-inv-list"></div>';
+    const heading = document.createElement('h3');
+    heading.textContent = 'Store from Inventory';
+    panel.appendChild(heading);
+    const listDiv = document.createElement('div');
+    listDiv.id = 'stash-inv-list';
+    panel.appendChild(listDiv);
     const gridEl = document.getElementById('stash-grid');
     if (gridEl && gridEl.parentNode) gridEl.parentNode.appendChild(panel);
   }
@@ -293,24 +302,28 @@ function _renderStashInvPanel() {
   const items = inventoryData.items || [];
   listEl.innerHTML = '';
   if (items.length === 0) {
-    listEl.innerHTML = '<p class="stash-empty">Inventory empty</p>';
+    const emptyMsg = document.createElement('p');
+    emptyMsg.className = 'stash-empty';
+    emptyMsg.textContent = 'Inventory empty';
+    listEl.appendChild(emptyMsg);
     return;
   }
   items.forEach((item, idx) => {
     const row = document.createElement('div');
-    row.className = `stash-inv-row rarity-${item.rarity || 'common'}`;
-    row.innerHTML = `<span>${item.name}</span><button class="stash-store-btn">Store</button>`;
-    row.querySelector('.stash-store-btn').addEventListener('click', () => {
+    row.className = 'stash-inv-row';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = item.name;
+    nameSpan.style.color = item.rarityColor || '#aaa';
+    row.appendChild(nameSpan);
+    const storeBtn = document.createElement('button');
+    storeBtn.className = 'stash-store-btn';
+    storeBtn.textContent = 'Store';
+    storeBtn.addEventListener('click', () => {
       socket.emit('stash:store', { inventoryIndex: idx });
     });
+    row.appendChild(storeBtn);
     listEl.appendChild(row);
   });
-}
-
-function _showStoreMenu(targetSlot) {
-  // Just focus the inv panel — slot selection is cosmetic for empty slots
-  const panel = document.getElementById('stash-inv-panel');
-  if (panel) panel.scrollIntoView({ behavior: 'smooth' });
 }
 
 socket.on('notification', (data) => {
@@ -1006,79 +1019,7 @@ function renderInventory() {
   renderStats();
 }
 
-// ─── Stash ────────────────────────────────────────────────────
-function openStash() {
-  socket.emit('stash:list');
-  inventoryScreen.classList.add('hidden');
-  document.getElementById('stash-screen').classList.remove('hidden');
-}
-
-function closeStash() {
-  document.getElementById('stash-screen').classList.add('hidden');
-}
-
-function renderStash() {
-  const grid = document.getElementById('stash-grid');
-  const countEl = document.getElementById('stash-count');
-  if (!grid) return;
-
-  grid.innerHTML = '';
-  const filled = stashData.length;
-  if (countEl) countEl.textContent = filled + ' / 20';
-
-  // Build a map of slot → item
-  const slotMap = new Map();
-  for (const entry of stashData) {
-    slotMap.set(entry.slot, entry.item);
-  }
-
-  for (let i = 0; i < 20; i++) {
-    const slotEl = document.createElement('div');
-    slotEl.className = 'stash-slot';
-    slotEl.style.position = 'relative';
-
-    const item = slotMap.get(i);
-    if (item) {
-      slotEl.classList.add('filled');
-      const nameEl = document.createElement('div');
-      nameEl.className = 'item-name';
-      nameEl.textContent = item.name || 'Item';
-      nameEl.style.color = item.rarityColor || '#aaa';
-      slotEl.appendChild(nameEl);
-
-      // Tap to retrieve
-      slotEl.addEventListener('click', () => {
-        socket.emit('stash:retrieve', { slot: i });
-      });
-      slotEl.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        socket.emit('stash:retrieve', { slot: i });
-      });
-    } else {
-      slotEl.classList.add('empty');
-      const nameEl = document.createElement('div');
-      nameEl.className = 'item-name';
-      nameEl.textContent = '\u2014';
-      slotEl.appendChild(nameEl);
-    }
-
-    grid.appendChild(slotEl);
-  }
-}
-
-// Stash button in inventory opens stash
-document.getElementById('btn-stash').addEventListener('click', () => openStash());
-document.getElementById('btn-stash').addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  openStash();
-});
-
-// Stash close
-document.getElementById('stash-close').addEventListener('click', () => closeStash());
-document.getElementById('stash-close').addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  closeStash();
-});
+// (Stash open/close/render consolidated above — see initializeButtons + renderStash)
 
 // ─── Stats & Tooltip — delegated to stats-ui.js (StatsUI) ──────
 function renderStats() {

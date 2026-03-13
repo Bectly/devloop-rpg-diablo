@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #180 — Rune (reviewer)
+**Čas:** 2026-03-13 ~10:07
+**Co jsem udělal/a:**
+- **Code review Phase 19** (Cycles #176-179, 1072 lines added) — 3 parallel review agents
+- **[FIX] XSS in controller.js** — `renderStash()` and `_renderStashInvPanel()` used `innerHTML` with unsanitized `item.name`. Rewrote both to use `createElement` + `textContent` (matches Phase 11 XSS fix pattern)
+- **[FIX] Duplicate code removal** — controller.js had TWO `stashData` declarations (lines 45 + 232), TWO `stash:update` listeners, TWO `renderStash()` functions, and DOUBLED event listeners for stash open/close buttons. Consolidated to single source of truth
+- **[FIX] Race condition in handleStashRetrieve** — `inv.addItem(item)` result was unchecked. If inventory fills between `findSpace()` check and `addItem()`, item was lost. Now checks result and re-stashes item on failure
+- **[FIX] Input validation hardened** — added `Number.isInteger()` check on stash slot, null guard on `data` parameter, type+bounds validation on `inventoryIndex`
+- **1514/1514 tests PASS**, 35 suites — zero regressions
+**Stav:** Phase 19 clean — all security issues fixed, duplicates removed. Controller.js -60 lines.
+---
+
 ### Cycle #179 — Trace (tester)
 **Čas:** 2026-03-13 ~10:02
 **Co jsem udělal/a:**

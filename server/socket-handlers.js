@@ -1231,12 +1231,14 @@ exports.handleStashStore = (socket, data, { players, inventories, gameDb }) => {
   const inv = inventories.get(player.id);
   if (!inv) return;
 
+  if (!data) return;
+
   // Find item by index or by ID (stats-ui sends itemId, stash list sends inventoryIndex)
   const items = inv.getAllItems();
   let item;
-  if (data.itemId) {
+  if (data.itemId && typeof data.itemId === 'string') {
     item = items.find(i => i.id === data.itemId);
-  } else if (typeof data.inventoryIndex === 'number') {
+  } else if (typeof data.inventoryIndex === 'number' && Number.isInteger(data.inventoryIndex) && data.inventoryIndex >= 0 && data.inventoryIndex < items.length) {
     item = items[data.inventoryIndex];
   }
   if (!item) {
@@ -1271,9 +1273,9 @@ exports.handleStashRetrieve = (socket, data, { players, inventories, gameDb }) =
   const inv = inventories.get(player.id);
   if (!inv) return;
 
-  // Validate slot
-  const slot = data.slot;
-  if (typeof slot !== 'number' || slot < 0 || slot >= 20) {
+  // Validate slot — must be integer 0-19
+  const slot = data && data.slot;
+  if (typeof slot !== 'number' || !Number.isInteger(slot) || slot < 0 || slot >= 20) {
     socket.emit('notification', { text: 'Invalid stash slot', type: 'error' });
     return;
   }
@@ -1291,8 +1293,13 @@ exports.handleStashRetrieve = (socket, data, { players, inventories, gameDb }) =
     return;
   }
 
-  // Add to inventory
-  inv.addItem(item);
+  // Add to inventory — if fails, put item back in stash
+  const result = inv.addItem(item);
+  if (!result || !result.success) {
+    gameDb.stashItemAt(slot, item);
+    socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    return;
+  }
 
   socket.emit('inventory:update', inv.serialize());
   socket.emit('stash:update', { items: gameDb.getStash() });
