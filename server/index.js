@@ -273,6 +273,8 @@ const TICK_RATE = 20;
 const TICK_MS = 1000 / TICK_RATE;
 let lastTick = Date.now();
 let tickCount = 0;
+const AUTO_PICKUP_RADIUS = 72; // 1.5 tiles
+const RARE_PLUS_RARITIES = new Set(['rare', 'epic', 'legendary', 'set']);
 
 function gameLoop() {
   const now = Date.now();
@@ -1224,9 +1226,6 @@ function gameLoop() {
 
   // ── Loot filter: auto-pickup ──
   if (tickCount % 10 === 0) {
-    const AUTO_PICKUP_RADIUS = 72; // 1.5 tiles
-    const RARE_PLUS = new Set(['rare', 'epic', 'legendary', 'set']);
-
     for (const [pid, player] of players) {
       if (!player.alive || player.lootFilter === 'off') continue;
 
@@ -1259,7 +1258,7 @@ function gameLoop() {
             item.subType === 'health_potion' ||
             item.subType === 'mana_potion' ||
             item.type === 'gem' ||
-            RARE_PLUS.has(item.rarity);
+            RARE_PLUS_RARITIES.has(item.rarity);
         }
 
         if (!shouldPickup) continue;
@@ -1270,13 +1269,17 @@ function gameLoop() {
 
         if (picked.type === 'currency') {
           player.gold += picked.quantity;
+          if (player.questManager) player.questManager.check('collect_gold', picked.quantity);
           sock.emit('notification', { text: `+${picked.quantity} gold`, type: 'gold' });
+          sock.emit('player:stats', player.serializeForPhone());
         } else if (picked.subType === 'health_potion') {
           player.healthPotions += picked.quantity;
           sock.emit('notification', { text: `+${picked.quantity} Health Potion`, type: 'info' });
+          sock.emit('player:stats', player.serializeForPhone());
         } else if (picked.subType === 'mana_potion') {
           player.manaPotions += picked.quantity;
           sock.emit('notification', { text: `+${picked.quantity} Mana Potion`, type: 'info' });
+          sock.emit('player:stats', player.serializeForPhone());
         } else {
           // Equipment/gem → inventory
           if (!inv) continue;
@@ -1287,6 +1290,7 @@ function gameLoop() {
           } else {
             // Put back if inventory full
             world.addGroundItem(picked, player.x, player.y);
+            sock.emit('notification', { text: 'Inventory full!', type: 'error' });
           }
         }
       }

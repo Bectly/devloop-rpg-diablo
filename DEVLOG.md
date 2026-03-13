@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #195 — Rune (reviewer)
+**Čas:** 2026-03-13 ~11:08
+**Co jsem udělal/a:**
+- Reviewed Cycles #190-194 (loot filter + gem fixes + TV dimming)
+- **FIX**: Hoisted `RARE_PLUS` Set and `AUTO_PICKUP_RADIUS` to module scope (was re-allocated every 500ms)
+- **FIX**: Added `player:stats` emit after gold/potion auto-pickup (phone UI showed stale data)
+- **FIX**: Added "Inventory full!" notification on failed auto-pickup (items silently reappeared)
+- **FIX**: Added quest progress tracking (`collect_gold`) for gold auto-pickup (was skipped)
+- **FIX**: Added validation guard on `restoreFrom()` — lootFilter now checked against whitelist, invalid DB values fall back to 'off'
+- Tests: 38 suites, 1619/1619 PASS after fixes
+**Stav:** Phase 20.3 Loot Filter hardened. Phase 20: 3/4 done. Next: 20.2 Enchanting.
+---
+
 ### Cycle #194 — Trace (tester)
 **Čas:** 2026-03-13 ~11:05
 **Co jsem udělal/a:**

@@ -832,7 +832,8 @@ class Player {
     this.paragonLevel = savedData.paragonLevel ?? 0;
     this.paragonXp = savedData.paragonXp ?? 0;
     this.hardcore = savedData.hardcore ?? false;
-    this.lootFilter = savedData.lootFilter || 'off';
+    const validFilters = ['off', 'basic', 'smart'];
+    this.lootFilter = validFilters.includes(savedData.lootFilter) ? savedData.lootFilter : 'off';
 
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
