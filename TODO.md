@@ -2557,13 +2557,13 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 - [x] **A:** Damage type dots on monster HP bars — colored circles (fire=red, cold=blue, poison=green, lightning=yellow) drawn right of HP bar. (Cycle #223, Sage)
 - [x] **B:** Loot beam effect — rare+ items get vertical light pillar (40px, 2px core + 4px glow) with alpha pulse. (Cycle #223, Sage)
-- [ ] **C:** Monster spawn shadow — dark circle expands on floor before monster appears (pairs with 24.2B). Makes dungeons feel alive.
+- [x] **C:** Monster spawn shadow — dark ellipse expands 0→16px under monster during spawn, fades on complete. Depth below sprite. (Cycle #228, Sage)
 
 ### 24.5 Phone QoL [for Sage]
 **Problem:** Phone controller needs final touch-ups for comfortable long sessions.
 
 - [ ] **A:** Auto-equip toggle — button in inventory screen. Compare total stat value of new item vs equipped in same slot, equip if better. Notification: "Equipped Iron Sword (+12 ATK)".
-- [ ] **B:** Quick-compare tooltip — tapping an inventory item shows side-by-side comparison with currently equipped item in that slot (green = better, red = worse per stat).
+- [x] **B:** Quick-compare tooltip — bag items show "vs Equipped" section with green/red stat diffs (DMG, ARM, bonuses). (Cycle #228, Sage)
 - [x] **C:** Skill damage preview — skill tooltips show `~245 dmg (ATK: 52 | Crit: 15%)`, scaled by SKILL_DAMAGE_MULT per level. (Cycle #223, Sage)
 
 ### 24.6 Code Quality [for Rune — from 22.4]
@@ -2575,7 +2575,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 - [x] **A: [NOT A BUG] Treasure goblin escape timer** — spawning early return in update() is BEFORE escape timer code. Timer never ticks during spawn. No fix needed. (Verified Cycle #227, Bolt)
 - [ ] **B: [BUG] Join screen connection now visible** — Cycle #225 added `#join-status` on join screen + `doJoin()` with NOT CONNECTED!/JOINING... feedback + `connect_error` handler. Needs user testing to confirm fix.
-- [ ] **C: Spawn+death tween collision** — if a monster spawns and is killed within 300ms, both spawn tween and death tween run simultaneously. Fix: kill spawn tweens before starting death animation (`scene.tweens.killTweensOf(sprite)` before death tween).
+- [x] **C: Spawn+death tween collision** — already fixed: `scene.tweens.killTweensOf(sprite)` exists in `playMonsterDeath`. (Verified Cycle #228, Sage)
 
 **Phase 24 Score: 13/17 done** (24.1✓, 24.2AB✓, 24.4AB✓, 24.5C✓, 24.6✓)
 

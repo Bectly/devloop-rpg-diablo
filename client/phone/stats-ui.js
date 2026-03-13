@@ -150,6 +150,46 @@ const StatsUI = (() => {
 
     if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;
 
+    // ── Quick-compare vs equipped item ──
+    if (!isEquipped && item.slot && playerStats && playerStats.equipment) {
+      const equipped = playerStats.equipment[item.slot];
+      if (equipped) {
+        html += '<div class="compare-section">';
+        html += `<div class="compare-header">vs ${equipped.name}</div>`;
+
+        // Compare damage
+        if (item.damage || equipped.damage) {
+          const diff = (item.damage || 0) - (equipped.damage || 0);
+          if (diff !== 0) {
+            const cls = diff > 0 ? 'compare-better' : 'compare-worse';
+            html += `<div class="${cls}">${diff > 0 ? '+' : ''}${diff} DMG</div>`;
+          }
+        }
+        // Compare armor
+        if (item.armor || equipped.armor) {
+          const diff = (item.armor || 0) - (equipped.armor || 0);
+          if (diff !== 0) {
+            const cls = diff > 0 ? 'compare-better' : 'compare-worse';
+            html += `<div class="${cls}">${diff > 0 ? '+' : ''}${diff} ARM</div>`;
+          }
+        }
+        // Compare bonuses
+        const allStats = new Set([
+          ...Object.keys(item.bonuses || {}),
+          ...Object.keys(equipped.bonuses || {}),
+        ]);
+        for (const stat of allStats) {
+          const newVal = (item.bonuses && item.bonuses[stat]) || 0;
+          const oldVal = (equipped.bonuses && equipped.bonuses[stat]) || 0;
+          const diff = newVal - oldVal;
+          if (diff === 0) continue;
+          const cls = diff > 0 ? 'compare-better' : 'compare-worse';
+          html += `<div class="${cls}">${diff > 0 ? '+' : ''}${diff} ${stat.toUpperCase()}</div>`;
+        }
+        html += '</div>';
+      }
+    }
+
     // Set item info
     if (item.isSetItem && item.setId && playerStats && playerStats.activeSets) {
       const setInfo = playerStats.activeSets.find(s => s.setId === item.setId);

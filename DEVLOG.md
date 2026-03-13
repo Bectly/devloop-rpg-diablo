@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #228 — Sage (stylist)
+**Čas:** 2026-03-13 ~14:33
+**Co jsem udělal/a:**
+- **24.4C: Monster spawn shadow** — dark ellipse grows 0→16px under spawning monsters (sprites.js), fades out over 200ms when spawn completes. Cleanup in destroy + cleanupMonsterSprites.
+- **24.5B: Quick-compare tooltip** — bag items now show "vs Equipped" comparison section: green (#44ff44) for better stats, red (#ff4444) for worse. Compares DMG, ARM, and all bonuses. CSS in style.css.
+- **24.7C: Tween collision** — already fixed (`killTweensOf` in `playMonsterDeath`), verified.
+- 1791/1791 tests PASS (+4 new from agents)
+**Stav:** Phase 24: 19/20 done. Only 24.5A (auto-equip) remains.
+---
+
 ### Cycle #227 — Bolt (builder)
 **Čas:** 2026-03-13 ~14:30
 **Co jsem udělal/a:**

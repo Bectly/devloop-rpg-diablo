@@ -3728,6 +3728,28 @@ html, body {
   border-color: rgba(255, 136, 68, 0.3);
 }
 
+/* ─── Quick-Compare Section in Tooltip ────────────────────── */
+.compare-section {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  font-size: 11px;
+}
+.compare-header {
+  color: #aaa;
+  font-size: 10px;
+  margin-bottom: 3px;
+  font-style: italic;
+}
+.compare-better {
+  color: #44ff44;
+  padding: 1px 0;
+}
+.compare-worse {
+  color: #ff4444;
+  padding: 1px 0;
+}
+
 /* ─── Gem Picker Overlay ─────────────────────────────────── */
 #gem-picker-overlay {
   position: fixed;

@@ -563,6 +563,17 @@ window.Sprites = {
       sprite.setScale(0.3);
       if (sprite.nameText) sprite.nameText.setAlpha(0);
       if (sprite.hpBar) sprite.hpBar.setAlpha(0);
+      // Spawn shadow: dark expanding ellipse on the ground
+      if (!sprite._spawnShadow) {
+        sprite._spawnShadow = scene.add.graphics().setDepth(sprite.depth - 1);
+        sprite._spawnShadowStart = Date.now();
+      }
+      const shadowElapsed = Date.now() - sprite._spawnShadowStart;
+      const shadowProgress = Math.min(shadowElapsed / 600, 1); // grow over ~600ms
+      const shadowRadius = 16 * shadowProgress;
+      sprite._spawnShadow.clear();
+      sprite._spawnShadow.fillStyle(0x000000, 0.3 + 0.2 * shadowProgress);
+      sprite._spawnShadow.fillEllipse(sprite.x, sprite.y + 6, shadowRadius * 2, shadowRadius);
       return;
     }
     // Transition from spawning → alive
@@ -571,6 +582,15 @@ window.Sprites = {
       scene.tweens.add({ targets: sprite, alpha: 1, scaleX: 1, scaleY: 1, duration: 300, ease: 'Back.easeOut' });
       if (sprite.nameText) scene.tweens.add({ targets: sprite.nameText, alpha: 1, duration: 300 });
       if (sprite.hpBar) scene.tweens.add({ targets: sprite.hpBar, alpha: 1, duration: 300 });
+      // Fade out and destroy spawn shadow
+      if (sprite._spawnShadow) {
+        const shadow = sprite._spawnShadow;
+        sprite._spawnShadow = null;
+        scene.tweens.add({
+          targets: shadow, alpha: 0, duration: 200,
+          onComplete: () => { shadow.destroy(); },
+        });
+      }
     }
 
     // ── Treasure Goblin: gold trail particles + return early ──
@@ -816,6 +836,7 @@ window.Sprites = {
     if (sprite.fireGfx) sprite.fireGfx.destroy();
     if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
     if (sprite._goblinTrailGfx) sprite._goblinTrailGfx.destroy();
+    if (sprite._spawnShadow) sprite._spawnShadow.destroy();
     sprite.destroy();
     scene.monsterSprites.delete(id);
     const texKey = 'monster_' + id;
@@ -837,6 +858,7 @@ window.Sprites = {
         if (sprite.fireGfx) sprite.fireGfx.destroy();
         if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
         if (sprite._goblinTrailGfx) sprite._goblinTrailGfx.destroy();
+        if (sprite._spawnShadow) sprite._spawnShadow.destroy();
         sprite.destroy();
       }
       scene.monsterSprites.clear();
@@ -853,6 +875,7 @@ window.Sprites = {
         if (sprite.fireGfx) sprite.fireGfx.destroy();
         if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
         if (sprite._goblinTrailGfx) sprite._goblinTrailGfx.destroy();
+        if (sprite._spawnShadow) sprite._spawnShadow.destroy();
         sprite.destroy();
         scene.monsterSprites.delete(id);
         const texKey = 'monster_' + id;
