@@ -1,15 +1,7 @@
 const { generateLoot } = require('./items');
 const { modifyDamageByAffixes, processAffixOnHitPlayer, processAffixOnDealDamage, processAffixOnDeath } = require('./affixes');
 const { rollSetDrop, generateSetItem } = require('./sets');
-const { executeSkill } = require('./skills');
-
-/** Apply shatter bonus if target is stunned/frozen and player has the passive. */
-function applyShatter(damage, player, target) {
-  if (target.stunned > 0 && player.talentBonuses?.passives?.shatter_bonus) {
-    return Math.floor(damage * (1 + player.talentBonuses.passives.shatter_bonus / 100));
-  }
-  return damage;
-}
+const { executeSkill, applyShatter } = require('./skills');
 
 class CombatSystem {
   constructor() {

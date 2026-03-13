@@ -127,10 +127,10 @@ describe('updateProjectiles()', () => {
 
   it('removes out-of-bounds projectiles', () => {
     const p = new Projectile({
-      ownerId: 'p1', x: 1340, y: 100, vx: 500, vy: 0, lifetime: 5000,
+      ownerId: 'p1', x: 1960, y: 100, vx: 500, vy: 0, lifetime: 5000,
     });
     projectiles.push(p);
-    updateProjectiles(projectiles, monsters, 100); // x goes to 1390 > 1350
+    updateProjectiles(projectiles, monsters, 100); // x goes to 2010 > 1970
     expect(projectiles).toHaveLength(0);
   });
 

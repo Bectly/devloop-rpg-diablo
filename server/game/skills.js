@@ -91,7 +91,10 @@ function handleSkillKill(player, monster, results, partyBuffs) {
     entityId: monster.id,
     entityName: monster.name,
     killedBy: player.id,
+    killedByName: player.name,
     isBoss: monster.isBoss,
+    isElite: monster.isElite || false,
+    eliteRank: monster.eliteRank || null,
     loot: loot.map(item => ({
       ...item,
       worldX: monster.x + (Math.random() - 0.5) * 40,
@@ -100,10 +103,19 @@ function handleSkillKill(player, monster, results, partyBuffs) {
     xpReward: monster.xpReward,
   };
 
-  if (monster.isElite) {
-    deathEvent.isElite = true;
-    deathEvent.eliteRank = monster.eliteRank;
-    deathEvent.affixEvents = processAffixOnDeath(monster);
+  // Affix on-death effects
+  if (monster.affixes) {
+    const affixDeathEvents = processAffixOnDeath(monster);
+    if (affixDeathEvents.length > 0) {
+      deathEvent.affixEvents = affixDeathEvents;
+    }
+  }
+
+  // Award keystone for boss kill on floor 3+
+  if (monster.isBoss && (monster.floor || 0) >= 3) {
+    const keystones = player.difficulty === 'hell' ? 2 : 1;
+    player.addKeystones(keystones);
+    deathEvent.keystoneReward = keystones;
   }
 
   results.push(deathEvent);
@@ -117,9 +129,36 @@ function handleSkillKill(player, monster, results, partyBuffs) {
     xpReward = Math.floor(xpReward * (1 + partyBuffs.xp_percent / 100));
   }
 
+  // On-kill talent procs (Bloodbath heal, spirit wolf summon)
+  if (player.talentBonuses && player.talentBonuses.procs) {
+    for (const proc of player.talentBonuses.procs) {
+      if (proc.trigger === 'on_kill' && Math.random() < (proc.chance ?? 1)) {
+        if (proc.effect === 'heal_percent') {
+          const heal = Math.floor(player.maxHp * (proc.value || 15) / 100);
+          player.hp = Math.min(player.maxHp, player.hp + heal);
+          results.push({ type: 'combat:proc', targetId: player.id, attackerId: player.id, effect: 'heal_on_kill', heal });
+        } else if (proc.effect === 'summon_spirit_wolf') {
+          results.push({
+            type: 'summon:spirit_wolf',
+            playerId: player.id,
+            x: monster.x,
+            y: monster.y,
+          });
+        }
+      }
+    }
+  }
+
   const levelResult = player.gainXp(xpReward);
   if (levelResult) {
-    results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
+    results.push({
+      type: 'player:levelup',
+      playerId: player.id,
+      playerName: player.name,
+      level: levelResult.level,
+      isParagon: levelResult.isParagon || false,
+      paragonLevel: levelResult.paragonLevel || 0,
+    });
   }
 }
 
@@ -410,4 +449,4 @@ function executeSkill(combat, player, skillIndex, monsters, allPlayers) {
   return results;
 }
 
-module.exports = { executeSkill };
+module.exports = { executeSkill, applyShatter };

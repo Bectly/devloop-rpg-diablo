@@ -122,7 +122,7 @@ function updateProjectiles(projectiles, monsters, dt) {
     proj.lifetime -= dt;
 
     // Out of bounds or expired
-    if (proj.lifetime <= 0 || proj.x < -50 || proj.x > 1350 || proj.y < -50 || proj.y > 800) {
+    if (proj.lifetime <= 0 || proj.x < -50 || proj.x > 1970 || proj.y < -50 || proj.y > 1330) {
       proj.alive = false;
       projectiles.splice(i, 1);
       continue;
@@ -149,7 +149,7 @@ function updateProjectiles(projectiles, monsters, dt) {
             const ady = aoeTarget.y - proj.y;
             const adist = Math.sqrt(adx * adx + ady * ady);
             if (adist <= proj.aoeRadius) {
-              const dealt = aoeTarget.takeDamage(proj.damage);
+              const dealt = aoeTarget.takeDamage(proj.damage, proj.damageType);
               events.push({
                 type: 'combat:hit',
                 attackerId: proj.ownerId,
@@ -174,7 +174,7 @@ function updateProjectiles(projectiles, monsters, dt) {
           proj.alive = false;
         } else {
           // Direct hit
-          const dealt = monster.takeDamage(proj.damage);
+          const dealt = monster.takeDamage(proj.damage, proj.damageType);
           events.push({
             type: 'combat:hit',
             attackerId: proj.ownerId,

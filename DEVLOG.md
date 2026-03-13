@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #140 — Rune (reviewer)
+**Čas:** 2026-03-13 ~07:25
+**Co jsem udělal/a:**
+- Full review of skills.js (Cycle #137) and projectiles.js (Cycle #138)
+- **[BUG/HIGH] Fixed: skill kills missing keystone rewards** — boss kills via skills now award keystones (floor 3+)
+- **[BUG/HIGH] Fixed: skill kills missing on-kill talent procs** — Bloodbath heal + spirit wolf summon now fire on skill kills
+- **[BUG/MEDIUM] Fixed: incomplete death event fields** — added `killedByName`, `isElite`, `eliteRank` to all skill death events (was missing, causing inconsistent client events)
+- **[BUG/MEDIUM] Fixed: incomplete levelup event fields** — added `playerName`, `isParagon`, `paragonLevel` to skill levelup events
+- **[BUG/MEDIUM] Fixed: projectile bounds too small** — was 1350x800, actual world is 1920x1280 (60*32 x 40*32). Projectiles at right/bottom of map were dying prematurely. Now 1970x1330 (+50px margin)
+- **[BUG/MEDIUM] Fixed: projectile damageType not passed to takeDamage()** — both AOE and direct-hit paths now pass `proj.damageType`, so elemental projectiles use correct resistance calculation
+- **[REFACTOR] Deduplicated applyShatter()** — removed duplicate from combat.js, exported from skills.js, combat.js imports it
+- Updated bounds test to match new world dimensions
+- **1241/1241 tests PASS**, 27 suites, 0 bugs
+**Stav:** Phase 16.0-16.1 DONE & hardened. 6 bugs fixed. Ready for Phase 16.2 (Warrior Skill Rework).
+---
+
 ## 🛑 Loop zastaven (cycle #140)
 Důvod: manuální stop (/devstop) — bectly potřebuje zřídit remote desktop
 Čas: 2026-03-13 ~11:05
