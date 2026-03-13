@@ -717,8 +717,9 @@ function gameLoop() {
           for (const p of allPlayers) p.healReduction = 1.0;
           saveAllPlayers();
 
-          // Return to normal floor after 2s delay
+          // Return to normal floor after 2s delay (guard against race with new rift)
           setTimeout(() => {
+            if (world.riftActive) return; // A new rift was opened during the delay
             world.generateFloor(0, gameDifficulty);
             story.placeNpcs(world.storyNpcs || []);
             let ridx = 0;

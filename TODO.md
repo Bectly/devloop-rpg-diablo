@@ -1342,6 +1342,13 @@ Test categories:
 
 ---
 
+## Fixed Bugs (Rune review, Cycle #120)
+- [x] [BUG/HIGH] `handleInteract` shrine bypass `healReduction` — cursed rift had no effect via interact path
+- [x] [BUG/HIGH] `pendingRift` dangling on opener disconnect — blocked all future rift opens
+- [x] [BUG/HIGH] Guardian kill `setTimeout` races with new rift open — overwrites new rift floor
+- [x] [BUG/MEDIUM] Rift readySet counts disconnected players — stalls rift entry
+- [x] [BUG/MEDIUM] `gainXp` single `if` skips level-ups on large XP — changed to `while` loop
+
 ## Known Bugs (from Rune review, Cycle #115)
 
 ### [BUG] Defensive talent procs never fire [Medium]

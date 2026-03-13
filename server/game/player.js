@@ -332,8 +332,11 @@ class Player {
 
     // Normal leveling
     this.xp += amount;
-    if (this.xp >= this.xpToNext) {
-      const result = this.levelUp();
+    let result = null;
+    while (this.xp >= this.xpToNext && this.level < MAX_LEVEL) {
+      result = this.levelUp();
+    }
+    if (result) {
       // If we just hit MAX_LEVEL, feed leftover XP into paragon
       if (this.level >= MAX_LEVEL && this.xp > 0) {
         this.paragonXp += this.xp;

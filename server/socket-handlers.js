@@ -21,6 +21,15 @@ const GRACE_PERIOD_MS = 30000; // 30 seconds
 // Rift open/enter state
 let pendingRift = null;
 
+/** Count only non-disconnected players (excludes grace-period ghosts). */
+function _activePlayerCount(players) {
+  let count = 0;
+  for (const p of players.values()) {
+    if (!p.disconnected) count++;
+  }
+  return count;
+}
+
 function _resolveDialogue(socket, data, { players, world, story, gameNs, io }) {
   const player = players.get(socket.id);
   if (!player) return;
@@ -503,7 +512,9 @@ exports.handleInteract = (socket, data, { players, world, story, gameNs }) => {
   const room = world.getRoomAtPosition(player.x, player.y);
   if (room && room.hasShrine && !room.shrineUsed) {
     room.shrineUsed = true;
-    player.hp = player.maxHp;
+    const healReduction = player.healReduction ?? 1.0;
+    const hpHeal = Math.floor((player.maxHp - player.hp) * healReduction);
+    player.hp = Math.min(player.maxHp, player.hp + hpHeal);
     player.mp = player.maxMp;
     const shrineChanged = player.questManager.check('use_shrine', {});
     if (shrineChanged.length > 0) {
@@ -512,7 +523,8 @@ exports.handleInteract = (socket, data, { players, world, story, gameNs }) => {
         if (cq.completed) gameNs.emit('quest:complete', { playerId: player.id, playerName: player.name, title: cq.title });
       }
     }
-    socket.emit('notification', { text: 'Healing Shrine! Full HP & MP restored!', type: 'quest' });
+    const shrineText = healReduction < 1.0 ? 'Shrine activated! (healing reduced by curse)' : 'Healing Shrine! Full HP & MP restored!';
+    socket.emit('notification', { text: shrineText, type: 'quest' });
     socket.emit('stats:update', player.serializeForPhone());
     gameNs.emit('shrine:used', {
       roomId: room.id,
@@ -905,6 +917,14 @@ exports.handleDisconnect = (socket, data, { players, inventories, controllerSock
   // Clean up pending crafting reforges
   pendingReforges.delete(socket.id);
 
+  // If this socket was the rift opener, cancel the pending rift and refund keystone
+  if (pendingRift && pendingRift.openerSocketId === socket.id) {
+    const opener = players.get(socket.id);
+    if (opener) opener.addKeystones(1);
+    pendingRift = null;
+    gameNs.emit('rift:status', { state: 'cancelled' });
+  }
+
   const player = players.get(socket.id);
   if (player) {
     // Save character to DB immediately (include current floor)
@@ -1090,7 +1110,7 @@ exports.handleRiftOpen = (socket, data, ctx) => {
     zone: riftConfig.zone,
     timeLimit: riftConfig.timeLimit,
     readyCount: 1,
-    totalPlayers: ctx.players.size,
+    totalPlayers: _activePlayerCount(ctx.players),
   };
   ctx.gameNs.emit('rift:status', statusPayload);
   ctx.controllerNs.emit('rift:status', statusPayload);
@@ -1098,7 +1118,7 @@ exports.handleRiftOpen = (socket, data, ctx) => {
   socket.emit('stats:update', player.serializeForPhone());
 
   // Solo: auto-enter
-  if (ctx.players.size <= 1) {
+  if (_activePlayerCount(ctx.players) <= 1) {
     _enterRift(ctx);
   }
 };
@@ -1116,12 +1136,12 @@ exports.handleRiftEnter = (socket, data, ctx) => {
     zone: pendingRift.riftConfig.zone,
     timeLimit: pendingRift.riftConfig.timeLimit,
     readyCount: pendingRift.readySet.size,
-    totalPlayers: ctx.players.size,
+    totalPlayers: _activePlayerCount(ctx.players),
   };
   ctx.gameNs.emit('rift:status', statusPayload);
   ctx.controllerNs.emit('rift:status', statusPayload);
 
-  if (pendingRift.readySet.size >= ctx.players.size) {
+  if (pendingRift.readySet.size >= _activePlayerCount(ctx.players)) {
     _enterRift(ctx);
   }
 };

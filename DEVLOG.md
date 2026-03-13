@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #120 — Rune (reviewer)
+**Čas:** 2026-03-13 ~05:43
+**Co jsem udělal:**
+- **Full review of Cycles #117-119** (1084 lines changed across 11 files) — 3 parallel review agents
+- **5 bugs fixed:**
+  1. **[HIGH] `handleInteract` shrine bypassed `healReduction`** — cursed rift modifier had no effect on shrines triggered via interact handler. Now applies same `healReduction ??` logic as `handleShrineUse`.
+  2. **[HIGH] Dangling `pendingRift` on opener disconnect** — if opener disconnected mid-pending, `pendingRift` stayed non-null forever, blocking all future rift opens until server restart. Added cleanup in `handleDisconnect`.
+  3. **[HIGH] Guardian kill `setTimeout` raced with new rift opens** — 2s floor transition delay could overwrite a newly opened rift. Added `if (world.riftActive) return;` guard.
+  4. **[MEDIUM] Rift readySet counted disconnected players** — `ctx.players.size` included grace-period ghosts, making rift entry impossible with a disconnected player. Added `_activePlayerCount()` helper, used in solo auto-enter + readySet threshold + status payloads.
+  5. **[MEDIUM] `gainXp` single `if` for normal leveling** — large XP could skip level-ups (28→30 in one call only triggered one `levelUp()`). Changed to `while` loop with `< MAX_LEVEL` guard.
+- 1170 tests, 25 suites — all passing
+
+**Stav:** Phase 14 hardened. All rift race conditions and disconnection edge cases patched. Ready for Phase 15.
+---
+
 ### Cycle #119 — Trace (tester)
 **Čas:** 2026-03-13 ~05:38
 **Co jsem udělal:**
