@@ -820,7 +820,7 @@ Extract `client/phone/death-victory.js` (~120 LOC):
 
 Update phone index.html script tags (before controller.js).
 
-### 12.1 Difficulty System — Server [for Bolt]
+### 12.1 Difficulty System — Server [DONE — Sage, Cycle #93]
 **File:** `server/game/world.js` (add difficulty scaling)
 
 **Difficulty levels:**

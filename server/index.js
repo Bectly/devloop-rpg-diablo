@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const { Player, DEATH_GOLD_DROP_PERCENT } = require('./game/player');
-const { World, TILE, TILE_SIZE, GRID_W, GRID_H, FLOOR_NAMES } = require('./game/world');
+const { World, TILE, TILE_SIZE, GRID_W, GRID_H, FLOOR_NAMES, DIFFICULTY_SCALES } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
@@ -70,13 +70,14 @@ const combat = new CombatSystem();
 const story = new StoryManager();
 
 // Generate first dungeon floor
-world.generateFloor(0);
+world.generateFloor(0, gameDifficulty);
 story.placeNpcs(world.storyNpcs || []);
 console.log(`[World] Loaded floor: ${world.roomName}`);
 
 // Track game start time for victory stats
 let gameStartTime = Date.now();
 let gameWon = false;
+let gameDifficulty = 'normal';
 
 // ─── Socket.io: TV Namespace ───────────────────────────────────
 const gameNs = io.of('/game');
@@ -105,7 +106,7 @@ const controllerNs = io.of('/controller');
 controllerNs.on('connection', (socket) => {
   console.log(`[Phone] Connected: ${socket.id}`);
 
-  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, controllerNs, io, gameDb };
+  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, controllerNs, io, gameDb, gameDifficulty, DIFFICULTY_SCALES };
 
   socket.on('join', (data) => handlers.handleJoin(socket, data, ctx));
   socket.on('move', (data) => handlers.handleMove(socket, data, ctx));
@@ -143,7 +144,7 @@ controllerNs.on('connection', (socket) => {
     console.log('[Game] Restart requested — regenerating dungeon from floor 0');
     gameWon = false;
     gameStartTime = Date.now();
-    world.generateFloor(0);
+    world.generateFloor(0, gameDifficulty);
     story.placeNpcs(world.storyNpcs || []);
 
     // Force-reconnect all disconnected players on restart (Bug #4):
@@ -674,7 +675,7 @@ function gameLoop() {
           }
 
           const nextFloor = world.currentFloor + 1;
-          world.generateFloor(nextFloor);
+          world.generateFloor(nextFloor, gameDifficulty);
           story.placeNpcs(world.storyNpcs || []);
 
           // Save all players on floor transition

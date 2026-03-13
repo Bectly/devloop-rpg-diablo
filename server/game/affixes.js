@@ -152,7 +152,7 @@ const AFFIX_DEFS = {
  * @param {string} monsterType - Key from MONSTER_DEFS
  * @returns {null|{affixes: string[], rank: string}} null if not elite, or affix result
  */
-function rollAffixes(floor, monsterType) {
+function rollAffixes(floor, monsterType, eliteBonus = 0) {
   // Boss never gets affixes
   if (MONSTER_DEFS[monsterType]?.isBoss) return null;
   // Small slimes (split products) don't get affixes
@@ -162,8 +162,12 @@ function rollAffixes(floor, monsterType) {
   let maxAffixes = 0;
   let rank = null;
 
-  if (floor <= 2) return null; // no elites on floors 1-2 (0-indexed: 0, 1, 2)
-  if (floor <= 4) {
+  if (floor <= 2) {
+    if (eliteBonus <= 0) return null; // no elites on early floors in Normal
+    eliteChance = eliteBonus;
+    maxAffixes = 1;
+    rank = 'champion';
+  } else if (floor <= 4) {
     eliteChance = 0.15;
     maxAffixes = 1;
     rank = 'champion';
@@ -176,6 +180,9 @@ function rollAffixes(floor, monsterType) {
     maxAffixes = 3;
     rank = 'rare';
   }
+
+  // Apply difficulty bonus to elite chance
+  eliteChance = Math.min(0.60, eliteChance + eliteBonus);
 
   if (Math.random() >= eliteChance) return null;
 

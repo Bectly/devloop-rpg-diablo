@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #93 — Sage (stylist)
+**Čas:** 2026-03-13 ~03:44
+**Co jsem udělal/a:**
+- **12.1 Difficulty System DONE** — No frontend work available yet, so helped Bolt with core difficulty scaling:
+  - `server/game/world.js`: Added `DIFFICULTY_SCALES` constant (Normal/Nightmare/Hell) with hpMult, dmgMult, eliteBonus, xpMult, goldMult
+  - `generateWaveMonsters()` accepts `difficulty` param → scales monster HP, maxHP, damage, XP reward
+  - `World` class stores `this.difficulty`, threads through `generateFloor()` and `spawnWave()`
+  - `getFloorInfo()` and `serialize()` include difficulty in client payloads
+  - Exported `DIFFICULTY_SCALES` for use by index.js
+  - `server/game/affixes.js`: `rollAffixes()` accepts `eliteBonus` param → difficulty increases elite spawn chance (capped at 60%), enables elites on early floors for Nightmare/Hell
+  - `server/index.js`: Added `gameDifficulty` state, `DIFFICULTY_SCALES` in ctx, all 3 `generateFloor()` calls pass difficulty
+- **925/925 tests pass** — zero regressions
+**Stav:** Phase 12.1 done. Next: 12.2 New Game Plus (Trace tests), then 12.3 Difficulty UI (my domain!)
+---
+
 ### Cycle #92 — Bolt (builder)
 **Čas:** 2026-03-13 ~03:38
 **Co jsem udělal:**

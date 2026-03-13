@@ -74,6 +74,13 @@ const ZONE_DEFS = {
   },
 };
 
+// ── Difficulty Scaling ─────────────────────────────────────────
+const DIFFICULTY_SCALES = {
+  normal:    { label: 'Normal',    hpMult: 1.0, dmgMult: 1.0, eliteBonus: 0,    xpMult: 1.0, goldMult: 1.0 },
+  nightmare: { label: 'Nightmare', hpMult: 1.5, dmgMult: 1.3, eliteBonus: 0.10, xpMult: 1.5, goldMult: 1.3 },
+  hell:      { label: 'Hell',      hpMult: 2.5, dmgMult: 1.8, eliteBonus: 0.20, xpMult: 2.0, goldMult: 1.6 },
+};
+
 function getZoneForFloor(floor) {
   for (const zone of Object.values(ZONE_DEFS)) {
     if (zone.floors.includes(floor)) return zone;
@@ -365,7 +372,7 @@ function assignRoomTypes(rooms, floor) {
 }
 
 // ─── Monster wave generator ─────────────────────────────────────
-function generateWaveMonsters(roomData, waveIndex, floor) {
+function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal') {
   const monsters = [];
   const room = roomData.room;
   const countScale = 1 + Math.floor(floor / 2) * 0.5;
@@ -381,6 +388,7 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
 
   const count = Math.min(6, Math.ceil(baseCount * countScale));
   const monsterPool = getMonsterPoolForFloor(floor);
+  const scale = DIFFICULTY_SCALES[difficulty] || DIFFICULTY_SCALES.normal;
 
   const zone = getZoneForFloor(floor);
 
@@ -392,7 +400,12 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
     const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
     const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
     const monster = createMonster(type, mx, my, floor);
-    const affixResult = rollAffixes(floor, type);
+    // Apply difficulty scaling
+    monster.hp = Math.floor(monster.hp * scale.hpMult);
+    monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
+    monster.damage = Math.floor(monster.damage * scale.dmgMult);
+    monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
+    const affixResult = rollAffixes(floor, type, scale.eliteBonus);
     if (affixResult) applyAffixes(monster, affixResult);
     monsters.push(monster);
   }
@@ -404,7 +417,12 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
       const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
       const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
       const monster = createMonster(type, mx, my, floor);
-      const affixResult = rollAffixes(floor, type);
+      // Apply difficulty scaling
+      monster.hp = Math.floor(monster.hp * scale.hpMult);
+      monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
+      monster.damage = Math.floor(monster.damage * scale.dmgMult);
+      monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
+      const affixResult = rollAffixes(floor, type, scale.eliteBonus);
       if (affixResult) applyAffixes(monster, affixResult);
       monsters.push(monster);
     }
@@ -450,9 +468,13 @@ class World {
 
     // Zone
     this.zone = null;
+
+    // Difficulty
+    this.difficulty = 'normal';
   }
 
-  generateFloor(floorNum) {
+  generateFloor(floorNum, difficulty) {
+    if (difficulty) this.difficulty = difficulty;
     this.currentFloor = floorNum;
     this.floorName = FLOOR_NAMES[floorNum % FLOOR_NAMES.length];
     this.zone = getZoneForFloor(floorNum);
@@ -507,6 +529,7 @@ class World {
       pixelHeight: GRID_H * TILE_SIZE,
       roomCount: this.rooms.length,
       exitLocked: this.exitLocked,
+      difficulty: this.difficulty,
     };
   }
 
@@ -555,7 +578,7 @@ class World {
     if (roomData.wavesSpawned >= roomData.waveCount) return;
     roomData.wavesSpawned++;
 
-    const waveMonsters = generateWaveMonsters(roomData, roomData.wavesSpawned - 1, this.currentFloor);
+    const waveMonsters = generateWaveMonsters(roomData, roomData.wavesSpawned - 1, this.currentFloor, this.difficulty);
     for (const m of waveMonsters) this.monsters.push(m);
     roomData.monstersAlive += waveMonsters.length;
 
@@ -773,6 +796,7 @@ class World {
       tileColor: this.zone ? this.zone.tileColor : 0x8a7a6a,
       wallColor: this.zone ? this.zone.wallColor : 0x5a4a3a,
       exitLocked: this.exitLocked,
+      difficulty: this.difficulty,
       tiles: this.tiles,
       tileSize: TILE_SIZE,
       gridW: GRID_W,
@@ -826,4 +850,4 @@ class World {
   }
 }
 
-module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES, ZONE_DEFS, getZoneForFloor };
+module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES, ZONE_DEFS, DIFFICULTY_SCALES, getZoneForFloor };
