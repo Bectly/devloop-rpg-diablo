@@ -652,3 +652,605 @@ describe('Talent combat bonuses — CombatSystem', () => {
     });
   });
 });
+
+// ── Paragon system ───────────────────────────────────────────────
+
+describe('Paragon system', () => {
+  const { Player, MAX_LEVEL } = require('../game/player');
+
+  it('MAX_LEVEL is 30', () => {
+    expect(MAX_LEVEL).toBe(30);
+  });
+
+  it('new player has paragonLevel 0 and paragonXp 0', () => {
+    const p = new Player('Tester', 'warrior');
+    expect(p.paragonLevel).toBe(0);
+    expect(p.paragonXp).toBe(0);
+  });
+
+  it('gainXp works normally below MAX_LEVEL', () => {
+    const p = new Player('LevelUp', 'warrior');
+    // Player starts at level 1, xpToNext = 100
+    expect(p.level).toBe(1);
+    const result = p.gainXp(150);
+    // Should have leveled up
+    expect(result).not.toBeNull();
+    expect(result.level).toBe(2);
+    expect(result.isParagon).toBeUndefined();
+    // Level should have increased, not paragon
+    expect(p.level).toBe(2);
+    expect(p.paragonLevel).toBe(0);
+  });
+
+  it('gainXp at MAX_LEVEL adds to paragonXp instead of normal level', () => {
+    const p = new Player('MaxHero', 'warrior');
+    p.level = MAX_LEVEL; // set to max level
+
+    const before = p.paragonXp;
+    const result = p.gainXp(500); // below 1000 threshold for paragon 0→1
+    expect(result).toBeNull(); // no level-up event
+    expect(p.level).toBe(MAX_LEVEL); // level unchanged
+    expect(p.paragonXp).toBe(before + 500); // XP went to paragon pool
+  });
+
+  it('paragon levels up when paragonXp reaches threshold of 1000 (paragonLevel 0→1)', () => {
+    const p = new Player('ParagonHero', 'warrior');
+    p.level = MAX_LEVEL;
+    const statsBefore = p.freeStatPoints;
+
+    // Paragon 0 cost = (0+1)*1000 = 1000
+    const result = p.gainXp(1000);
+    expect(result).not.toBeNull();
+    expect(result.isParagon).toBe(true);
+    expect(result.paragonLevel).toBe(1);
+    expect(p.paragonLevel).toBe(1);
+    expect(p.freeStatPoints).toBe(statsBefore + 1);
+  });
+
+  it('paragon cost increases: (paragonLevel+1) * 1000', () => {
+    const p = new Player('CostTest', 'warrior');
+    p.level = MAX_LEVEL;
+
+    // First paragon level: cost = 1 * 1000 = 1000
+    // Give 999 — should not level up
+    let result = p.gainXp(999);
+    expect(result).toBeNull();
+    expect(p.paragonLevel).toBe(0);
+    expect(p.paragonXp).toBe(999);
+
+    // Give 1 more — should now reach 1000 and trigger paragon 1
+    result = p.gainXp(1);
+    expect(result).not.toBeNull();
+    expect(result.isParagon).toBe(true);
+    expect(p.paragonLevel).toBe(1);
+    // Overflow XP: 1000 - 1000 = 0
+    expect(p.paragonXp).toBe(0);
+
+    // Second paragon level: cost = 2 * 1000 = 2000
+    result = p.gainXp(1999);
+    expect(result).toBeNull();
+    expect(p.paragonLevel).toBe(1);
+
+    result = p.gainXp(1);
+    expect(result).not.toBeNull();
+    expect(p.paragonLevel).toBe(2);
+  });
+
+  it('paragon level-up grants 1 free stat point', () => {
+    const p = new Player('StatPoint', 'mage');
+    p.level = MAX_LEVEL;
+    const before = p.freeStatPoints;
+
+    p.gainXp(1000); // paragon 0 → 1
+    expect(p.freeStatPoints).toBe(before + 1);
+
+    const after1 = p.freeStatPoints;
+    p.gainXp(2000); // paragon 1 → 2
+    expect(p.freeStatPoints).toBe(after1 + 1);
+  });
+
+  it('paragon level-up returns { level, paragonLevel, isParagon: true, talentPoints: 0 }', () => {
+    const p = new Player('ReturnShape', 'ranger');
+    p.level = MAX_LEVEL;
+
+    const result = p.gainXp(1000);
+    expect(result).not.toBeNull();
+    expect(result).toHaveProperty('level', MAX_LEVEL);
+    expect(result).toHaveProperty('paragonLevel', 1);
+    expect(result).toHaveProperty('isParagon', true);
+    expect(result).toHaveProperty('talentPoints', 0);
+  });
+
+  it('gainXp returns null at MAX_LEVEL when below paragon threshold', () => {
+    const p = new Player('BelowThreshold', 'warrior');
+    p.level = MAX_LEVEL;
+
+    const result = p.gainXp(500); // 500 < 1000 threshold
+    expect(result).toBeNull();
+    expect(p.paragonXp).toBe(500);
+  });
+
+  it('serializeForPhone includes paragonLevel, paragonXp, and paragonXpToNext', () => {
+    const p = new Player('SerTest', 'warrior');
+    p.level = MAX_LEVEL;
+    p.paragonLevel = 3;
+    p.paragonXp = 750;
+
+    const data = p.serializeForPhone();
+    expect(data).toHaveProperty('paragonLevel', 3);
+    expect(data).toHaveProperty('paragonXp', 750);
+    // paragonXpToNext should be (paragonLevel+1)*1000 = 4000
+    expect(data).toHaveProperty('paragonXpToNext', 4000);
+  });
+
+  it('restoreFrom loads paragonLevel and paragonXp', () => {
+    const p = new Player('Restore', 'mage');
+    const savedData = {
+      level: MAX_LEVEL,
+      paragonLevel: 5,
+      paragonXp: 333,
+      xp: 0,
+      freeStatPoints: 0,
+      gold: 0,
+      kills: 0,
+      healthPotions: 3,
+      manaPotions: 2,
+      keystones: 0,
+      stats: { str: 10, dex: 10, int: 10, vit: 10 },
+      equipment: {},
+      talents: {},
+    };
+
+    p.restoreFrom(savedData);
+    expect(p.paragonLevel).toBe(5);
+    expect(p.paragonXp).toBe(333);
+    expect(p.level).toBe(MAX_LEVEL);
+  });
+});
+
+// ── Paragon persistence ──────────────────────────────────────────
+
+describe('Paragon persistence', () => {
+  const { GameDatabase } = require('../game/database');
+  const { Player, MAX_LEVEL } = require('../game/player');
+  let db;
+
+  beforeEach(() => {
+    db = new GameDatabase(':memory:');
+  });
+
+  it('save/load preserves paragon level and XP', () => {
+    const p = new Player('ParagonSave', 'warrior');
+    p.level = MAX_LEVEL;
+    p.paragonLevel = 4;
+    p.paragonXp = 1234;
+
+    db.saveCharacter(p, null, 0);
+    const loaded = db.loadCharacter('ParagonSave');
+
+    expect(loaded.paragonLevel).toBe(4);
+    expect(loaded.paragonXp).toBe(1234);
+
+    db.close();
+  });
+
+  it('new character defaults to paragon level 0 and paragon XP 0', () => {
+    const p = new Player('FreshParagon', 'mage');
+    // No paragon progression set
+
+    db.saveCharacter(p, null, 0);
+    const loaded = db.loadCharacter('FreshParagon');
+
+    expect(loaded.paragonLevel).toBe(0);
+    expect(loaded.paragonXp).toBe(0);
+
+    db.close();
+  });
+});
+
+// ── Rift floor generation ────────────────────────────────────────
+
+describe('Rift floor generation', () => {
+  const { World } = require('../game/world');
+
+  it('generateRiftFloor sets riftActive, riftConfig, riftTimer', () => {
+    const world = new World();
+    const rift = createRift(3, 15);
+
+    world.generateRiftFloor(rift);
+
+    expect(world.riftActive).toBe(true);
+    expect(world.riftConfig).toBe(rift);
+    expect(world.riftTimer).toBe(rift.timeLimit);
+    expect(world.riftTimeLimit).toBe(rift.timeLimit);
+    expect(world.riftStartTime).toBeGreaterThan(0);
+  });
+
+  it('generateRiftFloor generates more rooms for higher tiers (6 + tier)', () => {
+    const world1 = new World();
+    const rift1 = createRift(1, 10);
+    world1.generateRiftFloor(rift1);
+    // roomCount requested = 6 + 1 = 7, BSP may give fewer but at least 2
+    // we check that tier 5 generates >= rooms than tier 1 in aggregate
+    const rooms1 = world1.rooms.length;
+
+    const world5 = new World();
+    const rift5 = createRift(5, 10);
+    world5.generateRiftFloor(rift5);
+    const rooms5 = world5.rooms.length;
+
+    // Tier 5 requests 11 rooms, tier 1 requests 7 — tier 5 should have >= tier 1
+    expect(rooms5).toBeGreaterThanOrEqual(rooms1);
+  });
+
+  it('generateRiftFloor sets zone from rift config zone id', () => {
+    const world = new World();
+    // Use a known rift with a specific zone
+    const rift = createRift(2, 10);
+    world.generateRiftFloor(rift);
+
+    expect(world.zone).toBeDefined();
+    expect(world.zone.id).toBe(rift.zone.id);
+  });
+
+  it('getFloorInfo includes riftActive and riftTier after generateRiftFloor', () => {
+    const world = new World();
+    const rift = createRift(4, 20);
+    world.generateRiftFloor(rift);
+
+    const info = world.getFloorInfo();
+    expect(info.riftActive).toBe(true);
+    expect(info.riftTier).toBe(4);
+    expect(info.riftModifiers).toHaveLength(rift.modifiers.length);
+  });
+
+  it('endRift clears all rift state fields', () => {
+    const world = new World();
+    const rift = createRift(1, 5);
+    world.generateRiftFloor(rift);
+
+    // Sanity check — rift is active
+    expect(world.riftActive).toBe(true);
+
+    world.endRift();
+
+    expect(world.riftActive).toBe(false);
+    expect(world.riftConfig).toBeNull();
+    expect(world.riftTimer).toBe(0);
+    expect(world.riftTimeLimit).toBe(0);
+    expect(world.riftStartTime).toBe(0);
+  });
+
+  it('updateRiftTimer decreases timer by dt/1000 seconds', () => {
+    const world = new World();
+    const rift = createRift(1, 5);
+    world.generateRiftFloor(rift);
+    // Force a known timer value
+    world.riftTimer = 60;
+
+    world.updateRiftTimer(1000); // 1000ms = 1 second
+    expect(world.riftTimer).toBeCloseTo(59, 5);
+  });
+
+  it('updateRiftTimer returns false when time expires', () => {
+    const world = new World();
+    const rift = createRift(1, 5);
+    world.generateRiftFloor(rift);
+    world.riftTimer = 0.5; // half a second left
+
+    const stillOk = world.updateRiftTimer(1000); // subtract 1 second
+    expect(stillOk).toBe(false);
+  });
+
+  it('updateRiftTimer returns true when time is still remaining', () => {
+    const world = new World();
+    const rift = createRift(1, 5);
+    world.generateRiftFloor(rift);
+    world.riftTimer = 60;
+
+    const stillOk = world.updateRiftTimer(1000);
+    expect(stillOk).toBe(true);
+  });
+
+  it('getRiftTimeRemaining returns non-negative even when timer is negative', () => {
+    const world = new World();
+    const rift = createRift(1, 5);
+    world.generateRiftFloor(rift);
+    world.riftTimer = -5; // forced negative
+
+    expect(world.getRiftTimeRemaining()).toBe(0);
+  });
+
+  it('updateRiftTimer returns true (always ok) when rift is not active', () => {
+    const world = new World();
+    // No rift started — riftActive is false
+    const result = world.updateRiftTimer(5000);
+    expect(result).toBe(true);
+  });
+
+  it('last room is forced to boss type after generateRiftFloor', () => {
+    const world = new World();
+    const rift = createRift(2, 10);
+    world.generateRiftFloor(rift);
+
+    const lastRoom = world.rooms[world.rooms.length - 1];
+    expect(lastRoom.type).toBe('boss');
+  });
+
+  it('generateRiftFloor sets shopNpc and storyNpcs to null/empty', () => {
+    const world = new World();
+    const rift = createRift(3, 10);
+    world.generateRiftFloor(rift);
+
+    expect(world.shopNpc).toBeNull();
+    expect(world.storyNpcs).toHaveLength(0);
+  });
+});
+
+// ── applyRiftModifiers ───────────────────────────────────────────
+
+describe('applyRiftModifiers', () => {
+  const { World } = require('../game/world');
+
+  function makeMonster(overrides = {}) {
+    return {
+      hp: 100,
+      maxHp: 100,
+      damage: 20,
+      armor: 0,
+      speed: 60,
+      ...overrides,
+    };
+  }
+
+  it('deadly modifier increases monster damage', () => {
+    const world = new World();
+    // Manually set up a rift config with only the deadly modifier
+    world.riftActive = true;
+    world.riftConfig = {
+      tier: 1,
+      modifiers: [{ key: 'deadly', effect: 'monster_damage', value: 1.5 }],
+      monsterHpMult: 1.0,
+      monsterDmgMult: 1.0,
+    };
+
+    const monster = makeMonster({ damage: 20 });
+    world.applyRiftModifiers([monster]);
+
+    // 20 * 1.5 = 30
+    expect(monster.damage).toBe(30);
+  });
+
+  it('fortified modifier increases monster HP (maxHp and hp)', () => {
+    const world = new World();
+    world.riftActive = true;
+    world.riftConfig = {
+      tier: 1,
+      modifiers: [{ key: 'fortified', effect: 'monster_hp', value: 1.4 }],
+      monsterHpMult: 1.0,
+      monsterDmgMult: 1.0,
+    };
+
+    const monster = makeMonster({ hp: 100, maxHp: 100 });
+    world.applyRiftModifiers([monster]);
+
+    // 100 * 1.4 = 140
+    expect(monster.maxHp).toBe(140);
+    expect(monster.hp).toBe(140);
+  });
+
+  it('hasty modifier increases monster speed', () => {
+    const world = new World();
+    world.riftActive = true;
+    world.riftConfig = {
+      tier: 1,
+      modifiers: [{ key: 'hasty', effect: 'monster_speed', value: 1.3 }],
+      monsterHpMult: 1.0,
+      monsterDmgMult: 1.0,
+    };
+
+    const monster = makeMonster({ speed: 60 });
+    world.applyRiftModifiers([monster]);
+
+    // floor(60 * 1.3) = 78
+    expect(monster.speed).toBe(78);
+  });
+
+  it('tier multipliers stack with modifier effects', () => {
+    const world = new World();
+    world.riftActive = true;
+    // fortified: 1.4x HP, plus tier monsterHpMult: 1.9 (tier 4 = 1.0 + 3*0.3)
+    world.riftConfig = {
+      tier: 4,
+      modifiers: [{ key: 'fortified', effect: 'monster_hp', value: 1.4 }],
+      monsterHpMult: 1.9,
+      monsterDmgMult: 1.0,
+    };
+
+    const monster = makeMonster({ hp: 100, maxHp: 100 });
+    world.applyRiftModifiers([monster]);
+
+    // After fortified: floor(100 * 1.4) = 140
+    // After tier mult: floor(140 * 1.9) = 266
+    expect(monster.maxHp).toBe(Math.floor(Math.floor(100 * 1.4) * 1.9));
+    expect(monster.hp).toBe(monster.maxHp);
+  });
+
+  it('no crash with empty modifier list', () => {
+    const world = new World();
+    world.riftActive = true;
+    world.riftConfig = {
+      tier: 1,
+      modifiers: [],
+      monsterHpMult: 1.0,
+      monsterDmgMult: 1.0,
+    };
+
+    const monster = makeMonster();
+    expect(() => world.applyRiftModifiers([monster])).not.toThrow();
+    // Stats unchanged after empty modifiers + 1.0 multipliers
+    expect(monster.damage).toBe(20);
+    expect(monster.maxHp).toBe(100);
+  });
+
+  it('does nothing when rift is not active', () => {
+    const world = new World();
+    // riftActive = false (default), no riftConfig
+    const monster = makeMonster({ damage: 20, maxHp: 100, hp: 100 });
+    expect(() => world.applyRiftModifiers([monster])).not.toThrow();
+    // Nothing should have changed
+    expect(monster.damage).toBe(20);
+    expect(monster.maxHp).toBe(100);
+  });
+
+  it('armored modifier increases monster armor (monster_dr adds flat armor based on maxHp)', () => {
+    const world = new World();
+    world.riftActive = true;
+    world.riftConfig = {
+      tier: 1,
+      modifiers: [{ key: 'armored', effect: 'monster_dr', value: 0.3 }],
+      monsterHpMult: 1.0,
+      monsterDmgMult: 1.0,
+    };
+
+    const monster = makeMonster({ hp: 100, maxHp: 100, armor: 10 });
+    world.applyRiftModifiers([monster]);
+
+    // armor = 10 + floor(100 * 0.3) = 10 + 30 = 40
+    expect(monster.armor).toBe(40);
+  });
+});
+
+// ── Rift leaderboard ─────────────────────────────────────────────
+
+describe('Rift leaderboard', () => {
+  const { GameDatabase } = require('../game/database');
+  let db;
+
+  beforeEach(() => {
+    db = new GameDatabase(':memory:');
+  });
+
+  it('recordRiftClear inserts a record retrievable via getRiftLeaderboard', () => {
+    db.recordRiftClear(3, ['Alice', 'Bob'], 95.5, [{ key: 'deadly' }], 'normal');
+    const rows = db.getRiftLeaderboard(3);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].player1).toBe('Alice');
+    expect(rows[0].player2).toBe('Bob');
+    expect(rows[0].tier).toBe(3);
+    expect(rows[0].time_seconds).toBeCloseTo(95.5);
+    db.close();
+  });
+
+  it('getRiftLeaderboard returns records sorted by time_seconds ASC', () => {
+    db.recordRiftClear(2, ['Fast'], 60.0, [], 'normal');
+    db.recordRiftClear(2, ['Slow'], 180.0, [], 'normal');
+    db.recordRiftClear(2, ['Mid'], 100.0, [], 'normal');
+
+    const rows = db.getRiftLeaderboard(2);
+    expect(rows).toHaveLength(3);
+    expect(rows[0].time_seconds).toBeCloseTo(60.0);
+    expect(rows[1].time_seconds).toBeCloseTo(100.0);
+    expect(rows[2].time_seconds).toBeCloseTo(180.0);
+    db.close();
+  });
+
+  it('getRiftLeaderboard filters by tier — only returns matching tier', () => {
+    db.recordRiftClear(1, ['TierOne'], 50.0, [], 'normal');
+    db.recordRiftClear(3, ['TierThree'], 75.0, [], 'normal');
+    db.recordRiftClear(1, ['TierOneB'], 55.0, [], 'normal');
+
+    const tier1rows = db.getRiftLeaderboard(1);
+    expect(tier1rows).toHaveLength(2);
+    for (const row of tier1rows) {
+      expect(row.tier).toBe(1);
+    }
+
+    const tier3rows = db.getRiftLeaderboard(3);
+    expect(tier3rows).toHaveLength(1);
+    expect(tier3rows[0].tier).toBe(3);
+    db.close();
+  });
+
+  it('getRiftLeaderboard limits results to 20', () => {
+    for (let i = 0; i < 25; i++) {
+      db.recordRiftClear(5, [`Player${i}`], 60 + i, [], 'normal');
+    }
+    const rows = db.getRiftLeaderboard(5);
+    expect(rows).toHaveLength(20);
+    db.close();
+  });
+
+  it('getRiftLeaderboard returns parsed modifiers array (not raw JSON string)', () => {
+    const mods = [{ key: 'deadly', effect: 'monster_damage', value: 1.5 }];
+    db.recordRiftClear(4, ['ModPlayer'], 88.0, mods, 'normal');
+
+    const rows = db.getRiftLeaderboard(4);
+    expect(rows).toHaveLength(1);
+    expect(Array.isArray(rows[0].modifiers)).toBe(true);
+    expect(rows[0].modifiers[0].key).toBe('deadly');
+    db.close();
+  });
+
+  it('getPersonalRiftRecords shows best_time per tier', () => {
+    // Same player, same tier, different times
+    db.recordRiftClear(3, ['Hero'], 120.0, [], 'normal');
+    db.recordRiftClear(3, ['Hero'], 80.0, [], 'normal');  // best
+    db.recordRiftClear(3, ['Hero'], 100.0, [], 'normal');
+
+    const records = db.getPersonalRiftRecords('Hero');
+    expect(records).toHaveLength(1); // grouped by tier
+    expect(records[0].tier).toBe(3);
+    expect(records[0].best_time).toBeCloseTo(80.0);
+    expect(records[0].clears).toBe(3);
+    db.close();
+  });
+
+  it('getPersonalRiftRecords groups best time per tier across multiple tiers', () => {
+    db.recordRiftClear(1, ['Champion'], 45.0, [], 'normal');
+    db.recordRiftClear(2, ['Champion'], 90.0, [], 'normal');
+    db.recordRiftClear(2, ['Champion'], 70.0, [], 'normal'); // best for tier 2
+
+    const records = db.getPersonalRiftRecords('Champion');
+    expect(records).toHaveLength(2); // tier 1 and tier 2
+
+    const tier1 = records.find(r => r.tier === 1);
+    const tier2 = records.find(r => r.tier === 2);
+    expect(tier1).toBeDefined();
+    expect(tier1.best_time).toBeCloseTo(45.0);
+    expect(tier2).toBeDefined();
+    expect(tier2.best_time).toBeCloseTo(70.0);
+    db.close();
+  });
+
+  it('getPersonalRiftRecords matches player listed as player2', () => {
+    // Player is partner (player2), not the main player1
+    db.recordRiftClear(5, ['Leader', 'Partner'], 110.0, [], 'normal');
+
+    const records = db.getPersonalRiftRecords('Partner');
+    expect(records).toHaveLength(1);
+    expect(records[0].tier).toBe(5);
+    expect(records[0].best_time).toBeCloseTo(110.0);
+    db.close();
+  });
+
+  it('recordRiftClear solo run stores null for player2', () => {
+    db.recordRiftClear(2, ['SoloHero'], 55.0, [], 'normal');
+    const rows = db.getRiftLeaderboard(2);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].player2).toBeNull();
+    db.close();
+  });
+
+  it('returns empty array from getRiftLeaderboard for tier with no records', () => {
+    const rows = db.getRiftLeaderboard(10);
+    expect(rows).toHaveLength(0);
+    db.close();
+  });
+
+  it('returns empty array from getPersonalRiftRecords for unknown player', () => {
+    const records = db.getPersonalRiftRecords('NoSuchPlayer');
+    expect(records).toHaveLength(0);
+    db.close();
+  });
+});

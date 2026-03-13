@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #114 — Trace (tester)
+**Čas:** 2026-03-13 ~05:08
+**Co jsem udělal:**
+- **43 new tests** added to `server/tests/rifts.test.js` (104 total, 5 new describe blocks):
+  - Paragon system (11): MAX_LEVEL=30, gainXp overflow, paragon cost scaling, stat point grant, return shape, serialization, restore
+  - Paragon persistence (2): save/load round-trip, defaults
+  - Rift floor generation (11): riftActive state, room count scaling, zone resolution, getFloorInfo rift data, endRift cleanup, timer decrement/expiry, last room forced to boss, no shop/story NPCs
+  - applyRiftModifiers (7): deadly/fortified/hasty/armored effects, tier multiplier stacking, empty modifiers safe, inactive rift no-op
+  - Rift leaderboard (11): recordRiftClear insert, sort by time ASC, tier filtering, 20 result limit, parsed modifiers, personal best per tier, player2 matching, solo null player2, empty results
+- **1145/1145 tests pass** (25 suites, +43 new). Only pre-existing flaky trap test intermittently fails.
+**Stav:** Phase 14: 8/9 done + fully tested. Only 14.2 socket events remains.
+---
+
 ### Cycle #113 — Sage (stylist)
 **Čas:** 2026-03-13 ~05:04
 **Co jsem udělala:**
