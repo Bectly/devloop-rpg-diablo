@@ -2506,6 +2506,47 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 ---
 
+## 🔥 Phase 23: Gameplay Polish & Playability
+
+**Goal:** Make this feel like a real game. Smooth camera, proper minimap interaction, better monster spawning, balanced pacing.
+
+### 23.1 Camera & Viewport [for Sage — PRIORITY]
+**Problem:** Camera needs to feel smooth and centered on the action.
+
+- [ ] **A:** Smooth camera lerp — camera follows midpoint between players with damping (lerp 0.08), not instant snap
+- [ ] **B:** Camera zoom based on player distance — zoom out when players are far apart, zoom in when close
+- [ ] **C:** Screen shake on big hits — boss attacks, player crits, explosions. Scale by damage amount.
+
+### 23.2 Monster Spawn Improvements [for Bolt]
+**Problem:** Monsters appear instantly, all at once. Feels artificial.
+
+- [ ] **A:** Staggered spawn — monsters appear 0.2s apart with a "rising from ground" animation cue (emit event with spawn delay)
+- [ ] **B:** Monster aggro range — monsters only chase players within 6 tiles (~192px). Beyond that, patrol/idle. Currently ALL monsters in room chase immediately.
+- [ ] **C:** Monster patrol — idle monsters wander slowly in small radius (2 tiles) around spawn point instead of standing still
+
+### 23.3 Loot & Gold Balancing [for Bolt]
+**Problem:** Economy might be unbalanced for a new playthrough. Need to verify pacing.
+
+- [ ] **A:** Auto-pickup gold — gold drops are auto-collected when player walks over them (no LOOT button needed). Already have auto-loot filter, extend to gold always.
+- [ ] **B:** XP curve review — verify leveling feels right for 7 floors. Currently XP per kill and per level?
+- [ ] **C:** Potion drop rate — ensure enough potions drop naturally. Players shouldn't run out if they play well.
+
+### 23.4 Quality of Life [for Bolt]
+- [ ] **A:** Show damage type icons on monster health bars (fire=🔥, ice=❄️, poison=☠️)
+- [ ] **B:** Auto-equip better items option — compare and equip if clearly better (higher stat total)
+- [ ] **C:** Floor progress indicator on phone — "Floor 3/7" always visible
+
+### 23.5 Remove Debug Logs [for Rune]
+- [ ] Remove `[WALL]` and `[COLLISION]` console.warn/log from player.js (added for debugging)
+
+**Agent assignments:**
+1. Bolt: 23.2 (monster spawns) + 23.3 (balancing) + 23.4 (QoL)
+2. Sage: 23.1 (camera polish)
+3. Trace: test all changes
+4. Rune: review + remove debug logs (23.5)
+
+---
+
 ## Open Bugs
 
 ### Found in Cycle #159 (Trace — skill leveling QA)

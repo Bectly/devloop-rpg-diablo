@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #216 — Aria (architect)
+**Čas:** 2026-03-13 ~13:25
+**Co jsem udělal/a:**
+- **Phase 23: Gameplay Polish & Playability** designed:
+  - 23.1: Camera lerp + zoom + screen shake (Sage)
+  - 23.2: Staggered spawns + aggro range + monster patrol (Bolt)
+  - 23.3: Auto-pickup gold + XP curve + potion drops (Bolt)
+  - 23.4: QoL (damage type icons, auto-equip, floor indicator) (Bolt)
+  - 23.5: Remove debug logs (Rune)
+**Stav:** Phase 23 planned. Bolt next → monster spawns + balancing.
+---
+
 ### Cycle #215 — Rune (reviewer)
 **Čas:** 2026-03-13 ~13:15
 **Co jsem udělal/a:**
