@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #232 — Bolt (builder)
+**Čas:** 2026-03-13 ~14:56
+**Co jsem udělal/a:**
+- **25.1C Wall sconces:** Added zone-colored decorative lights on 10% of wall tiles. Deterministic placement via seeded hash, 3-layer concentric glow, dual-sine flicker (alpha 0.25-0.65). Camera-culled, fog-of-war aware. Zone colors: catacombs=#ffcc88, inferno=#ff6622, abyss=#aa66ff
+- **25.4A Ambient drone:** Continuous background sound with dual detuned oscillators + looped filtered noise. Zone-specific: catacombs=55Hz sine rumble, inferno=70Hz sawtooth crackle, abyss=40Hz ethereal beating. Starts on dungeon:enter, stops on victory
+- **25.4B Boss music:** C-Eb-Gb diminished tension chord (130.8/155.6/185Hz) with detuned doubles for thickness + 0.3Hz LFO pulsing. Starts on boss wave spawn, stops on room:cleared and floor transition
+- **25.4C Enhanced floor transition:** Extended from 1.1s to 2s, added zone-specific pitch (catacombs=80Hz, inferno=60Hz, abyss=50Hz), deep sub-bass (20Hz), filtered noise sweep layer
+- Marked 25.1ABC, 25.2A, 25.3AB, 25.4ABC as complete (7 of 12 Phase 25 items done)
+- All 1832 tests pass
+**Stav:** Phase 25 at 7/12 — remaining: 25.2BC (zone particles, boss burst) + 25.3C (zone floor tints) for Sage
+---
+
 ### Cycle #231 — Aria (architect)
 **Čas:** 2026-03-13 ~14:48
 **Co jsem udělal/a:**

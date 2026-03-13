@@ -241,19 +241,193 @@ window.Sound = {
     sub.stop(chordStart + 2.0);
   },
 
-  floorTransition() {
-    // Low sweep + reverb-like decay
+  floorTransition(zoneId) {
+    // Enhanced floor transition — deeper sub-bass, longer duration, zone-specific pitch
     if (!this.ctx || this._muted) return;
     const t = this.ctx.currentTime;
+
+    // Zone-specific pitch center
+    const zonePitch = { catacombs: 80, inferno: 60, abyss: 50 };
+    const basePitch = zonePitch[zoneId] || 80;
+
+    // Main sweep oscillator (longer: 2s vs old 1.1s)
     const o = this.ctx.createOscillator();
-    const g = this._gain(0.2, 1.0);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.2 * this.masterVol, t);
+    g.gain.linearRampToValueAtTime(0.25 * this.masterVol, t + 0.6);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+    g.connect(this.ctx.destination);
     o.type = 'sine';
-    o.frequency.setValueAtTime(80, t);
-    o.frequency.linearRampToValueAtTime(200, t + 0.5);
-    o.frequency.exponentialRampToValueAtTime(60, t + 0.9);
+    o.frequency.setValueAtTime(basePitch, t);
+    o.frequency.linearRampToValueAtTime(basePitch * 2.5, t + 0.7);
+    o.frequency.exponentialRampToValueAtTime(basePitch * 0.6, t + 1.8);
     o.connect(g);
     o.start(t);
-    o.stop(t + 1.1);
+    o.stop(t + 2.1);
+
+    // Deep sub-bass layer (20Hz rumble)
+    const sub = this.ctx.createOscillator();
+    const sg = this.ctx.createGain();
+    sg.gain.setValueAtTime(0.15 * this.masterVol, t);
+    sg.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+    sg.connect(this.ctx.destination);
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(20, t);
+    sub.frequency.linearRampToValueAtTime(35, t + 1.0);
+    sub.connect(sg);
+    sub.start(t);
+    sub.stop(t + 2.1);
+
+    // Filtered noise sweep for texture
+    this._noise(0.4, 0.08);
+  },
+
+  // ── Ambient Drone (continuous background sound) ──
+
+  _ambientNodes: null,
+
+  ambientDroneStart(zoneId) {
+    // Start a continuous ambient drone — zone-specific timbre
+    if (!this.ctx || this._muted) return;
+    this.ambientDroneStop(); // Stop any existing drone
+
+    const t = this.ctx.currentTime;
+
+    // Master gain for drone (fade in over 2s)
+    const master = this.ctx.createGain();
+    master.gain.setValueAtTime(0, t);
+    master.gain.linearRampToValueAtTime(0.05 * this.masterVol, t + 2.0);
+    master.connect(this.ctx.destination);
+
+    // Zone configs: { freq, type, noiseVol, detune }
+    const zones = {
+      catacombs: { freq: 55, type: 'sine', noiseVol: 0.02, detune: 0 },
+      inferno:   { freq: 70, type: 'sawtooth', noiseVol: 0.06, detune: 5 },
+      abyss:     { freq: 40, type: 'sine', noiseVol: 0.01, detune: -8 },
+    };
+    const cfg = zones[zoneId] || zones.catacombs;
+
+    // Low oscillator
+    const osc = this.ctx.createOscillator();
+    osc.type = cfg.type;
+    osc.frequency.setValueAtTime(cfg.freq, t);
+    osc.detune.setValueAtTime(cfg.detune, t);
+    osc.connect(master);
+    osc.start(t);
+
+    // Second detuned oscillator for richness (abyss = ethereal beating)
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(cfg.freq * 1.002, t); // Slight detune = slow beating
+    osc2.connect(master);
+    osc2.start(t);
+
+    // Filtered noise layer
+    const noiseLen = 4; // 4s buffer, looped
+    const bufSize = Math.round(this.ctx.sampleRate * noiseLen);
+    const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+    const noiseData = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) noiseData[i] = (Math.random() * 2 - 1);
+    const noiseSrc = this.ctx.createBufferSource();
+    noiseSrc.buffer = buf;
+    noiseSrc.loop = true;
+
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(200, t);
+    noiseFilter.Q.value = 1;
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(cfg.noiseVol * this.masterVol, t);
+
+    noiseSrc.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noiseSrc.start(t);
+
+    this._ambientNodes = { master, osc, osc2, noiseSrc, noiseGain, noiseFilter };
+  },
+
+  ambientDroneStop() {
+    if (!this._ambientNodes) return;
+    const t = this.ctx ? this.ctx.currentTime : 0;
+    const { master, osc, osc2, noiseSrc } = this._ambientNodes;
+    try {
+      master.gain.linearRampToValueAtTime(0, t + 1.0);
+      setTimeout(() => {
+        try { osc.stop(); } catch (_) {}
+        try { osc2.stop(); } catch (_) {}
+        try { noiseSrc.stop(); } catch (_) {}
+      }, 1200);
+    } catch (_) {}
+    this._ambientNodes = null;
+  },
+
+  // ── Boss Music (tension chord) ──
+
+  _bossNodes: null,
+
+  bossMusic() {
+    // Start boss tension chord: C-Eb-Gb diminished, sustained pad
+    if (!this.ctx || this._muted) return;
+    this.bossStop();
+
+    const t = this.ctx.currentTime;
+    const master = this.ctx.createGain();
+    master.gain.setValueAtTime(0, t);
+    master.gain.linearRampToValueAtTime(0.08 * this.masterVol, t + 1.5);
+    master.connect(this.ctx.destination);
+
+    // C-Eb-Gb diminished triad (C3=130.8, Eb3=155.6, Gb3=185.0)
+    const freqs = [130.81, 155.56, 185.00];
+    const oscs = [];
+
+    for (const freq of freqs) {
+      // Main tone
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      o.connect(master);
+      o.start(t);
+      oscs.push(o);
+
+      // Detuned double for thickness
+      const o2 = this.ctx.createOscillator();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(freq * 1.003, t);
+      const detGain = this.ctx.createGain();
+      detGain.gain.setValueAtTime(0.6, t);
+      o2.connect(detGain);
+      detGain.connect(master);
+      o2.start(t);
+      oscs.push(o2);
+    }
+
+    // Slow LFO on master volume for pulsing tension
+    const lfo = this.ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(0.3, t); // Slow pulse ~3s cycle
+    const lfoGain = this.ctx.createGain();
+    lfoGain.gain.setValueAtTime(0.02 * this.masterVol, t);
+    lfo.connect(lfoGain);
+    lfoGain.connect(master.gain);
+    lfo.start(t);
+    oscs.push(lfo);
+
+    this._bossNodes = { master, oscs };
+  },
+
+  bossStop() {
+    if (!this._bossNodes) return;
+    const t = this.ctx ? this.ctx.currentTime : 0;
+    const { master, oscs } = this._bossNodes;
+    try {
+      master.gain.linearRampToValueAtTime(0, t + 1.0);
+      setTimeout(() => {
+        for (const o of oscs) { try { o.stop(); } catch (_) {} }
+      }, 1200);
+    } catch (_) {}
+    this._bossNodes = null;
   },
 
   // ── UI ──

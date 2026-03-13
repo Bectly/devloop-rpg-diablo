@@ -898,6 +898,9 @@ socket.on('dungeon:enter', (data) => {
       // Clean up fog of war + lighting for new floor
       Lighting.cleanup();
 
+      // Stop boss music if playing (boss died on previous floor)
+      Sound.bossStop();
+
       HUD._forceDestroyDialogue();
       HUD._destroyVictoryScreen();
 
@@ -916,10 +919,14 @@ socket.on('dungeon:enter', (data) => {
       HUD.showRoomDiscovery(scene);
 
       // Floor transition effect with zone color
-      Sound.floorTransition();
+      const zoneId = data.zoneId || 'catacombs';
+      Sound.floorTransition(zoneId);
+
+      // Start ambient drone for this zone
+      Sound.ambientDroneStart(zoneId);
+
       const floorIdx = data.floor || 0;
       const floorName = data.floorName || FLOOR_NAMES[floorIdx % FLOOR_NAMES.length] || `Floor ${floorIdx + 1}`;
-      const zoneId = data.zoneId || 'catacombs';
       HUD.playFloorTransition(scene, floorIdx, floorName, zoneId);
     }
   }
@@ -934,6 +941,7 @@ socket.on('wave:start', (data) => {
       if (data.roomType === 'boss' && data.bossName) {
         HUD.showBossAnnouncement(scene, data.bossName);
         Sound.bossSpawn();
+        Sound.bossMusic();
       }
     }
   }
@@ -945,6 +953,8 @@ socket.on('room:cleared', (data) => {
     if (scene) {
       HUD.showWaveAnnouncement(scene, `${data.roomName} CLEARED!`, '#44ff44');
       HUD.spawnCelebrationParticles(scene);
+      // Stop boss music when boss room is cleared
+      Sound.bossStop();
       // Reset wave text color after announcement fades
       scene.time.delayedCall(2600, () => {
         HUD.setWaveTextColor('#ff4444');
@@ -1241,7 +1251,9 @@ socket.on('game:victory', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');
     if (scene && scene.scene.isActive()) {
-      // Play victory sound
+      // Stop ambient/boss music, play victory sound
+      Sound.ambientDroneStop();
+      Sound.bossStop();
       Sound.victory();
       setTimeout(() => Sound.levelUp(), 500);
 

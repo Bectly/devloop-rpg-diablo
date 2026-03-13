@@ -2600,30 +2600,30 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 25.1 Fog of War + Lighting [for Bolt — PRIORITY]
 **Approach:** Server already sends room data with positions. TV knows which rooms the player has visited.
 
-- [ ] **A:** Room fog overlay — Phaser Graphics layer (depth above floor, below entities). Unvisited rooms: dark fill at alpha 0.6. Current room: fully revealed. Adjacent rooms: alpha 0.3. Use room rectangles from world data.
-- [ ] **B:** Player torch light — radial gradient Graphics around each player sprite. 120px radius, warm yellow (#ffdd88) at center fading to transparent. Updates every frame at player position. Zone-tinted: inferno=orange, abyss=purple.
-- [ ] **C:** Torch wall sconces — decorative light circles on random wall tiles (10% chance per wall tile). Flicker: alpha oscillates 0.3-0.6 with noise. Zone-colored. Created in `game.js` when floor loads.
+- [x] **A:** Room fog overlay — RenderTexture fog layer (depth 45), explored mask tracks visited tiles, eraser textures with feathered edges. `lighting.js` (Sage, Cycle #213)
+- [x] **B:** Player torch light — 14-step concentric radial glow (orange→yellow gradient), per-player flicker variation, floor-dependent radius reduction. `lighting.js` (Sage, Cycle #213)
+- [x] **C:** Torch wall sconces — 10% of wall tiles get decorative flickering lights, zone-colored (catacombs=warm, inferno=orange, abyss=purple), culled by camera bounds, respects fog of war visibility. `lighting.js` (Bolt, Cycle #232)
 
 ### 25.2 Ambient Particles [for Sage]
 **Approach:** Simple Graphics-based particles. No Phaser particle system.
 
-- [ ] **A:** Dust motes — 15 small circles (radius 1-2px, alpha 0.15-0.3) drifting slowly (0.1-0.3 px/frame) in random directions. Wrap around camera bounds. Created once, updated in game loop.
+- [x] **A:** Dust motes — 25 particles (radius 1-2.5px, alpha 0.1-0.3 sine oscillation), drift 0.8px/frame, camera-culled, respects fog. `lighting.js` (Sage, Cycle #213)
 - [ ] **B:** Zone-specific colors — catacombs: white/gray dust, inferno: orange/red embers (faster drift, 0.3-0.5), abyss: purple wisps (sine-wave path). Switch on `dungeon:enter` event.
 - [ ] **C:** Boss room burst — on boss room entry, spawn 30 particles in radial burst from center. Fade out over 1s. Triggered by `monster:spawned` for boss type.
 
 ### 25.3 Floor Tile Variation [for Sage]
 **Approach:** Modify tile rendering in game.js where floor tiles are drawn.
 
-- [ ] **A:** Tile color variation — use `(x*7 + y*13) % 3` seeded hash for 3 brightness levels (base, +5%, -5%). Apply as tint to floor tile rectangles.
-- [ ] **B:** Crack overlays — 8% of floor tiles get a thin dark line (Graphics.lineTo) across them. Direction seeded by position. Simple cross-hatch pattern.
+- [x] **A:** Tile color variation — seeded hash `(c*7919+r*104729)%100` for 3 variants: base (60%), cracked (25%), mossy (15%). Pre-baked textures per floor theme. `game.js` (Sage, Cycle #213)
+- [x] **B:** Crack overlays — cracked variant has diagonal + horizontal scratch lines. Mossy variant has dark circles + edge wear. Applied to floor + corridor tiles. `game.js` (Sage, Cycle #213)
 - [ ] **C:** Zone floor tints — multiply floor color by zone accent: catacombs=#aaaacc (blue-gray), inferno=#ffccaa (warm), abyss=#ccaaff (purple). Applied to all floor tiles on floor load.
 
 ### 25.4 Sound & Music [for Bolt]
 **Approach:** Extend existing Web Audio procedural sound system.
 
-- [ ] **A:** Ambient drone — low continuous oscillator (40-80Hz sine) + filtered noise. Volume 0.05. Zone-specific: catacombs=low rumble, inferno=crackling (noise-heavy), abyss=ethereal (detuned sine). Start on floor load, crossfade on zone change.
-- [ ] **B:** Boss music — tension chord: C-Eb-Gb (diminished) sustained pad. Starts on boss spawn, ends on boss death. Layer over ambient.
-- [ ] **C:** Enhanced floor transition — current `floorTransition()` is simple sweep. Add: deeper sub-bass (20Hz), longer duration (2s vs 1s), zone-specific pitch.
+- [x] **A:** Ambient drone — dual detuned oscillators + looped filtered noise. Zone-specific: catacombs=55Hz sine, inferno=70Hz sawtooth (noise-heavy), abyss=40Hz detuned (ethereal beating). Starts on `dungeon:enter`, stops on victory. `sound.js` (Bolt, Cycle #232)
+- [x] **B:** Boss music — C-Eb-Gb diminished triad (130.8/155.6/185Hz), doubled with detune for thickness, LFO pulsing (0.3Hz). Starts on boss wave, stops on room:cleared + floor transition. `sound.js` (Bolt, Cycle #232)
+- [x] **C:** Enhanced floor transition — 2s duration (was 1.1s), zone-specific pitch (catacombs=80Hz, inferno=60Hz, abyss=50Hz), deeper sub-bass (20Hz), filtered noise sweep. `sound.js` (Bolt, Cycle #232)
 
 **Agent assignments:**
 1. **Bolt**: 25.1A-C (fog of war + lighting) + 25.4A-C (sound)

@@ -20,6 +20,15 @@ const Lighting = (() => {
   const LIGHT_FLOOR_PENALTY = 5;   // Radius reduction per floor
   const PARTICLE_COUNT = 25;       // Ambient particle count
   const ERASER_SIZE = 360;         // Diameter of the eraser texture (~2x vision radius + margin)
+  const SCONCE_CHANCE = 0.10;      // 10% of wall tiles get a sconce
+  const SCONCE_RADIUS = 18;        // Light radius for wall sconces
+
+  // Zone-specific sconce colors
+  const SCONCE_COLORS = {
+    catacombs: { color: 0xffcc88, r: 0xff, g: 0xcc, b: 0x88 },
+    inferno:   { color: 0xff6622, r: 0xff, g: 0x66, b: 0x22 },
+    abyss:     { color: 0xaa66ff, r: 0xaa, g: 0x66, b: 0xff },
+  };
 
   // ── State ──
   let fogRT = null;                // Phaser.GameObjects.RenderTexture — the visible fog overlay
@@ -27,6 +36,8 @@ const Lighting = (() => {
   let exploredStamp = null;        // Hidden Image used to stamp into exploredMask via draw()
   let torchGfx = null;             // Graphics object for torch light overlay
   let particleGfx = null;          // Graphics object for ambient particles
+  let sconceGfx = null;            // Graphics object for wall sconce lights
+  let sconcePositions = [];        // Array of { x, y, phase } for sconce locations
   let particles = [];              // Array of particle objects
   let revealedTiles = null;        // Set of "r,c" strings for explored tiles
   let lastWorldW = 0;
@@ -35,6 +46,7 @@ const Lighting = (() => {
   let flickerTarget = 0;           // Target flicker value
   let frameCount = 0;              // Frame counter for flicker updates
   let lastExploredPositions = {};  // Track last stamped tile per player id
+  let lastZoneId = 'catacombs';    // Current zone for sconce coloring
 
   // ── Init ──
   function init(scene) {
@@ -60,6 +72,10 @@ const Lighting = (() => {
 
     // Torch light graphics (warm glow, rendered just below the fog layer)
     torchGfx = scene.add.graphics().setDepth(44);
+
+    // Wall sconce graphics (decorative lights on wall tiles, above tiles, below entities)
+    sconceGfx = scene.add.graphics().setDepth(2);
+    sconcePositions = [];
 
     // Fog and explored RenderTextures are created lazily in update()
     // once we know the world dimensions.
@@ -142,6 +158,31 @@ const Lighting = (() => {
     };
   }
 
+  // ── Generate sconce positions (called once per floor) ──
+  function _generateSconces(tiles, gridW, gridH, zoneId) {
+    sconcePositions = [];
+    lastZoneId = zoneId || 'catacombs';
+
+    for (let r = 0; r < gridH; r++) {
+      for (let c = 0; c < gridW; c++) {
+        if (tiles[r][c] !== 1) continue; // Only wall tiles (TILE.WALL = 1)
+
+        // Deterministic seed for this wall tile
+        const seed = ((c * 31397 + r * 73856) % 1000) / 1000;
+        if (seed >= SCONCE_CHANCE) continue;
+
+        // Place sconce at center of wall tile
+        sconcePositions.push({
+          x: c * TILE_SIZE + TILE_SIZE / 2,
+          y: r * TILE_SIZE + TILE_SIZE / 2,
+          phase: seed * Math.PI * 2, // Random starting flicker phase
+        });
+      }
+    }
+  }
+
+  let _lastSconceFloor = -1;
+
   // ── Main Update ──
   function update(scene, players, world) {
     if (!particleGfx) return; // Not initialized
@@ -154,9 +195,16 @@ const Lighting = (() => {
     const worldW = gridW * TILE_SIZE;
     const worldH = gridH * TILE_SIZE;
     const currentFloor = world.currentFloor || 0;
+    const zoneId = world.zoneId || 'catacombs';
 
     // Ensure fog textures match world size
     _ensureFogTextures(scene, worldW, worldH);
+
+    // Generate sconce positions once per floor
+    if (_lastSconceFloor !== currentFloor) {
+      _generateSconces(tiles, gridW, gridH, zoneId);
+      _lastSconceFloor = currentFloor;
+    }
 
     // Camera bounds for particle management
     const cam = scene.cameras.main;
@@ -173,6 +221,9 @@ const Lighting = (() => {
 
     // C: Ambient Particles
     _updateParticles(scene, camL, camT, camR, camB);
+
+    // D: Wall Sconces
+    _updateSconces(camL, camT, camR, camB);
 
     frameCount++;
   }
@@ -340,6 +391,43 @@ const Lighting = (() => {
     }
   }
 
+  // ── D: Wall Sconces ──
+  function _updateSconces(camL, camT, camR, camB) {
+    if (!sconceGfx) return;
+    sconceGfx.clear();
+
+    if (sconcePositions.length === 0) return;
+
+    const zoneCfg = SCONCE_COLORS[lastZoneId] || SCONCE_COLORS.catacombs;
+    const margin = SCONCE_RADIUS * 2;
+
+    for (const s of sconcePositions) {
+      // Cull: skip sconces outside camera view
+      if (s.x < camL - margin || s.x > camR + margin ||
+          s.y < camT - margin || s.y > camB + margin) continue;
+
+      // Only draw if this tile has been revealed
+      const tr = Math.floor(s.y / TILE_SIZE);
+      const tc = Math.floor(s.x / TILE_SIZE);
+      if (revealedTiles && revealedTiles.size > 0 && !revealedTiles.has(`${tr},${tc}`)) continue;
+
+      // Flicker: alpha oscillates 0.3-0.6 with noise-like variation
+      const flicker = Math.sin(frameCount * 0.05 + s.phase) * 0.3 +
+                      Math.sin(frameCount * 0.13 + s.phase * 2.3) * 0.15;
+      const alpha = 0.45 + flicker * 0.5; // Range ~0.25-0.65
+
+      // Draw radial glow — 3 concentric circles
+      sconceGfx.fillStyle(zoneCfg.color, alpha * 0.15);
+      sconceGfx.fillCircle(s.x, s.y, SCONCE_RADIUS);
+
+      sconceGfx.fillStyle(zoneCfg.color, alpha * 0.3);
+      sconceGfx.fillCircle(s.x, s.y, SCONCE_RADIUS * 0.5);
+
+      sconceGfx.fillStyle(zoneCfg.color, alpha * 0.6);
+      sconceGfx.fillCircle(s.x, s.y, 3);
+    }
+  }
+
   // ── Cleanup (called on floor transitions) ──
   function cleanup() {
     // Destroy render textures (they'll be recreated for the new floor)
@@ -349,6 +437,7 @@ const Lighting = (() => {
     // Clear graphics (keep the objects, just clear drawn content)
     if (torchGfx) torchGfx.clear();
     if (particleGfx) particleGfx.clear();
+    if (sconceGfx) sconceGfx.clear();
     // exploredStamp persists across floors (it's just a hidden image reference)
 
     // Reset all exploration data for the new floor
@@ -360,6 +449,8 @@ const Lighting = (() => {
     flickerOffset = 0;
     flickerTarget = 0;
     lastExploredPositions = {};
+    sconcePositions = [];
+    _lastSconceFloor = -1;
 
     // Re-scatter particles (they'll get positioned on next update)
     for (let i = 0; i < particles.length; i++) {
