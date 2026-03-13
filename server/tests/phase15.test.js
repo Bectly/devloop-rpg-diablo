@@ -511,3 +511,177 @@ describe('heal_on_kill event structure', () => {
     expect(healEvent.targetId).toBe(player.id);
   });
 });
+
+// ── Phase 15.3: Party Aura Full Implementation ──────────────────
+
+describe('Phase 15.3 — Party Auras', () => {
+  let combat;
+
+  beforeEach(() => {
+    combat = new CombatSystem();
+  });
+
+  // Helper: create a minimal attackable player with aura-providing ally
+  function auraPlayer(auras = []) {
+    return {
+      id: 'aura-provider', name: 'AuraGuy', alive: true,
+      talentBonuses: { passives: {}, procs: [], auras },
+    };
+  }
+
+  function attackerPlayer(overrides = {}) {
+    return {
+      id: 'atk-test', name: 'Attacker', alive: true,
+      attackPower: 100, spellPower: 0, critChance: 0,
+      x: 90, y: 90, attackRange: 120,
+      attackCooldown: 0, attackSpeed: 1000,
+      canAttack() { return this.attackCooldown <= 0; },
+      startAttackCooldown() { this.attackCooldown = this.attackSpeed; },
+      equipment: {}, setBonuses: {}, buffs: [],
+      hp: 200, maxHp: 200,
+      kills: 0, gold: 0, difficulty: 'normal',
+      gainXp(amount) { this._lastXp = amount; return null; },
+      questManager: { notifyKill() {} },
+      talentBonuses: { passives: {}, procs: [], auras: [] },
+      _lastXp: 0,
+      ...overrides,
+    };
+  }
+
+  describe('getPartyBuffs()', () => {
+    it('aggregates aura stats from multiple players', () => {
+      const p1 = auraPlayer([{ party: true, stat: 'str', value: 3 }]);
+      const p2 = auraPlayer([{ party: true, stat: 'str', value: 5 }]);
+      const result = combat.getPartyBuffs([p1, p2]);
+      expect(result.str).toBe(8);
+    });
+
+    it('aggregates different aura types', () => {
+      const p1 = auraPlayer([
+        { party: true, stat: 'xp_percent', value: 10 },
+        { party: true, stat: 'attack_speed', value: 5 },
+      ]);
+      const result = combat.getPartyBuffs([p1]);
+      expect(result.xp_percent).toBe(10);
+      expect(result.attack_speed).toBe(5);
+      expect(result.move_speed).toBe(0);
+    });
+
+    it('ignores non-party auras', () => {
+      const p1 = auraPlayer([{ party: false, stat: 'str', value: 99 }]);
+      const result = combat.getPartyBuffs([p1]);
+      expect(result.str).toBe(0);
+    });
+
+    it('returns zeros for null/empty players', () => {
+      expect(combat.getPartyBuffs(null).str).toBe(0);
+      expect(combat.getPartyBuffs([]).str).toBe(0);
+    });
+
+    it('ignores unknown stat keys', () => {
+      const p1 = auraPlayer([{ party: true, stat: 'unknown_stat', value: 99 }]);
+      const result = combat.getPartyBuffs([p1]);
+      expect(result.str).toBe(0);
+      expect(result.unknown_stat).toBeUndefined();
+    });
+  });
+
+  describe('XP aura bonus', () => {
+    it('increases XP reward on kill via playerAttack', () => {
+      const player = attackerPlayer();
+      const ally = auraPlayer([{ party: true, stat: 'xp_percent', value: 20 }]);
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 100;
+      monster.hp = 1; // will die
+      monster.xpReward = 100;
+
+      combat.playerAttack(player, [monster], [player, ally]);
+
+      // XP should be 100 * 1.2 = 120 (20% aura bonus)
+      expect(player._lastXp).toBe(120);
+    });
+
+    it('XP aura stacks with setBonuses.xpPercent', () => {
+      const player = attackerPlayer({ setBonuses: { xpPercent: 50 } });
+      const ally = auraPlayer([{ party: true, stat: 'xp_percent', value: 20 }]);
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 100;
+      monster.hp = 1;
+      monster.xpReward = 100;
+
+      combat.playerAttack(player, [monster], [player, ally]);
+
+      // setBonuses: 100 * 1.5 = 150, then aura: 150 * 1.2 = 180
+      expect(player._lastXp).toBe(180);
+    });
+
+    it('no XP aura bonus without allPlayers', () => {
+      const player = attackerPlayer();
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 100;
+      monster.hp = 1;
+      monster.xpReward = 100;
+
+      // No allPlayers passed (solo mode)
+      combat.playerAttack(player, [monster]);
+
+      expect(player._lastXp).toBe(100);
+    });
+  });
+
+  describe('Attack speed aura', () => {
+    it('reduces attack cooldown by aura percentage', () => {
+      const ally = auraPlayer([{ party: true, stat: 'attack_speed', value: 10 }]);
+      const player = attackerPlayer({ attackSpeed: 1000 });
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 5000;
+      monster.hp = 5000;
+
+      combat.playerAttack(player, [monster], [player, ally]);
+
+      // attackCooldown should be floor(1000 * 0.9) = 900
+      expect(player.attackCooldown).toBe(900);
+    });
+
+    it('no attack speed change without aura', () => {
+      const player = attackerPlayer({ attackSpeed: 1000 });
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 5000;
+      monster.hp = 5000;
+
+      combat.playerAttack(player, [monster], [player]);
+
+      // No aura → cooldown stays at attackSpeed
+      expect(player.attackCooldown).toBe(1000);
+    });
+  });
+
+  describe('Move speed aura (auraMoveBuff)', () => {
+    it('Player.auraMoveBuff defaults to 0', () => {
+      const p = new Player('AuraTest', 'ranger');
+      expect(p.auraMoveBuff).toBe(0);
+    });
+
+    it('auraMoveBuff affects speedMultiplier', () => {
+      const p = new Player('SpeedTest', 'ranger');
+      p.auraMoveBuff = 10; // +10%
+      const mult = p.speedMultiplier;
+      expect(mult).toBeCloseTo(1.1, 2);
+    });
+
+    it('auraMoveBuff stacks with setBonuses.speedPercent', () => {
+      const p = new Player('SpeedStack', 'ranger');
+      p.setBonuses = { speedPercent: 20 };
+      p.auraMoveBuff = 10;
+      // mult = 1.0 * (1 + 20/100) * (1 + 10/100) = 1.2 * 1.1 = 1.32
+      expect(p.speedMultiplier).toBeCloseTo(1.32, 2);
+    });
+
+    it('auraMoveBuff included in serializeForPhone()', () => {
+      const p = new Player('SerAura', 'warrior');
+      p.auraMoveBuff = 15;
+      const data = p.serializeForPhone();
+      expect(data.auraMoveBuff).toBe(15);
+    });
+  });
+});

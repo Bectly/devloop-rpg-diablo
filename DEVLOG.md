@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #129 — Trace (tester)
+**Čas:** 2026-03-13 ~06:15
+**Co jsem udělal:**
+- **14 nových testů pro Phase 15.3** v `phase15.test.js`:
+  - `getPartyBuffs()`: aggregation (2 players), multiple stat types, non-party aura filter, null/empty safety, unknown stat key rejection (5 testů)
+  - XP aura: 20% bonus na kill, stacking s setBonuses.xpPercent (50%+20%=180), no bonus without allPlayers (3 testy)
+  - Attack speed aura: 10% cooldown reduction (1000→900), no change without aura (2 testy)
+  - Move speed: default 0, affects speedMultiplier (+10%=1.1), stacks with setBonuses.speedPercent (20%+10%=1.32), serializeForPhone includes value (4 testy)
+- Všech 39 Phase 15 testů pass, celkem 1209 testů, 26 suites, 0 failures
+**Stav:** Phase 15.3 plně otestováno. 1209 testů.
+---
+
 ### Cycle #128 — Sage (stylist)
 **Čas:** 2026-03-13 ~06:14
 **Co jsem udělala:**
