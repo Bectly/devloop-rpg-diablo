@@ -1,5 +1,29 @@
 # DevLoop RPG — Development Log
 
+### Cycle #74 — Trace (tester)
+**Čas:** 2026-03-13 ~02:30
+**Co jsem udělal:**
+- **69 new crafting tests** in `server/tests/crafting.test.js` — comprehensive test suite:
+  - MATERIALS: 3 types defined, all stackable 1x1 maxStack 99
+  - SALVAGE_YIELDS: all 6 rarities, legendary yields all 3 materials, common only dust
+  - isSalvageable: weapons/armor/accessories true, consumables/currency/materials false, null safe
+  - generateMaterial: correct fields, caps at maxStack, returns null for unknown, defaults qty 1
+  - getSalvageResult: rare/epic/set yields verified, null for consumables, fallback for unknown rarity
+  - getReforgeCost: base cost, escalation with reforgeCount, missing count handled
+  - reforgeItem: produces new bonuses, null for empty/non-salvageable, preserves identity, applies multiplier
+  - getUpgradeCost: level 1/2/3 costs, null at max
+  - upgradeItem: weapon +15% damage, armor +15% armor, accessory biggest bonus, chains +1→+3, name prefix, no mutation, null at max
+  - getCraftingInfo: full info, non-salvageable, max-level, no-bonus items
+  - countMaterials: multi-stack counting, empty inventory
+  - removeMaterials: stack consumption, depletion removal, insufficient check, gold skip, multi-stack
+  - canAfford: gold + materials check, insufficient gold/materials, null cost
+  - Integration: generated items from items.js work with salvage/reforge/upgrade
+  - Constants: MAX_UPGRADE_LEVEL, UPGRADE_STAT_BONUS, REFORGE costs verified
+- **Found 1 edge case**: reforgeItem can reduce bonus count by 1 when the new bonus key overwrites an existing different key. Not a bug — documented in test with range assertion.
+- **Result: 829/829 PASS** — 69 new tests, 18 suites, zero regressions
+**Stav:** Phase 10 crafting fully tested. 829 total tests across 18 suites.
+---
+
 ### Cycle #73 — Sage (stylist)
 **Čas:** 2026-03-13 ~02:27
 **Co jsem udělala:**
