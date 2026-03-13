@@ -216,6 +216,56 @@ class BootScene extends Phaser.Scene {
     g.fillRect(7, 14, 18, 4);
     g.generateTexture('shrine', 32, 32);
 
+    // ── Trap textures ──
+    // Spike trap — gray metallic grate with shine
+    g.clear();
+    g.fillStyle(0x555566, 0.6);
+    g.fillCircle(16, 16, 10);
+    g.lineStyle(2, 0x888899, 0.8);
+    g.lineBetween(10, 12, 22, 12);
+    g.lineBetween(10, 16, 22, 16);
+    g.lineBetween(10, 20, 22, 20);
+    g.lineBetween(12, 10, 12, 22);
+    g.lineBetween(16, 10, 16, 22);
+    g.lineBetween(20, 10, 20, 22);
+    g.fillStyle(0xccccdd, 0.4);
+    g.fillCircle(14, 14, 2);
+    g.generateTexture('trap_spike', 32, 32);
+
+    // Fire grate — glowing red/orange floor
+    g.clear();
+    g.fillStyle(0x661100, 0.6);
+    g.fillCircle(16, 16, 10);
+    g.fillStyle(0xff4400, 0.4);
+    g.fillCircle(16, 16, 7);
+    g.fillStyle(0xff8800, 0.3);
+    g.fillCircle(16, 14, 4);
+    g.generateTexture('trap_fire', 32, 32);
+
+    // Poison pool — green bubbles
+    g.clear();
+    g.fillStyle(0x114411, 0.6);
+    g.fillCircle(16, 16, 10);
+    g.fillStyle(0x33aa33, 0.4);
+    g.fillCircle(13, 15, 4);
+    g.fillStyle(0x44cc44, 0.3);
+    g.fillCircle(19, 17, 3);
+    g.fillCircle(15, 19, 2);
+    g.generateTexture('trap_poison', 32, 32);
+
+    // Void rift — purple swirl
+    g.clear();
+    g.fillStyle(0x220044, 0.6);
+    g.fillCircle(16, 16, 10);
+    g.fillStyle(0x6622bb, 0.4);
+    g.fillCircle(16, 16, 7);
+    g.lineStyle(1.5, 0x8844dd, 0.5);
+    g.strokeCircle(16, 16, 5);
+    g.strokeCircle(16, 16, 8);
+    g.fillStyle(0xaa66ff, 0.3);
+    g.fillCircle(16, 16, 3);
+    g.generateTexture('trap_void', 32, 32);
+
     g.destroy();
   }
 
@@ -246,6 +296,9 @@ class GameScene extends Phaser.Scene {
 
     // Shrine sprites
     this.shrineSprites = new Map();
+
+    // Trap sprites
+    this.trapSprites = new Map();
 
     // Story NPC sprites
     this.storyNpcSprites = {};
@@ -483,6 +536,49 @@ class GameScene extends Phaser.Scene {
       }
     }
 
+    // ── Render Environmental Traps ──
+    if (state.world.traps) {
+      const seenTraps = new Set();
+      for (const trap of state.world.traps) {
+        seenTraps.add(trap.id);
+        let sprite = this.trapSprites.get(trap.id);
+        if (!sprite) {
+          const texKey = `trap_${trap.type}`;
+          sprite = this.add.sprite(trap.x, trap.y, texKey).setDepth(3).setScale(0.8).setAlpha(0.7);
+          sprite._type = trap.type;
+          sprite._baseX = trap.x;
+          sprite._baseY = trap.y;
+          this.trapSprites.set(trap.id, sprite);
+        }
+        // Animate based on type
+        const t = Date.now();
+        if (sprite._type === 'fire') {
+          // Flickering glow
+          sprite.setAlpha(0.5 + Math.sin(t / 200) * 0.2);
+          sprite.setScale(0.75 + Math.sin(t / 300) * 0.05);
+        } else if (sprite._type === 'poison') {
+          // Gentle pulse (bubbling)
+          sprite.setAlpha(0.5 + Math.sin(t / 600) * 0.15);
+          sprite.y = sprite._baseY + Math.sin(t / 400) * 1.5;
+        } else if (sprite._type === 'void') {
+          // Rotation effect via scale oscillation + alpha pulse
+          sprite.setAlpha(0.5 + Math.sin(t / 400) * 0.25);
+          const rotScale = 0.75 + Math.sin(t / 500) * 0.08;
+          sprite.setScale(rotScale);
+        } else {
+          // Spike: subtle metallic shine
+          sprite.setAlpha(0.55 + Math.sin(t / 800) * 0.1);
+        }
+      }
+      // Clean up old trap sprites
+      for (const [id, sprite] of this.trapSprites) {
+        if (!seenTraps.has(id)) {
+          sprite.destroy();
+          this.trapSprites.delete(id);
+        }
+      }
+    }
+
     // ── Combat events (damage numbers + skill effects) ──
     if (state.events) {
       for (const ev of state.events) {
@@ -579,6 +675,27 @@ class GameScene extends Phaser.Scene {
           const fromX = sprite ? sprite.x : ev.x;
           const fromY = sprite ? sprite.y : ev.y;
           this.spawnTeleportEffect(fromX, fromY, ev.x, ev.y);
+        }
+        // Trap trigger burst effect
+        if (ev.type === 'trap:trigger' && ev.x !== undefined) {
+          const trapColors = {
+            spike: 0x888899,
+            fire: 0xff4400,
+            poison: 0x44cc44,
+            void: 0x8844dd,
+          };
+          const color = trapColors[ev.trapType] || 0xffffff;
+          this.spawnAoeEffect(ev.x, ev.y, 24, color, 400);
+          // Small camera shake
+          this.cameras.main.shake(150, 0.002);
+          // Damage number at trap location
+          if (ev.damage > 0 && !ev.dodged) {
+            const dmgTypeMap = { spike: 'physical', fire: 'fire', poison: 'poison', void: 'cold' };
+            HUD.spawnDamageText(this, ev.x, ev.y - 20, ev.damage, false, false, null, dmgTypeMap[ev.trapType] || 'physical');
+          }
+          if (ev.dodged) {
+            HUD.spawnDamageText(this, ev.x, ev.y - 20, 'DODGE', false, true);
+          }
         }
       }
     }
@@ -882,6 +999,12 @@ socket.on('dungeon:enter', (data) => {
         shrine.destroy();
       }
       scene.shrineSprites.clear();
+
+      // Clean up trap sprites on floor change
+      if (scene.trapSprites) {
+        for (const [, s] of scene.trapSprites) s.destroy();
+        scene.trapSprites.clear();
+      }
 
       HUD._forceDestroyDialogue();
       HUD._destroyVictoryScreen();

@@ -673,16 +673,17 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 - Columns: Rank, Name, Class, Level, Floor, Kills, Time, Victory badge
 - Personal best tab
 
-### 11.4 Trap Visuals — TV [for Sage]
-- Spike: gray metallic grate with light shine
-- Fire: animated orange glow with occasional spark particles
-- Poison: green bubbles with alpha pulse
-- Void: purple swirl with rotating particles
-- Trigger effect: flash + screen shake (small)
+### 11.4 Trap Visuals — TV [DONE — Sage, Cycle #78]
+- [x] 4 procedural trap textures: spike (gray grate), fire (red glow), poison (green bubbles), void (purple swirl)
+- [x] Persistent trap sprites with per-type animation (fire flickers, poison bobs, void pulses, spike shines)
+- [x] trap:trigger event → AOE burst (type-colored), camera shake, damage/dodge text
+- [x] Floor transition cleanup (trap sprites destroyed on dungeon:enter)
 
-### 11.5 Trap Indicators — Phone [for Sage]
-- Debuff pills when affected (same as cold/fire from affixes)
-- "Trap!" toast notification on first trigger
+### 11.5 Trap Indicators — Phone [DONE — Sage, Cycle #78]
+- [x] Stun debuff indicator (⚡ with yellow styling) added to reconnect.js
+- [x] `.debuff-stun` CSS (yellow background/border)
+- [x] `.notification-toast.trap` CSS (purple accent)
+- [x] Existing fire_dot/slow debuff display covers burning/poison/slow trap effects
 
 ### Implementation Order:
 1. **11.0** Refactoring (Bolt, 15 min) — split socket-handlers

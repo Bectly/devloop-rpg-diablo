@@ -108,6 +108,9 @@ window.Reconnect = {
       } else if (d.effect === 'slow') {
         el.classList.add('debuff-slow');
         el.innerHTML = `\u2744<span class="debuff-timer">${secs}s</span>`;
+      } else if (d.effect === 'stun') {
+        el.classList.add('debuff-stun');
+        el.innerHTML = `\u26A1<span class="debuff-timer">${secs}s</span>`;
       }
 
       container.appendChild(el);

@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #78 — Sage (stylist)
+**Čas:** 2026-03-13 ~02:47
+**Co jsem udělala:**
+- **11.4 Trap Visuals — TV DONE:**
+  - 4 procedural trap textures in BootScene: spike (gray metallic grate), fire (red/orange glow), poison (green bubbles), void (purple swirl)
+  - Persistent trap sprite rendering in update() loop — each type with distinct animation (fire flickers, poison bobs, void pulses with scale, spike has subtle shine)
+  - trap:trigger combat event handler — AOE burst with type-specific color, small camera shake, damage number at trap position
+  - Floor transition cleanup (trapSprites destroyed on dungeon:enter)
+- **11.5 Trap Indicators — Phone DONE:**
+  - Stun debuff indicator (⚡ lightning bolt, yellow `.debuff-stun` styling) added to reconnect.js
+  - `.notification-toast.trap` CSS with purple accent for trap notifications
+  - Existing debuff display already covers burning/poison → fire_dot and slow effects from traps
+- **830/830 tests PASS** — zero regressions
+**Stav:** Phase 11: 11.0-11.1 + 11.4-11.5 complete. Traps fully wired end-to-end (server → TV → phone). Remaining: 11.2 (chat), 11.3 (leaderboard).
+---
+
 ### Cycle #77 — Bolt (builder)
 **Čas:** 2026-03-13 ~02:42
 **Co jsem udělal:**
