@@ -2590,25 +2590,48 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 **Goal:** Make dungeons feel alive — lighting, particles, ambient effects. The game loop is solid, now add visual depth.
 
-### 25.1 Lighting System
-- [ ] **A:** Dark overlay on unexplored rooms — rooms start at 50% darkness, reveal as player enters
-- [ ] **B:** Player torch light — radial gradient around player (Phaser light plugin or manual gradient), 120px radius
-- [ ] **C:** Torch wall sconces — decorative light sources in rooms, flicker effect
+**Implementation notes:**
+- All visual effects in `client/tv/` — game.js uses Phaser Graphics for rendering
+- `client/tv/lighting.js` already exists (371 LOC) — extend it
+- Zone data in `server/game/world.js` ZONE_DEFS — server sends `zoneId` with each floor
+- Particles: use Phaser Graphics (lines/circles), NOT Phaser particle emitter (too heavy)
+- Sound: extend `client/shared/sound.js` Web Audio procedural system
 
-### 25.2 Ambient Particles
-- [ ] **A:** Dust motes — 10-15 small particles drifting slowly in each room, subtle alpha
-- [ ] **B:** Zone-specific particles — catacombs: dust, inferno: embers, abyss: purple wisps
-- [ ] **C:** Boss room entrance — particle burst when entering boss room
+### 25.1 Fog of War + Lighting [for Bolt — PRIORITY]
+**Approach:** Server already sends room data with positions. TV knows which rooms the player has visited.
 
-### 25.3 Floor Tile Variation
-- [ ] **A:** 2-3 floor tile color variants (random per tile, seeded by position)
-- [ ] **B:** Crack/debris overlay on some floor tiles (10% chance)
-- [ ] **C:** Zone-specific floor tints — catacombs: gray-blue, inferno: warm orange, abyss: purple
+- [ ] **A:** Room fog overlay — Phaser Graphics layer (depth above floor, below entities). Unvisited rooms: dark fill at alpha 0.6. Current room: fully revealed. Adjacent rooms: alpha 0.3. Use room rectangles from world data.
+- [ ] **B:** Player torch light — radial gradient Graphics around each player sprite. 120px radius, warm yellow (#ffdd88) at center fading to transparent. Updates every frame at player position. Zone-tinted: inferno=orange, abyss=purple.
+- [ ] **C:** Torch wall sconces — decorative light circles on random wall tiles (10% chance per wall tile). Flicker: alpha oscillates 0.3-0.6 with noise. Zone-colored. Created in `game.js` when floor loads.
 
-### 25.4 Sound & Music
-- [ ] **A:** Ambient background drone per zone (procedural via Web Audio)
-- [ ] **B:** Boss encounter music — tension chord progression
-- [ ] **C:** Floor transition sound enhancement — deeper, more dramatic
+### 25.2 Ambient Particles [for Sage]
+**Approach:** Simple Graphics-based particles. No Phaser particle system.
+
+- [ ] **A:** Dust motes — 15 small circles (radius 1-2px, alpha 0.15-0.3) drifting slowly (0.1-0.3 px/frame) in random directions. Wrap around camera bounds. Created once, updated in game loop.
+- [ ] **B:** Zone-specific colors — catacombs: white/gray dust, inferno: orange/red embers (faster drift, 0.3-0.5), abyss: purple wisps (sine-wave path). Switch on `dungeon:enter` event.
+- [ ] **C:** Boss room burst — on boss room entry, spawn 30 particles in radial burst from center. Fade out over 1s. Triggered by `monster:spawned` for boss type.
+
+### 25.3 Floor Tile Variation [for Sage]
+**Approach:** Modify tile rendering in game.js where floor tiles are drawn.
+
+- [ ] **A:** Tile color variation — use `(x*7 + y*13) % 3` seeded hash for 3 brightness levels (base, +5%, -5%). Apply as tint to floor tile rectangles.
+- [ ] **B:** Crack overlays — 8% of floor tiles get a thin dark line (Graphics.lineTo) across them. Direction seeded by position. Simple cross-hatch pattern.
+- [ ] **C:** Zone floor tints — multiply floor color by zone accent: catacombs=#aaaacc (blue-gray), inferno=#ffccaa (warm), abyss=#ccaaff (purple). Applied to all floor tiles on floor load.
+
+### 25.4 Sound & Music [for Bolt]
+**Approach:** Extend existing Web Audio procedural sound system.
+
+- [ ] **A:** Ambient drone — low continuous oscillator (40-80Hz sine) + filtered noise. Volume 0.05. Zone-specific: catacombs=low rumble, inferno=crackling (noise-heavy), abyss=ethereal (detuned sine). Start on floor load, crossfade on zone change.
+- [ ] **B:** Boss music — tension chord: C-Eb-Gb (diminished) sustained pad. Starts on boss spawn, ends on boss death. Layer over ambient.
+- [ ] **C:** Enhanced floor transition — current `floorTransition()` is simple sweep. Add: deeper sub-bass (20Hz), longer duration (2s vs 1s), zone-specific pitch.
+
+**Agent assignments:**
+1. **Bolt**: 25.1A-C (fog of war + lighting) + 25.4A-C (sound)
+2. **Sage**: 25.2A-C (particles) + 25.3A-C (tile variation)
+3. **Trace**: test all visual changes (source verification + screenshot comparison)
+4. **Rune**: review performance (particle count, Graphics object reuse, cleanup)
+
+**Priority order:** 25.1A (fog) → 25.1B (torch) → 25.3C (zone tints) → 25.2A (dust) → 25.4A (drone) → rest
 
 ---
 
