@@ -95,6 +95,20 @@ window.Sprites = {
     sprite.hpBar.fillStyle(0x4466ff, 1);
     sprite.hpBar.fillRect(barX, mpY, barW * mpRatio, 3);
 
+    // Party aura glow ring (visible when player has active aura talents)
+    if (p.talentBonuses && p.talentBonuses.auras && p.talentBonuses.auras.length > 0) {
+      if (!sprite.auraGlow) {
+        sprite.auraGlow = scene.add.circle(sprite.x, sprite.y + 4, 18, 0x66ffaa, 0.15).setDepth(9);
+      }
+      sprite.auraGlow.setPosition(sprite.x, sprite.y + 4);
+      // Subtle pulse via alpha oscillation
+      const pulse = 0.1 + Math.sin(scene.time.now / 600) * 0.08;
+      sprite.auraGlow.setAlpha(pulse);
+    } else if (sprite.auraGlow) {
+      sprite.auraGlow.destroy();
+      sprite.auraGlow = null;
+    }
+
     // Death timer display
     if (p.isDying && p.deathTimer > 0) {
       const secs = (p.deathTimer / 1000).toFixed(1);
@@ -116,6 +130,7 @@ window.Sprites = {
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
         if (sprite.dcLabel) sprite.dcLabel.destroy();
+        if (sprite.auraGlow) sprite.auraGlow.destroy();
         sprite.destroy();
       }
       scene.playerSprites.clear();
@@ -126,6 +141,7 @@ window.Sprites = {
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
         if (sprite.dcLabel) sprite.dcLabel.destroy();
+        if (sprite.auraGlow) sprite.auraGlow.destroy();
         sprite.destroy();
         scene.playerSprites.delete(id);
       }

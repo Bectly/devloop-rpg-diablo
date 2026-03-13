@@ -501,8 +501,9 @@ function updateHUD(stats) {
     DeathVictory.hideDeathScreen();
   }
 
-  // Update debuff indicators
+  // Update debuff and buff indicators
   Reconnect.updateDebuffDisplay(stats.debuffs || []);
+  Reconnect.updateBuffDisplay(stats);
 
   updateFloorDisplay();
 }

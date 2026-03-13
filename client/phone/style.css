@@ -1852,6 +1852,60 @@ html, body {
   50% { opacity: 0.6; }
 }
 
+/* ─── Buff/Aura Indicators ─── */
+.buff-indicator {
+  position: fixed;
+  top: 52px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.buff-icon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ddd;
+  font-family: 'Courier New', monospace;
+}
+
+.buff-icon.buff-warcry {
+  border: 1px solid rgba(255, 170, 0, 0.5);
+  text-shadow: 0 0 6px rgba(255, 170, 0, 0.6);
+}
+
+.buff-icon.buff-evasion {
+  border: 1px solid rgba(100, 200, 255, 0.5);
+  text-shadow: 0 0 6px rgba(100, 200, 255, 0.6);
+}
+
+.buff-icon.buff-laststand {
+  border: 1px solid rgba(255, 102, 0, 0.6);
+  text-shadow: 0 0 8px rgba(255, 102, 0, 0.8);
+  animation: buff-laststand-pulse 0.6s ease-in-out infinite;
+}
+
+.buff-icon.buff-aura {
+  border: 1px solid rgba(100, 255, 140, 0.5);
+  text-shadow: 0 0 6px rgba(100, 255, 140, 0.6);
+}
+
+.buff-icon.buff-generic {
+  border: 1px solid rgba(200, 200, 200, 0.3);
+}
+
+@keyframes buff-laststand-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(255, 102, 0, 0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 12px rgba(255, 102, 0, 0.8); }
+}
+
 /* ─── Set Items ──────────────────────────────────────────────── */
 .set-item { color: #00cc66; }
 .set-bonus-active { color: #00cc66; font-size: 10px; margin-top: 2px; }

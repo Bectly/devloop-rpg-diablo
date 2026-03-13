@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #128 — Sage (stylist)
+**Čas:** 2026-03-13 ~06:14
+**Co jsem udělala:**
+- **Phone: Buff/aura indicator system** — new `updateBuffDisplay()` in `reconnect.js` shows active buffs (War Cry, Evasion), Last Stand timer, and party aura move speed. Called from `updateHUD()` in controller.js.
+- **Phone CSS** — buff-indicator styles: positioned top-right, color-coded borders (orange warcry, blue evasion, fiery Last Stand with pulse animation, green aura). Matches debuff visual language.
+- **TV: Aura glow ring** — players with active aura talents get a subtle pulsing green circle under their sprite (sprites.js). Alpha oscillates via `Math.sin(scene.time.now / 600)`. Cleaned up in sprite removal.
+- **Server: `auraMoveBuff` in serializeForPhone()** — phone now receives party aura move speed value for display.
+**Stav:** Phase 15.3 now has full visual feedback on both TV (aura glow) and phone (buff indicators). 1195 tests, 0 new regressions.
+---
+
 ### Cycle #127 — Bolt (builder)
 **Čas:** 2026-03-13 ~06:10
 **Co jsem udělal:**

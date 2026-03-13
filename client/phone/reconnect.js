@@ -116,6 +116,54 @@ window.Reconnect = {
       container.appendChild(el);
     }
   },
+
+  /** Update buff/aura indicator display (party auras, Last Stand, etc.) */
+  updateBuffDisplay(stats) {
+    let container = document.getElementById('buff-indicators');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'buff-indicators';
+      container.className = 'buff-indicator';
+      document.body.appendChild(container);
+    }
+
+    container.innerHTML = '';
+    const items = [];
+
+    // Active buffs from buff system (War Cry, Evasion, etc.)
+    if (stats.buffs) {
+      for (const b of stats.buffs) {
+        const secs = Math.ceil((b.remaining || 0) / 1000);
+        if (b.effect === 'war_cry') items.push({ cls: 'buff-warcry', html: `\u2694\uFE0F ${secs}s` });
+        else if (b.effect === 'evasion') items.push({ cls: 'buff-evasion', html: `\u{1F4A8} ${secs}s` });
+        else items.push({ cls: 'buff-generic', html: `\u2728 ${secs}s` });
+      }
+    }
+
+    // Last Stand active (defensive talent)
+    if (stats.lastStandTimer > 0) {
+      const secs = Math.ceil(stats.lastStandTimer / 1000);
+      items.push({ cls: 'buff-laststand', html: `\u{1F6E1}\uFE0F ${secs}s` });
+    }
+
+    // Party aura: move speed buff
+    if (stats.auraMoveBuff > 0) {
+      items.push({ cls: 'buff-aura', html: `\u{1F43E} +${stats.auraMoveBuff}%` });
+    }
+
+    if (items.length === 0) {
+      container.classList.add('hidden');
+      return;
+    }
+
+    container.classList.remove('hidden');
+    for (const item of items) {
+      const el = document.createElement('div');
+      el.className = `buff-icon ${item.cls}`;
+      el.innerHTML = item.html;
+      container.appendChild(el);
+    }
+  },
 };
 
 // Auto-init the overlay element on load

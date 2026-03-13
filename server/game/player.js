@@ -779,6 +779,7 @@ class Player {
       debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
       lastDamageTaken: this.lastDamageTaken,
       lastStandTimer: this.lastStandTimer || 0,
+      auraMoveBuff: this.auraMoveBuff || 0,
       quests: this.questManager.getActiveQuests(),
       activeSets: this.activeSets,
       setBonuses: this.setBonuses,
