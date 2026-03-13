@@ -143,6 +143,20 @@ const StatsUI = (() => {
         }
       }
     }
+    // Socket display
+    if (item.sockets && item.sockets.length > 0) {
+      html += '<div class="tt-sockets">';
+      for (let i = 0; i < item.sockets.length; i++) {
+        const gem = item.sockets[i];
+        if (gem) {
+          html += `<span class="tt-socket filled" style="color:${gem.color || '#aaa'}">\u25C6 ${gem.name || 'Gem'}</span>`;
+        } else {
+          html += '<span class="tt-socket empty">\u25CB Empty Socket</span>';
+        }
+      }
+      html += '</div>';
+    }
+
     if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;
 
     // Set item info

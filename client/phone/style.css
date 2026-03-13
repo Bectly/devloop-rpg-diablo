@@ -3478,3 +3478,50 @@ html, body {
 .inv-tab-btn:active {
   background: rgba(255, 204, 0, 0.25);
 }
+
+/* ─── Socket Display in Tooltip ───────────────────────────── */
+.tt-sockets {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.tt-socket {
+  display: block;
+  font-size: 10px;
+  padding: 1px 0;
+}
+.tt-socket.empty {
+  color: #666;
+}
+.tt-socket.filled {
+  font-weight: bold;
+}
+
+/* ─── Death Recap ─────────────────────────────────────────── */
+#death-recap {
+  margin-top: 8px;
+  max-width: 240px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.recap-title {
+  color: #ff4444;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.recap-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.recap-source {
+  color: #ccc;
+}
+.recap-damage {
+  color: #ff6666;
+  font-weight: bold;
+}

@@ -300,7 +300,8 @@ class CombatSystem {
     if (monster && monster.fireEnchanted) damageType = 'fire';
     else if (monster && monster.coldEnchanted) damageType = 'cold';
 
-    const dealt = target.takeDamage(event.damage, damageType);
+    const sourceName = (monster && monster.name) || 'Monster';
+    const dealt = target.takeDamage(event.damage, damageType, sourceName);
 
     const dodged = dealt === -1;
 

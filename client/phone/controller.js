@@ -443,7 +443,7 @@ socket.on('combat:proc', (data) => {
 });
 
 socket.on('player:death', (data) => {
-  DeathVictory.showDeathScreen(data.deathTimer, data.goldDropped);
+  DeathVictory.showDeathScreen(data.deathTimer, data.goldDropped, data.damageLog);
 });
 
 socket.on('player:respawn', (data) => {

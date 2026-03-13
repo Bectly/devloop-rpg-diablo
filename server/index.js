@@ -509,7 +509,7 @@ function gameLoop() {
           const dy = player.y - event.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= event.radius) {
-            const dmg = player.takeDamage(event.damage, 'cold');
+            const dmg = player.takeDamage(event.damage, 'cold', event.attackerName || 'Cold Enchanted');
             if (dmg === -1) continue; // dodged
             combat.events.push({
               type: 'combat:hit',
@@ -1051,6 +1051,7 @@ function gameLoop() {
               socket.emit('player:death', {
                 deathTimer: player.deathTimer,
                 goldDropped: player.deathGoldDrop,
+                damageLog: player.damageLog || [],
               });
             }
           }

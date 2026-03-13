@@ -77,7 +77,7 @@ class Trap {
     this.triggered.set(player.id, Date.now());
 
     // Apply damage using player.takeDamage which handles resistances
-    const dmg = player.takeDamage(this.def.damage, this.def.damageType);
+    const dmg = player.takeDamage(this.def.damage, this.def.damageType, this.def.name || 'Trap');
 
     // Apply effect/debuff
     if (this.def.effect && player.alive) {

@@ -15,7 +15,53 @@ const DeathVictory = (() => {
   }
 
   // ─── Death Screen ───────────────────────────────────────────────
-  function showDeathScreen(timerMs, goldDropped) {
+  const DMG_TYPE_ICONS = {
+    physical: '\u2694',
+    fire: '\uD83D\uDD25',
+    cold: '\u2744',
+    poison: '\uD83E\uDDEA',
+    lightning: '\u26A1',
+    dot: '\uD83D\uDD25',
+    trap: '\u26A0',
+  };
+
+  function _renderDeathRecap(damageLog) {
+    const recapEl = document.getElementById('death-recap');
+    if (!recapEl) return;
+    recapEl.innerHTML = '';
+
+    if (!damageLog || damageLog.length === 0) return;
+
+    // Find killer (highest single hit)
+    let killer = damageLog[0];
+    for (const entry of damageLog) {
+      if (entry.amount > killer.amount) killer = entry;
+    }
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'recap-title';
+    titleEl.textContent = 'Killed by ' + (killer.source || 'Unknown');
+    recapEl.appendChild(titleEl);
+
+    // Show last 5 entries (most recent first)
+    const entries = damageLog.slice(-5).reverse();
+    for (const entry of entries) {
+      const row = document.createElement('div');
+      row.className = 'recap-row';
+      const icon = DMG_TYPE_ICONS[entry.type] || '\u2694';
+      const srcSpan = document.createElement('span');
+      srcSpan.className = 'recap-source';
+      srcSpan.textContent = icon + ' ' + (entry.source || '?');
+      row.appendChild(srcSpan);
+      const dmgSpan = document.createElement('span');
+      dmgSpan.className = 'recap-damage';
+      dmgSpan.textContent = '-' + Math.round(entry.amount);
+      row.appendChild(dmgSpan);
+      recapEl.appendChild(row);
+    }
+  }
+
+  function showDeathScreen(timerMs, goldDropped, damageLog) {
     _isDead = true;
     _deathCountdown = timerMs || 5000;
 
@@ -25,6 +71,8 @@ const DeathVictory = (() => {
 
     const goldText = goldDropped > 0 ? `Lost ${goldDropped} gold` : '';
     document.getElementById('death-gold-text').textContent = goldText;
+
+    _renderDeathRecap(damageLog);
 
     // Strong haptic
     if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);

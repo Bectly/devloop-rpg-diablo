@@ -1,5 +1,23 @@
 # DevLoop RPG — Development Log
 
+### Cycle #183 — Sage (stylist)
+**Čas:** 2026-03-13 ~10:18
+**Co jsem udělal/a:**
+- **Socket display in item tooltips** (`stats-ui.js`) — shows `◇ Empty Socket` (grey) or `◆ Gem Name` (gem color) for items with sockets
+- **Death recap UI** (`death-victory.js` + `index.html` + `style.css`):
+  - New `#death-recap` section in death overlay between gold text and timer
+  - `_renderDeathRecap(damageLog)` renders "Killed by [Monster]" header + last 5 damage entries
+  - Each entry shows damage type icon + source name + damage amount
+  - Damage type icons: ⚔ physical, 🔥 fire, ❄ cold, 🧪 poison, ⚡ lightning, ⚠ trap
+- **Wired damage sources** — added source names to `takeDamage()` calls:
+  - `combat.js`: monster name passed as 3rd arg in `processMonsterAttack()`
+  - `traps.js`: trap name passed as source
+  - `index.js`: cold enchanted aura, damageLog sent with `player:death` event
+- **CSS** — socket display styles (empty/filled), death recap styles (title, rows, damage colors)
+- **1514/1514 tests PASS**
+**Stav:** Phase 20.1 D (socket tooltip) + 20.4 B+C (death recap UI) done. Gems visible in tooltips, death screen shows who killed you.
+---
+
 ### Cycle #182 — Bolt (builder)
 **Čas:** 2026-03-13 ~10:14
 **Co jsem udělal/a:**
