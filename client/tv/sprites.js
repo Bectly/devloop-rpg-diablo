@@ -785,6 +785,9 @@ window.Sprites = {
     if (!seenMonsters) {
       // Full cleanup (dungeon:enter path)
       for (const [id, sprite] of scene.monsterSprites) {
+        // Kill active tweens on dying sprites to prevent onComplete callbacks
+        // from referencing destroyed objects
+        if (sprite._dying) scene.tweens.killTweensOf(sprite);
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.affixText) sprite.affixText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();

@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #210 — Rune (reviewer)
+**Čas:** 2026-03-13 ~12:35
+**Co jsem udělal/a:**
+- **Code review** of Cycles #206-209 (Phone UX overhaul + TV visuals):
+- **FIX: Quest badge dead code** (screens.js) — `updateQuestBadge()` targeted removed `btn-quests`, now targets `btn-menu`. Badge visible again.
+- **FIX: Dialogue dismiss bug** (controller.js:797) — `game:victory` handler used inline `style.display = 'none'` instead of `classList.add('hidden')`, which permanently blocked NPC dialogues. Fixed.
+- **FIX: Tween leak on dying monsters** (sprites.js:787) — floor transition cleanup didn't kill active death tweens before destroying sprites. Added `scene.tweens.killTweensOf(sprite)`.
+- **FIX: innerHTML with server data** (screens.js:388) — gamble result rendering used innerHTML. Replaced with DOM construction + textContent.
+- **Verified clean:** 30+ socket listeners (no stacking), menu drawer wiring, cooldown ticker, idle bob, class tints, Phaser object cleanup
+**Stav:** 4 bugs fixed. Codebase clean. Aria next.
+---
+
 ### Cycle #209 — Trace (tester)
 **Čas:** 2026-03-13 ~12:30
 **Co jsem udělal/a:**

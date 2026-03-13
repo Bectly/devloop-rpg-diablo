@@ -112,7 +112,9 @@ window.Screens = (() => {
   }
 
   function updateQuestBadge(questData) {
-    const btn = document.getElementById('btn-quests');
+    // Badge lives on the menu button (btn-menu) since the dedicated btn-quests
+    // was removed in Cycle #206 (Phone UX overhaul → menu drawer).
+    const btn = document.getElementById('btn-menu');
     if (!btn) return;
     const unclaimedCount = questData.filter(q => q.completed).length;
     let badge = btn.querySelector('.quest-badge');
@@ -383,12 +385,27 @@ window.Screens = (() => {
         }
       }
 
-      resultEl.innerHTML = `
-        <div class="gamble-result-label">LAST GAMBLE</div>
-        <div class="shop-item-name ${rarityClass}">${item.name}</div>
-        <div class="shop-item-type">${(item.rarity || '').toUpperCase()} ${item.type || ''}</div>
-        ${statsText.trim() ? `<div class="shop-item-stats">${statsText.trim()}</div>` : ''}
-      `;
+      const labelEl = document.createElement('div');
+      labelEl.className = 'gamble-result-label';
+      labelEl.textContent = 'LAST GAMBLE';
+      resultEl.appendChild(labelEl);
+
+      const nameEl = document.createElement('div');
+      nameEl.className = `shop-item-name ${rarityClass}`;
+      nameEl.textContent = item.name;
+      resultEl.appendChild(nameEl);
+
+      const typeEl = document.createElement('div');
+      typeEl.className = 'shop-item-type';
+      typeEl.textContent = `${(item.rarity || '').toUpperCase()} ${item.type || ''}`;
+      resultEl.appendChild(typeEl);
+
+      if (statsText.trim()) {
+        const statsEl = document.createElement('div');
+        statsEl.className = 'shop-item-stats';
+        statsEl.textContent = statsText.trim();
+        resultEl.appendChild(statsEl);
+      }
       container.appendChild(resultEl);
     }
 

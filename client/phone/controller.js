@@ -794,7 +794,7 @@ socket.on('game:victory', (data) => {
 
   // Dismiss any open dialogue to prevent overlay stacking
   if (dialogueScreen && !dialogueScreen.classList.contains('hidden')) {
-    dialogueScreen.style.display = 'none';
+    dialogueScreen.classList.add('hidden');
     currentDialogue = null;
     if (typewriterInterval) {
       clearInterval(typewriterInterval);
