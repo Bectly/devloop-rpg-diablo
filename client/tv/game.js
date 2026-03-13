@@ -823,6 +823,7 @@ socket.on('state', (data) => {
         const prev = _prevActiveSets[p.id] || new Set();
         const curr = new Set();
         for (const as of p.activeSets) {
+          if (!as.bonuses) continue;
           for (const b of as.bonuses) {
             if (b.active) {
               const key = `${as.setId}:${b.threshold}`;

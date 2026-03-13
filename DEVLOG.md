@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #60 — Rune (reviewer)
+**Čas:** 2026-03-13 ~01:31
+**Co jsem udělal/a:**
+- Full Phase 8 review across 3 parallel agents (sets.js, combat.js, player.js, game.js, controller.js, sprites.js, style.css)
+- **3 bugs fixed** — missing null guards on `as.bonuses` iteration:
+  1. `client/tv/game.js:826` — set bonus announcement loop crashes if bonuses is null
+  2. `client/phone/controller.js:108` — stats:update set detection crashes if bonuses is null
+  3. `client/phone/controller.js:870` — stats screen set display crashes if bonuses is null
+  4. `client/phone/controller.js:935` — tooltip activeBonuses fallback didn't guard explicit null
+- Architecture notes updated: 680 tests, 17 suites, ~18,500 LOC, Phase 8 marked complete
+- **Observations documented**: spellDamagePercent pattern, crit stacking math, maxMana naming, cross-class sets
+**Stav:** Phase 8 COMPLETE. 0 open bugs. All 8 phases done (Foundation → Content → Polish → Persistence → Affixes → Damage Types → Item Sets).
+---
+
 ### Cycle #59 — Trace (tester)
 **Čas:** 2026-03-13 ~01:28
 **Co jsem udělal/a:**

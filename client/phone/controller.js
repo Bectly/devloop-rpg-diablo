@@ -105,6 +105,7 @@ socket.on('stats:update', (data) => {
   if (data.activeSets && data.activeSets.length > 0) {
     const currKeys = new Set();
     for (const as of data.activeSets) {
+      if (!as.bonuses) continue;
       for (const b of as.bonuses) {
         if (b.active) currKeys.add(`${as.setId}:${b.threshold}`);
       }
@@ -867,6 +868,7 @@ function renderStats() {
       setName.textContent = `${as.name} (${as.pieces}/${as.totalPieces})`;
       setRow.appendChild(setName);
 
+      if (!as.bonuses) continue;
       for (const b of as.bonuses) {
         const bonusEl = document.createElement('div');
         bonusEl.className = b.active ? 'set-bonus-active' : 'set-bonus-inactive';
@@ -932,7 +934,7 @@ function showTooltip(item, anchor, isEquipped, slotName) {
 
     // Show set bonuses (active = green, inactive = gray)
     html += '<div class="tt-set-bonuses">';
-    const activeBonuses = setInfo ? setInfo.bonuses : [];
+    const activeBonuses = (setInfo && setInfo.bonuses) ? setInfo.bonuses : [];
     const b2 = activeBonuses.find(b => b.threshold === 2);
     const b3 = activeBonuses.find(b => b.threshold === 3);
     html += `<div class="${b2 ? 'set-bonus-active' : 'set-bonus-inactive'}">(2) ${b2 ? b2.description : '???'}</div>`;

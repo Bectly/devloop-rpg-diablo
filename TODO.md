@@ -228,17 +228,26 @@ Diablo-style item sets — wear multiple pieces for escalating bonuses.
 
 ---
 
-## Architecture Notes (Updated Cycle #56)
-**Current LOC:** ~17,570 source JS (32 files). Largest: game.js 1073, controller.js 1057, player.test.js 1076, socket-handlers.js 878.
-**Tests:** 605/605 PASS, 16 suites.
+## Architecture Notes (Updated Cycle #60)
+**Current LOC:** ~18,500 source JS (34 files). Largest: game.js 1074, controller.js 1061, player.test.js 1233, socket-handlers.js 878.
+**Tests:** 680/680 PASS, 17 suites.
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
-**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). 0 open bugs.
+**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
 
 ### Phase 7 Review Notes (Cycle #55 — Rune)
 - `damage-types.js`: `calcResistance()` exported+tested but never imported by game code. `player.js` caps resistances inline in `recalcEquipBonuses()`. Harmless but could be consolidated.
 - `monsters.js`: `Monster.takeDamage()` duplicates the armor formula from `applyArmor()` in damage-types.js. Same formula, DRY concern for future maintenance.
 - Resistance items: only armor pieces roll resist bonuses (by design). Weapons/accessories cannot roll resist.
 - Boss phase `damageType` overrides work correctly in attack event emission.
+
+### Phase 8 Review Notes (Cycle #60 — Rune)
+- **3 bugs fixed**: Missing null guards on `as.bonuses` iteration in game.js:826, controller.js:108, controller.js:870. Would crash if server sent set data with null bonuses array. Added `if (!as.bonuses) continue;` guards.
+- **1 defensive fix**: controller.js tooltip `activeBonuses` fallback now checks for explicit null (`(setInfo && setInfo.bonuses) ? ... : []`).
+- `spellDamagePercent` is stored in setBonuses but never applied to `spellPower` stat — works because combat.js reads setBonuses directly. Consistent with damagePercent/critDamagePercent pattern.
+- `maxMana` naming in set defs vs `maxMp` property in Player — works but inconsistent naming. Low priority.
+- Crit damage stacking is multiplicative (base 2x × dagger 1.2x × set 1.3x = 3.12x for Shadowweave rogue). Intentional power curve.
+- Cross-class set equipping has no validation — any class can wear any set. Could be a feature or a bug depending on design intent.
+- No validation prevents calling `recalcSetBonuses()` independently of `recalcStats()`, but in practice it's always called via `recalcEquipBonuses()` chain. Safe by convention.
 
 ## Open Bugs
 
