@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #137 — Bolt (builder)
+**Čas:** 2026-03-13 ~06:43
+**Co jsem udělal:**
+- **Phase 16.0: Skill engine extraction** — `combat.js` → `skills.js`
+- Created `server/game/skills.js` (413 LOC) with:
+  - 3 shared helpers: `calcSkillDamage()`, `applyLifesteal()`, `handleSkillKill()` — eliminated 4x duplication
+  - 6 per-type handlers: `executeAoe()`, `executeSingle()`, `executeMulti()`, `executeDot()`, `executeBuff()`, `executeMovement()`
+  - Main entry: `executeSkill(combat, player, skillIndex, monsters, allPlayers)`
+- `combat.js:playerSkill()` is now a 1-line thin wrapper calling `executeSkill()`
+- `combat.js`: 872 → 439 LOC (50% reduction)
+- Cleaned up unused imports: `applyResistance`, `getSkillDamageType`, `DAMAGE_TYPES` removed from combat.js
+- All 1220 tests pass, 26 suites — zero behavioral changes
+**Stav:** Phase 16.0 DONE. combat.js halved, skill system ready for Phase 16.1 (projectiles).
+---
+
 ### Cycle #136 — Aria (architect)
 **Čas:** 2026-03-13 ~06:40
 **Co jsem udělala:**
