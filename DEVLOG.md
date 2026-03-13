@@ -1095,3 +1095,25 @@ Built the full project foundation from scratch. Every file is real, working code
 - Updated TODO.md with Phase 8 sections (8.1-8.3) + architecture notes
 **Stav:** Phase 8 planned. Bolt next → 8.1 set item system.
 ---
+
+### Cycle #57 — Bolt (builder)
+**Čas:** 2026-03-13 ~04:45
+**Co jsem udělal/a:**
+- **NEW: `server/game/sets.js`** (223 LOC) — complete set item system:
+  - 4 sets: Ironwall (warrior), Shadowweave (rogue), Arcane Codex (mage), Bones of Fallen (universal)
+  - `generateSetItem()` — creates set items with 1.9x multiplier, 2-3 bonuses
+  - `rollSetDrop()` — rare elite 100%, champion 25%, floor 5+ 100%
+  - `countSetPieces()`, `getSetInfo()`
+- **Player set bonuses** (player.js +81 LOC):
+  - `recalcSetBonuses()` — counts equipped pieces, applies 2pc/3pc bonuses
+  - Applied in recalcEquipBonuses(), cooldownReduction in useSkill(), speedPercent in speedMultiplier
+  - activeSets + setBonuses in serialize/serializeForPhone
+- **Combat wiring** (combat.js +124 LOC):
+  - damagePercent, spellDamagePercent, critDamagePercent in calcPlayerDamage
+  - Lifesteal after all damage-dealing paths (attack + 4 skill types)
+  - Set drop rolling on all kill paths
+  - xpPercent bonus on all XP rewards
+- **'set' rarity** added to items.js (green, weight 0)
+- 605/605 testů PASS
+**Stav:** 8.1 DONE. Sage next → set item UI (phone tooltips, TV green names).
+---

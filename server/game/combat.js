@@ -1,6 +1,7 @@
 const { generateLoot } = require('./items');
 const { modifyDamageByAffixes, processAffixOnHitPlayer, processAffixOnDealDamage, processAffixOnDeath } = require('./affixes');
 const { applyResistance, getSkillDamageType, DAMAGE_TYPES } = require('./damage-types');
+const { rollSetDrop, generateSetItem } = require('./sets');
 
 class CombatSystem {
   constructor() {
@@ -46,6 +47,16 @@ class CombatSystem {
       }
     }
 
+    // Set bonus: extra crit damage
+    if (isCrit && player.setBonuses && player.setBonuses.critDamagePercent) {
+      baseDamage = Math.floor(baseDamage * (1 + player.setBonuses.critDamagePercent / 100));
+    }
+
+    // Set bonus: flat damage percent increase
+    if (player.setBonuses && player.setBonuses.damagePercent) {
+      baseDamage = Math.floor(baseDamage * (1 + player.setBonuses.damagePercent / 100));
+    }
+
     // Determine damage type from weapon bonuses (elemental weapons deal that type)
     let damageType = 'physical';
     if (player.equipment.weapon && player.equipment.weapon.bonuses) {
@@ -84,6 +95,12 @@ class CombatSystem {
     const modifiedDamage = nearest.affixes ? modifyDamageByAffixes(nearest, damage) : damage;
     const dealt = nearest.takeDamage(modifiedDamage);
 
+    // Set bonus: lifesteal
+    if (dealt > 0 && player.setBonuses && player.setBonuses.lifestealPercent) {
+      const heal = Math.floor(dealt * player.setBonuses.lifestealPercent / 100);
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+    }
+
     const event = {
       type: 'combat:hit',
       attackerId: player.id,
@@ -101,6 +118,14 @@ class CombatSystem {
     // Check for kill
     if (!nearest.alive) {
       const loot = generateLoot(nearest.lootTier, nearest.type);
+
+      // Set item drop chance
+      const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);
+      if (setDrop) {
+        const setItem = generateSetItem(setDrop.setId, setDrop.slot);
+        if (setItem) loot.push(setItem);
+      }
+
       const deathEvent = {
         type: 'combat:death',
         entityId: nearest.id,
@@ -128,9 +153,13 @@ class CombatSystem {
 
       this.events.push(deathEvent);
 
-      // Award XP and track kill
+      // Award XP and track kill (with set bonus)
       player.kills = (player.kills || 0) + 1;
-      const levelResult = player.gainXp(nearest.xpReward);
+      let xpReward = nearest.xpReward;
+      if (player.setBonuses && player.setBonuses.xpPercent) {
+        xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+      }
+      const levelResult = player.gainXp(xpReward);
       if (levelResult) {
         this.events.push({
           type: 'player:levelup',
@@ -161,12 +190,27 @@ class CombatSystem {
           const dy = monster.y - player.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= skill.radius) {
-            let baseDmg = (skill.name === 'Fireball' || skill.name === 'Frost Nova')
+            const isSpell = skill.name === 'Fireball' || skill.name === 'Frost Nova';
+            let baseDmg = isSpell
               ? Math.floor(player.spellPower * skill.damage)
               : Math.floor(player.attackPower * skill.damage);
+            // Set bonus: spell damage
+            if (isSpell && player.setBonuses && player.setBonuses.spellDamagePercent) {
+              baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.spellDamagePercent / 100));
+            }
+            // Set bonus: flat damage percent
+            if (player.setBonuses && player.setBonuses.damagePercent) {
+              baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
+            }
             baseDmg = monster.affixes ? modifyDamageByAffixes(monster, baseDmg) : baseDmg;
 
             const dealt = monster.takeDamage(baseDmg);
+
+            // Set bonus: lifesteal
+            if (dealt > 0 && player.setBonuses && player.setBonuses.lifestealPercent) {
+              const heal = Math.floor(dealt * player.setBonuses.lifestealPercent / 100);
+              player.hp = Math.min(player.maxHp, player.hp + heal);
+            }
 
             // Apply effects
             if (skill.effect === 'stun') monster.applyStun(skill.duration);
@@ -188,6 +232,11 @@ class CombatSystem {
             if (!monster.alive) {
               player.kills = (player.kills || 0) + 1;
               const loot = generateLoot(monster.lootTier, monster.type);
+              const setDrop = rollSetDrop(monster.floor || 0, monster.isElite, monster.eliteRank);
+              if (setDrop) {
+                const setItem = generateSetItem(setDrop.setId, setDrop.slot);
+                if (setItem) loot.push(setItem);
+              }
               const deathEvent = {
                 type: 'combat:death',
                 entityId: monster.id,
@@ -207,7 +256,11 @@ class CombatSystem {
                 deathEvent.affixEvents = processAffixOnDeath(monster);
               }
               results.push(deathEvent);
-              const levelResult = player.gainXp(monster.xpReward);
+              let xpReward = monster.xpReward;
+              if (player.setBonuses && player.setBonuses.xpPercent) {
+                xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+              }
+              const levelResult = player.gainXp(xpReward);
               if (levelResult) {
                 results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
               }
@@ -231,9 +284,19 @@ class CombatSystem {
         }
         if (nearest) {
           let baseDmg = Math.floor(player.attackPower * skill.damage);
+          // Set bonus: flat damage percent
+          if (player.setBonuses && player.setBonuses.damagePercent) {
+            baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
+          }
           baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           if (skill.effect === 'stun') nearest.applyStun(skill.duration);
+
+          // Set bonus: lifesteal
+          if (dealt > 0 && player.setBonuses && player.setBonuses.lifestealPercent) {
+            const heal = Math.floor(dealt * player.setBonuses.lifestealPercent / 100);
+            player.hp = Math.min(player.maxHp, player.hp + heal);
+          }
 
           results.push({
             type: 'combat:hit',
@@ -249,6 +312,11 @@ class CombatSystem {
           if (!nearest.alive) {
             player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(nearest.lootTier, nearest.type);
+            const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);
+            if (setDrop) {
+              const setItem = generateSetItem(setDrop.setId, setDrop.slot);
+              if (setItem) loot.push(setItem);
+            }
             const deathEvent = {
               type: 'combat:death',
               entityId: nearest.id,
@@ -267,7 +335,11 @@ class CombatSystem {
               deathEvent.affixEvents = processAffixOnDeath(nearest);
             }
             results.push(deathEvent);
-            const levelResult = player.gainXp(nearest.xpReward);
+            let xpReward = nearest.xpReward;
+            if (player.setBonuses && player.setBonuses.xpPercent) {
+              xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+            }
+            const levelResult = player.gainXp(xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
             }
@@ -289,8 +361,18 @@ class CombatSystem {
         for (let i = 0; i < Math.min(skill.count, targets.length); i++) {
           const t = targets[i].monster;
           let baseDmg = Math.floor(player.attackPower * skill.damage);
+          // Set bonus: flat damage percent
+          if (player.setBonuses && player.setBonuses.damagePercent) {
+            baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
+          }
           baseDmg = t.affixes ? modifyDamageByAffixes(t, baseDmg) : baseDmg;
           const dealt = t.takeDamage(baseDmg);
+
+          // Set bonus: lifesteal
+          if (dealt > 0 && player.setBonuses && player.setBonuses.lifestealPercent) {
+            const heal = Math.floor(dealt * player.setBonuses.lifestealPercent / 100);
+            player.hp = Math.min(player.maxHp, player.hp + heal);
+          }
 
           results.push({
             type: 'combat:hit',
@@ -306,6 +388,11 @@ class CombatSystem {
           if (!t.alive) {
             player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(t.lootTier, t.type);
+            const setDrop = rollSetDrop(t.floor || 0, t.isElite, t.eliteRank);
+            if (setDrop) {
+              const setItem = generateSetItem(setDrop.setId, setDrop.slot);
+              if (setItem) loot.push(setItem);
+            }
             const deathEvent = {
               type: 'combat:death',
               entityId: t.id,
@@ -324,7 +411,11 @@ class CombatSystem {
               deathEvent.affixEvents = processAffixOnDeath(t);
             }
             results.push(deathEvent);
-            const levelResult = player.gainXp(t.xpReward);
+            let xpReward = t.xpReward;
+            if (player.setBonuses && player.setBonuses.xpPercent) {
+              xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+            }
+            const levelResult = player.gainXp(xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
             }
@@ -347,11 +438,21 @@ class CombatSystem {
         }
         if (nearest) {
           let baseDmg = Math.floor(player.attackPower * skill.damage);
+          // Set bonus: flat damage percent
+          if (player.setBonuses && player.setBonuses.damagePercent) {
+            baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
+          }
           baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           // Set poison timer on monster
           nearest.poisonTick = skill.duration;
           nearest.poisonDamage = skill.tickDamage;
+
+          // Set bonus: lifesteal
+          if (dealt > 0 && player.setBonuses && player.setBonuses.lifestealPercent) {
+            const heal = Math.floor(dealt * player.setBonuses.lifestealPercent / 100);
+            player.hp = Math.min(player.maxHp, player.hp + heal);
+          }
 
           results.push({
             type: 'combat:hit',
@@ -368,6 +469,11 @@ class CombatSystem {
           if (!nearest.alive) {
             player.kills = (player.kills || 0) + 1;
             const loot = generateLoot(nearest.lootTier, nearest.type);
+            const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);
+            if (setDrop) {
+              const setItem = generateSetItem(setDrop.setId, setDrop.slot);
+              if (setItem) loot.push(setItem);
+            }
             const deathEvent = {
               type: 'combat:death',
               entityId: nearest.id,
@@ -386,7 +492,11 @@ class CombatSystem {
               deathEvent.affixEvents = processAffixOnDeath(nearest);
             }
             results.push(deathEvent);
-            const levelResult = player.gainXp(nearest.xpReward);
+            let xpReward = nearest.xpReward;
+            if (player.setBonuses && player.setBonuses.xpPercent) {
+              xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+            }
+            const levelResult = player.gainXp(xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
             }

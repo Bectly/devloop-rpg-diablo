@@ -93,6 +93,10 @@ class Player {
     // Elemental resistances (0-75 cap, from gear)
     this.resistances = { fire: 0, cold: 0, poison: 0 };
 
+    // Set bonuses (populated by recalcSetBonuses)
+    this.activeSets = [];
+    this.setBonuses = {};
+
     this.recalcStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
@@ -204,6 +208,64 @@ class Player {
     this.resistances.poison = Math.min(75, poisonResist + allResist);
 
     this.recalcStats();
+    this.recalcSetBonuses();
+  }
+
+  recalcSetBonuses() {
+    const { countSetPieces, getSetInfo } = require('./sets');
+
+    // Reset set bonuses
+    this.activeSets = [];
+    this.setBonuses = {};
+
+    const setCounts = countSetPieces(this.equipment);
+
+    for (const [setId, count] of setCounts) {
+      const setDef = getSetInfo(setId);
+      if (!setDef) continue;
+
+      const activeBonus = { setId, name: setDef.name, pieces: count, totalPieces: 3, bonuses: [] };
+
+      // Check 2-piece bonus
+      if (count >= 2 && setDef.bonuses[2]) {
+        const b = setDef.bonuses[2];
+        activeBonus.bonuses.push({ threshold: 2, description: b.description, active: true });
+        // Apply stat bonuses
+        if (b.armor) this.setBonuses.armor = (this.setBonuses.armor || 0) + b.armor;
+        if (b.maxHpPercent) this.setBonuses.maxHpPercent = (this.setBonuses.maxHpPercent || 0) + b.maxHpPercent;
+        if (b.critChance) this.setBonuses.critChance = (this.setBonuses.critChance || 0) + b.critChance;
+        if (b.speedPercent) this.setBonuses.speedPercent = (this.setBonuses.speedPercent || 0) + b.speedPercent;
+        if (b.spellDamagePercent) this.setBonuses.spellDamagePercent = (this.setBonuses.spellDamagePercent || 0) + b.spellDamagePercent;
+        if (b.maxMana) this.setBonuses.maxMana = (this.setBonuses.maxMana || 0) + b.maxMana;
+        if (b.all_resist) this.setBonuses.all_resist = (this.setBonuses.all_resist || 0) + b.all_resist;
+        if (b.maxHp) this.setBonuses.maxHp = (this.setBonuses.maxHp || 0) + b.maxHp;
+      }
+
+      // Check 3-piece bonus
+      if (count >= 3 && setDef.bonuses[3]) {
+        const b = setDef.bonuses[3];
+        activeBonus.bonuses.push({ threshold: 3, description: b.description, active: true });
+        if (b.damagePercent) this.setBonuses.damagePercent = (this.setBonuses.damagePercent || 0) + b.damagePercent;
+        if (b.critDamagePercent) this.setBonuses.critDamagePercent = (this.setBonuses.critDamagePercent || 0) + b.critDamagePercent;
+        if (b.cooldownReduction) this.setBonuses.cooldownReduction = (this.setBonuses.cooldownReduction || 0) + b.cooldownReduction;
+        if (b.lifestealPercent) this.setBonuses.lifestealPercent = (this.setBonuses.lifestealPercent || 0) + b.lifestealPercent;
+        if (b.xpPercent) this.setBonuses.xpPercent = (this.setBonuses.xpPercent || 0) + b.xpPercent;
+      }
+
+      this.activeSets.push(activeBonus);
+    }
+
+    // Apply additive stat bonuses
+    if (this.setBonuses.armor) this.armor += this.setBonuses.armor;
+    if (this.setBonuses.maxHp) this.maxHp += this.setBonuses.maxHp;
+    if (this.setBonuses.maxHpPercent) this.maxHp = Math.floor(this.maxHp * (1 + this.setBonuses.maxHpPercent / 100));
+    if (this.setBonuses.maxMana) this.maxMp += this.setBonuses.maxMana;
+    if (this.setBonuses.critChance) this.critChance += this.setBonuses.critChance;
+    if (this.setBonuses.all_resist) {
+      this.resistances.fire = Math.min(75, this.resistances.fire + this.setBonuses.all_resist);
+      this.resistances.cold = Math.min(75, this.resistances.cold + this.setBonuses.all_resist);
+      this.resistances.poison = Math.min(75, this.resistances.poison + this.setBonuses.all_resist);
+    }
   }
 
   gainXp(amount) {
@@ -344,7 +406,12 @@ class Player {
     if (!this.canUseSkill(index)) return null;
     const skill = this.skills[index];
     this.mp -= skill.mpCost;
-    this.skillCooldowns[index] = skill.cooldown;
+    let cd = skill.cooldown;
+    // Set bonus: cooldown reduction
+    if (this.setBonuses && this.setBonuses.cooldownReduction) {
+      cd = Math.floor(cd * (1 - this.setBonuses.cooldownReduction / 100));
+    }
+    this.skillCooldowns[index] = cd;
     return skill;
   }
 
@@ -449,8 +516,14 @@ class Player {
   }
 
   get speedMultiplier() {
+    let mult = 1.0;
     const slow = this.debuffs.find(d => d.effect === 'slow');
-    return slow ? slow.speedMult : 1.0;
+    if (slow) mult = slow.speedMult;
+    // Set bonus: speed percent
+    if (this.setBonuses && this.setBonuses.speedPercent) {
+      mult *= (1 + this.setBonuses.speedPercent / 100);
+    }
+    return mult;
   }
 
   serialize() {
@@ -474,6 +547,8 @@ class Player {
       resistances: { ...this.resistances },
       buffs: this.buffs.map(b => ({ effect: b.effect, remaining: b.remaining })),
       debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
+      activeSets: this.activeSets,
+      setBonuses: this.setBonuses,
     };
   }
 
@@ -553,6 +628,8 @@ class Player {
       debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
       lastDamageTaken: this.lastDamageTaken,
       quests: this.questManager.getActiveQuests(),
+      activeSets: this.activeSets,
+      setBonuses: this.setBonuses,
     };
   }
 }

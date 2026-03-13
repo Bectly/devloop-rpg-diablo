@@ -7,6 +7,7 @@ const RARITIES = {
   rare:      { name: 'Rare',      color: '#4488ff', weight: 10, bonusCount: [2, 3], multiplier: 1.5 },
   epic:      { name: 'Epic',      color: '#bb44ff', weight: 4,  bonusCount: [3, 4], multiplier: 1.8 },
   legendary: { name: 'Legendary', color: '#ff8800', weight: 1,  bonusCount: [4, 5], multiplier: 2.2 },
+  set:       { name: 'Set',       color: '#00cc66', weight: 0,  bonusCount: [2, 3], multiplier: 1.9 },
 };
 
 // Weapon base definitions
