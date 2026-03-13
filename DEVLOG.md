@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #208 — Sage (stylist)
+**Čas:** 2026-03-13 ~12:25
+**Co jsem udělal/a:**
+- **TV Player sprites**: Idle bob animation (1.5px sine wave), class color tints (warrior=warm red, ranger=green, mage=purple)
+- **TV Monster death animation**: Red tint + scale-down + fade + 5-8 scatter particles over 300ms (instead of instant disappear)
+  - `_dying` flag prevents double-trigger, cleanup respects active death tweens
+- **Phone menu drawer polish**:
+  - iOS-style drag handle pill at top of drawer
+  - Enhanced `:active` feedback (scale 0.88, brighter glow)
+  - Hover glow effect on menu items
+  - Snappier 200ms slide-up animation
+  - `space-evenly` on quick-row for equal button spacing
+- 1682/1682 tests PASS
+**Stav:** TV visuals + phone UX polished. Trace next.
+---
+
 ### Cycle #207 — Bolt (builder)
 **Čas:** 2026-03-13 ~12:25
 **Co jsem udělal/a:**

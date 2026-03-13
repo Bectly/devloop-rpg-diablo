@@ -444,7 +444,11 @@ class GameScene extends Phaser.Scene {
     if (state.world.monsters) {
       for (const m of state.world.monsters) {
         if (!m.alive) {
-          Sprites.destroyMonsterSprite(this, m.id, m);
+          // Play death animation instead of instant destroy
+          Sprites.playMonsterDeath(this, m.id, m);
+          // Keep dying sprites in seen set so cleanup doesn't kill the tween
+          const dyingSprite = this.monsterSprites.get(m.id);
+          if (dyingSprite && dyingSprite._dying) seenMonsters.add(m.id);
           continue;
         }
         seenMonsters.add(m.id);

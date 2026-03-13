@@ -41,10 +41,17 @@ window.Sprites = {
 
   /** Per-frame update: lerp position, swap texture, redraw HP/MP bars, death timer, DC ghost. */
   updatePlayerSprite(scene, sprite, p) {
-    // Smooth lerp
+    // Smooth lerp (base position)
     sprite.x += (p.x - sprite.x) * 0.3;
     sprite.y += (p.y - sprite.y) * 0.3;
-    sprite.nameText.setPosition(sprite.x, sprite.y - 28);
+
+    // Idle bob animation — gentle sine wave when not moving (visual offset only)
+    const dx = Math.abs(p.x - sprite.x);
+    const dy = Math.abs(p.y - sprite.y);
+    const isMoving = p.moving || dx > 1.5 || dy > 1.5;
+    sprite._idleBob = isMoving ? 0 : Math.sin((scene.time?.now || Date.now()) / 800) * 1.5;
+
+    sprite.nameText.setPosition(sprite.x, sprite.y + sprite._idleBob - 28);
 
     // HC badge positioning
     if (sprite.hcBadge) {
@@ -81,7 +88,14 @@ window.Sprites = {
           sprite.setAlpha(1);
         }
       } else {
-        sprite.clearTint();
+        // Subtle class color tint when no debuffs (blended toward white for subtlety)
+        const classTints = { warrior: 0xffc4b3, ranger: 0xc4e6b3, mage: 0xc4b3ff };
+        const classTint = classTints[p.characterClass];
+        if (classTint) {
+          sprite.setTint(classTint);
+        } else {
+          sprite.clearTint();
+        }
         sprite.setAlpha(1);
       }
     } else {
@@ -99,7 +113,7 @@ window.Sprites = {
           backgroundColor: '#00000099', padding: { x: 3, y: 1 },
         }).setOrigin(0.5).setDepth(12);
       }
-      sprite.dcLabel.setPosition(sprite.x, sprite.y - 40);
+      sprite.dcLabel.setPosition(sprite.x, sprite.y + sprite._idleBob - 40);
       sprite.dcLabel.setVisible(true);
     } else if (sprite.dcLabel) {
       // Player reconnected — remove DC label
@@ -111,7 +125,7 @@ window.Sprites = {
     const barW = 32;
     const barH = 4;
     const barX = sprite.x - barW / 2;
-    const barY = sprite.y - 20;
+    const barY = sprite.y + sprite._idleBob - 20;
     sprite.hpBar.fillStyle(0x333333, 0.8);
     sprite.hpBar.fillRect(barX, barY, barW, barH);
     const hpRatio = p.hp / p.maxHp;
@@ -133,7 +147,7 @@ window.Sprites = {
     }
     sprite.debuffGfx.clear();
     if (p.debuffs && p.debuffs.length > 0) {
-      const iconY = sprite.y - 45;
+      const iconY = sprite.y + sprite._idleBob - 45;
       let iconX = sprite.x - (p.debuffs.length - 1) * 5;
       for (const d of p.debuffs) {
         const color = d.effect === 'fire_dot' ? 0xff6633 : d.effect === 'slow' ? 0x6688cc : 0xcccccc;
@@ -146,9 +160,9 @@ window.Sprites = {
     // Party aura glow ring (visible when player has active aura talents)
     if (p.talentBonuses && p.talentBonuses.auras && p.talentBonuses.auras.length > 0) {
       if (!sprite.auraGlow) {
-        sprite.auraGlow = scene.add.circle(sprite.x, sprite.y + 4, 18, 0x66ffaa, 0.15).setDepth(9);
+        sprite.auraGlow = scene.add.circle(sprite.x, sprite.y + sprite._idleBob + 4, 18, 0x66ffaa, 0.15).setDepth(9);
       }
-      sprite.auraGlow.setPosition(sprite.x, sprite.y + 4);
+      sprite.auraGlow.setPosition(sprite.x, sprite.y + sprite._idleBob + 4);
       // Subtle pulse via alpha oscillation
       const pulse = 0.1 + Math.sin((scene.time?.now || 0) / 600) * 0.08;
       sprite.auraGlow.setAlpha(pulse);
@@ -642,6 +656,70 @@ window.Sprites = {
     }
   },
 
+  /**
+   * Play a death animation for a monster, then destroy it.
+   * Prevents double-triggering by marking sprite with _dying flag.
+   */
+  playMonsterDeath(scene, id, m) {
+    const sprite = scene.monsterSprites.get(id);
+    if (!sprite || sprite._dying) return;
+    sprite._dying = true;
+
+    // Immediately hide HP bar, name, and affix text
+    if (sprite.nameText) sprite.nameText.setAlpha(0);
+    if (sprite.affixText) sprite.affixText.setAlpha(0);
+    if (sprite.hpBar) sprite.hpBar.clear();
+
+    // Red flash tint
+    sprite.setTint(0xcc2222);
+
+    // Death tween: scale down + fade out
+    scene.tweens.add({
+      targets: sprite,
+      scaleX: 0.2,
+      scaleY: 0.2,
+      alpha: 0,
+      duration: 300,
+      ease: 'Power2',
+      onComplete: () => {
+        Sprites.destroyMonsterSprite(scene, id, m);
+      },
+    });
+
+    // Scatter particles (5-8 small circles that fly outward and fade)
+    const particleCount = 5 + Math.floor(Math.random() * 4);
+    const deathGfx = scene.add.graphics().setDepth(20);
+    const deathParticles = [];
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.4;
+      const speed = 30 + Math.random() * 50;
+      deathParticles.push({
+        x: sprite.x, y: sprite.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+      });
+    }
+    const startTime = Date.now();
+    const particleDuration = 350;
+    const particleEvent = scene.time.addEvent({
+      delay: 16, loop: true,
+      callback: () => {
+        const elapsed = Date.now() - startTime;
+        const t = elapsed / particleDuration;
+        if (t >= 1) { deathGfx.destroy(); particleEvent.destroy(); return; }
+        deathGfx.clear();
+        for (const pt of deathParticles) {
+          pt.x += pt.vx * 0.016;
+          pt.y += pt.vy * 0.016;
+          pt.life = 1 - t;
+          deathGfx.fillStyle(0xcc4444, pt.life * 0.8);
+          deathGfx.fillCircle(pt.x, pt.y, 2.5 * pt.life);
+        }
+      },
+    });
+  },
+
   /** Remove a single dead monster sprite and its texture, with elite death FX. */
   destroyMonsterSprite(scene, id, m) {
     const sprite = scene.monsterSprites.get(id);
@@ -721,6 +799,8 @@ window.Sprites = {
     }
     for (const [id, sprite] of scene.monsterSprites) {
       if (!seenMonsters.has(id)) {
+        // Skip sprites mid-death-animation (tween will destroy them)
+        if (sprite._dying) continue;
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.affixText) sprite.affixText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
