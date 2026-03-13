@@ -47,6 +47,114 @@ const CombatFX = (() => {
     }
   }
 
+  // ── Ranger Skill Effects (Phase 16.3) ──
+
+  function spawnArrowVolleyEffect(scene, x, y, angle, count) {
+    // Fan of arrow trails emanating from player
+    const spreadRad = (30 * Math.PI) / 180;
+    for (let i = 0; i < count; i++) {
+      const offset = spreadRad * ((i / (count - 1)) - 0.5);
+      const a = angle + offset;
+      const endX = x + Math.cos(a) * 120;
+      const endY = y + Math.sin(a) * 120;
+      const arrow = scene.add.circle(x, y, 3, 0x88cc44, 0.9);
+      arrow.setDepth(9);
+      scene.tweens.add({
+        targets: arrow,
+        x: endX,
+        y: endY,
+        alpha: 0,
+        duration: 250,
+        delay: i * 40,
+        onComplete: () => arrow.destroy(),
+      });
+    }
+    // Muzzle flash
+    const flash = scene.add.circle(x, y, 8, 0xaadd66, 0.5);
+    flash.setDepth(8);
+    scene.tweens.add({
+      targets: flash,
+      scale: 1.5,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  function spawnSniperShotEffect(scene, x, y, angle) {
+    // Bright line trail in firing direction + camera shake
+    const len = 350;
+    const endX = x + Math.cos(angle) * len;
+    const endY = y + Math.sin(angle) * len;
+    // Trail dots along the line
+    const steps = 12;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const px = x + (endX - x) * t;
+      const py = y + (endY - y) * t;
+      const dot = scene.add.circle(px, py, 2.5 - t * 1.5, 0xffdd44, 0.9 - t * 0.4);
+      dot.setDepth(9);
+      scene.tweens.add({
+        targets: dot,
+        alpha: 0,
+        duration: 500,
+        delay: i * 20,
+        onComplete: () => dot.destroy(),
+      });
+    }
+    // Muzzle flash (large, bright)
+    const flash = scene.add.circle(x, y, 12, 0xffee88, 0.7);
+    flash.setDepth(8);
+    scene.tweens.add({
+      targets: flash,
+      scale: 2,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flash.destroy(),
+    });
+    scene.cameras.main.shake(150, 0.002);
+  }
+
+  function spawnShadowStepEffect(scene, fromX, fromY, toX, toY) {
+    // Dark smoke puff at origin
+    for (let i = 0; i < 6; i++) {
+      const ox = (Math.random() - 0.5) * 20;
+      const oy = (Math.random() - 0.5) * 20;
+      const smoke = scene.add.circle(fromX + ox, fromY + oy, 4, 0x333355, 0.7);
+      smoke.setDepth(9);
+      scene.tweens.add({
+        targets: smoke,
+        y: smoke.y - 15,
+        alpha: 0,
+        scale: 1.5,
+        duration: 400,
+        delay: i * 30,
+        onComplete: () => smoke.destroy(),
+      });
+    }
+    // Shadow afterimage at origin (lingers)
+    const shadow = scene.add.circle(fromX, fromY, 10, 0x443366, 0.4);
+    shadow.setDepth(7);
+    scene.tweens.add({
+      targets: shadow,
+      alpha: 0,
+      scale: 0.5,
+      duration: 1500,
+      onComplete: () => shadow.destroy(),
+    });
+    // Appear flash at destination
+    const appear = scene.add.circle(toX, toY, 0, 0x6644aa, 0.6);
+    appear.setDepth(9);
+    scene.tweens.add({
+      targets: appear,
+      scale: 1.5,
+      alpha: 0,
+      duration: 300,
+      delay: 100,
+      onComplete: () => appear.destroy(),
+    });
+  }
+
   // ── Warrior Skill Effects (Phase 16.2) ──
 
   function spawnWhirlwindEffect(scene, x, y, radius, duration) {
@@ -303,16 +411,17 @@ const CombatFX = (() => {
               spawnAoeEffect(scene, ax, ay, 80, 0x44ddff, 700);
               break;
             }
-            case 'Multi-Shot': {
-              if (attacker && target) {
-                spawnProjectile(scene, attacker.x, attacker.y, target.x, target.y, 0x44cc44);
+            case 'Arrow Volley': {
+              // Projectile hits are rendered by projectile sprites; just show impact
+              if (target) {
+                spawnAoeEffect(scene, target.x, target.y, 15, 0x88cc44, 300);
               }
               break;
             }
-            case 'Poison Arrow': {
-              if (attacker && target) {
-                spawnProjectile(scene, attacker.x, attacker.y, target.x, target.y, 0x88cc22);
-                spawnAoeEffect(scene, target.x, target.y, 20, 0x66aa11, 800);
+            case 'Sniper Shot': {
+              // Heavy hit impact
+              if (target) {
+                spawnAoeEffect(scene, target.x, target.y, 20, 0xffdd44, 400);
               }
               break;
             }
@@ -386,8 +495,8 @@ const CombatFX = (() => {
           HUD.spawnDamageText(scene, p.x, p.y - 40, ev.skillName, false, false, '#44ccff');
           if (ev.skillName === 'Battle Shout') {
             spawnBuffEffect(scene, p.x, p.y, 0xffcc00);
-          } else if (ev.skillName === 'Evasion') {
-            spawnBuffEffect(scene, p.x, p.y, 0x44cc44);
+          } else if (ev.skillName === 'Shadow Step') {
+            spawnBuffEffect(scene, p.x, p.y, 0x6644aa);
           }
         }
       }
@@ -406,6 +515,18 @@ const CombatFX = (() => {
       if (ev.type === 'debuff:apply' && ev.effect === 'fear') {
         const m = state.world.monsters?.find(m => m.id === ev.targetId);
         if (m) spawnFearEffect(scene, m.x, m.y);
+      }
+      // Ranger skill effects (Phase 16.3)
+      if (ev.type === 'effect:spawn' && ev.effectType === 'arrow_volley') {
+        const p = state.players?.find(p => p.id === ev.playerId);
+        if (p) spawnArrowVolleyEffect(scene, p.x, p.y, ev.angle || 0, ev.count || 5);
+      }
+      if (ev.type === 'effect:spawn' && ev.effectType === 'sniper_shot') {
+        const p = state.players?.find(p => p.id === ev.playerId);
+        if (p) spawnSniperShotEffect(scene, p.x, p.y, ev.angle || 0);
+      }
+      if (ev.type === 'effect:spawn' && ev.effectType === 'shadow_step') {
+        spawnShadowStepEffect(scene, ev.fromX, ev.fromY, ev.toX, ev.toY);
       }
       if (ev.type === 'effect:spawn' && ev.effectType === 'teleport') {
         const p = state.players?.find(p => p.id === ev.playerId);
@@ -436,5 +557,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect };
 })();

@@ -334,6 +334,20 @@ window.Sprites = {
         g.fillStyle(0xffffff, 0.8);
         g.fillCircle(d - 6, s - 3, 0.7);
         g.fillCircle(d - 3, s - 3, 0.7);
+      } else if (m.type === 'shadow_decoy') {
+        // Shadow decoy — dark translucent humanoid silhouette
+        g.fillStyle(0x443366, 0.5);
+        g.fillRect(s - 4, 2, 8, d - 4); // body
+        g.fillStyle(0x554488, 0.4);
+        g.fillCircle(s, 4, 5); // head
+        // Glowing purple eyes
+        g.fillStyle(0xaa66ff, 0.9);
+        g.fillCircle(s - 2, 3, 1.5);
+        g.fillCircle(s + 2, 3, 1.5);
+        // Dark wisps
+        g.lineStyle(1, 0x443366, 0.3);
+        g.lineBetween(s - 3, d - 4, s - 6, d - 8);
+        g.lineBetween(s + 3, d - 4, s + 6, d - 8);
       } else if (m.type === 'slime' || m.type === 'slime_small') {
         // Slime blob — round body with top bump
         const isSmall = m.type === 'slime_small';

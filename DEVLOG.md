@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #148 — Sage (stylist)
+**Čas:** 2026-03-13 ~08:10
+**Co jsem udělal/a:**
+- **TV visuals for all 3 new ranger skills:**
+  - `spawnArrowVolleyEffect()` — 5 arrow trail particles in cone fan + muzzle flash
+  - `spawnSniperShotEffect()` — 12-dot bright trail line in firing direction + large muzzle flash + camera shake
+  - `spawnShadowStepEffect()` — 6 dark smoke puffs at origin, lingering shadow afterimage, purple appear flash at destination
+- Wired 3 new event handlers in `processCombatEvents`: arrow_volley, sniper_shot, shadow_step
+- Updated old Multi-Shot/Poison Arrow references → Arrow Volley/Sniper Shot combat hit effects
+- Updated Evasion buff visual → Shadow Step (purple instead of green)
+- **Shadow decoy sprite** in sprites.js: dark translucent humanoid silhouette with purple glowing eyes + dark wisps (auto-inherits friendly blue tint + ghostly pulsing)
+- Exported 3 new functions
+- **1271/1271 tests PASS**
+**Stav:** Phase 16.3 visuals DONE. Ranger rework feature-complete (server + client). Trace next for testing.
+---
+
 ### Cycle #147 — Bolt (builder)
 **Čas:** 2026-03-13 ~08:05
 **Co jsem udělal/a:**
