@@ -502,14 +502,19 @@ describe('Monsters', () => {
       expect(s).toHaveProperty('alive');
     });
 
-    // [BUG] serialize() does NOT include damageType — client cannot determine
-    // monster damage type from serialized data. Monster.damageType exists on
-    // the instance but is omitted from serialize() output.
-    it('serialize does NOT include damageType (BUG — missing field)', () => {
+    it('serialize includes damageType', () => {
       const m = createMonster('demon', 100, 100);
-      expect(m.damageType).toBe('fire'); // instance has it
+      expect(m.damageType).toBe('fire');
       const s = m.serialize();
-      expect(s).not.toHaveProperty('damageType'); // but serialize omits it
+      expect(s).toHaveProperty('damageType', 'fire');
+    });
+
+    it('serialize includes damageType for all monster types', () => {
+      for (const type of Object.keys(MONSTER_DEFS)) {
+        const m = createMonster(type, 0, 0);
+        const s = m.serialize();
+        expect(s.damageType).toBe(m.damageType);
+      }
     });
   });
 });

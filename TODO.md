@@ -62,12 +62,12 @@
 
 ## 🔥 NEXT PRIORITIES (Phase 6: Monster Affixes & Refactoring)
 
-### 6.0 Refactoring: hud.js split [Bolt]
+### 6.0 Refactoring: hud.js split [DONE — Bolt, Cycle #52]
 **Why:** hud.js at 1284 LOC, controller.js at 1032 LOC — both over 1000 threshold.
-- [ ] Extract `hud.js` victory screen code → `client/tv/victory.js` (~200 LOC)
-- [ ] Extract `hud.js` dialogue/NPC HUD → `client/tv/dialogue-hud.js` (~150 LOC)
-- [ ] Extract `controller.js` reconnect overlay + save toast → `client/phone/reconnect.js` (~100 LOC)
-- [ ] Verify all 450 tests still pass after split
+- [x] Extract `hud.js` victory screen code → `client/tv/victory.js` (~339 LOC)
+- [x] Extract `hud.js` dialogue/NPC HUD → `client/tv/dialogue-hud.js` (~153 LOC)
+- [x] Extract `controller.js` reconnect overlay + save toast → `client/phone/reconnect.js` (~119 LOC)
+- [x] Verify all tests still pass after split (516/516)
 
 ### 6.1 Monster Affix System — Server [DONE — Bolt, Cycle #47]
 **New file:** `server/game/affixes.js` (314 LOC)
@@ -173,9 +173,9 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
 - [x] **Phone:** resistance bonuses in equipment tooltips (colored labels)
 - [x] **TV crits:** type-colored with matching stroke
 
-### Found in Cycle #54 (Trace — damage types QA)
+### Found in Cycle #54 (Trace — damage types QA), Fixed in Cycle #55 (Rune)
 
-- [ ] [BUG/LOW] `monsters.js:514-540` — **`Monster.serialize()` does not include `damageType`.** The `Monster` instance has `this.damageType` set from the definition (e.g. 'fire' for demon, 'poison' for slime), but `serialize()` omits it. The client currently infers damage type from monster `type` string, but the server should send it explicitly for consistency and to support phase-specific damage type changes on bosses. **Fix:** Add `damageType: this.damageType` to the `serialize()` return object.
+- [x] [BUG/LOW] `monsters.js:514-540` — **`Monster.serialize()` does not include `damageType`.** **Fixed:** Added `damageType: this.damageType` to `serialize()` return object. Test updated from asserting absence to asserting presence + added coverage for all monster types.
 
 ### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)
@@ -186,11 +186,17 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
 
 ---
 
-## Architecture Notes (Updated Cycle #51)
-**Current LOC:** ~16,521 source JS (28 files). Largest: hud.js 1284, controller.js 1084, game.js 1073, socket-handlers.js 878.
-**Tests:** 604/604 PASS, 16 suites.
-**Split needed:** hud.js 1284, controller.js 1084 — both over threshold. MUST split before Phase 7 adds more code.
-**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). 0 open bugs.
+## Architecture Notes (Updated Cycle #55)
+**Current LOC:** ~16,600 source JS (31 files). Largest: hud.js 827, controller.js 1058, game.js 1073, socket-handlers.js 878.
+**Tests:** 605/605 PASS, 16 suites.
+**Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
+**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). 0 open bugs.
+
+### Phase 7 Review Notes (Cycle #55 — Rune)
+- `damage-types.js`: `calcResistance()` exported+tested but never imported by game code. `player.js` caps resistances inline in `recalcEquipBonuses()`. Harmless but could be consolidated.
+- `monsters.js`: `Monster.takeDamage()` duplicates the armor formula from `applyArmor()` in damage-types.js. Same formula, DRY concern for future maintenance.
+- Resistance items: only armor pieces roll resist bonuses (by design). Weapons/accessories cannot roll resist.
+- Boss phase `damageType` overrides work correctly in attack event emission.
 
 ## Open Bugs
 

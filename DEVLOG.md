@@ -1063,3 +1063,21 @@ Built the full project foundation from scratch. Every file is real, working code
   - [BUG/LOW] Monster.serialize() missing damageType field
 **Stav:** 604 tests, 16 suites. 1 low bug. Phase 7 solid.
 ---
+
+### Cycle #55 — Rune (reviewer)
+**Čas:** 2026-03-13 ~04:30
+**Co jsem udělal/a:**
+- Fixed [BUG/LOW] Monster.serialize() missing damageType — added `damageType: this.damageType`
+- Full Phase 7 code review (6 server files + 2 client files):
+  - File splits: clean, no dead code, delegation pattern correct
+  - damage-types.js: well-structured, pure functions
+  - Combat wiring: correct elemental/physical branching, affix override works
+  - Player resistances: proper capping at 75, both serialize methods expose it
+  - Item resist bonuses: correctly scoped to armor only
+  - DRY note: Monster.takeDamage() duplicates armor formula from applyArmor()
+- Updated monster serialize test (was documenting bug → now asserts fix)
+- Updated TODO.md: bug fixed, architecture notes refreshed
+- **605/605 testů PASS** (+1 new serialize assertion)
+- 0 open bugs
+**Stav:** Phase 7 (Damage Types) COMPLETE & stable. 605 tests, 16 suites, 0 bugs. ~17,000 LOC.
+---

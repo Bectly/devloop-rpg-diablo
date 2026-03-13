@@ -529,6 +529,7 @@ class Monster {
       stunned: this.stunned > 0,
       slowed: this.slowed > 0,
       behavior: this.behavior,
+      damageType: this.damageType,
       // Affix data
       affixes: this.affixes || null,
       isElite: this.isElite || false,
