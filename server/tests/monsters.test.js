@@ -850,4 +850,206 @@ describe('Monsters', () => {
       expect(MONSTER_DEFS.boss_void.damageType).toBe('cold');
     });
   });
+
+  // ── Phase 9.5: Boss Infernal Phase AI ─────────────────────────
+  describe('boss_infernal phase AI', () => {
+    it('phase 0 is ranged_barrage at full HP', () => {
+      const m = createMonster('boss_infernal', 100, 100);
+      expect(m.currentPhase).toBe(0);
+      expect(m.phases[0].mode).toBe('ranged_barrage');
+    });
+
+    it('ranged_barrage emits 3 attack events (2 side + 1 center)', () => {
+      const m = createMonster('boss_infernal', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 300, y: 100 };
+      const events = m.update(16, [player]);
+      const attacks = events.filter(e => e.type === 'monster_attack');
+      expect(attacks.length).toBe(3); // 2 side projectiles + 1 center
+      // All should be ranged with projectile data
+      for (const atk of attacks) {
+        expect(atk.attackType).toBe('ranged');
+        expect(atk.projectile).not.toBeNull();
+        expect(atk.projectile.speed).toBe(320);
+        expect(atk.damageType).toBe('fire');
+      }
+    });
+
+    it('transitions to summoner phase at 60% HP', () => {
+      const m = createMonster('boss_infernal', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 999;
+      m.hp = Math.floor(m.maxHp * 0.55);
+      const player = { id: 'p1', alive: true, x: 300, y: 100 };
+      const events = m.update(16, [player]);
+      const phase = events.find(e => e.type === 'boss_phase');
+      expect(phase).toBeDefined();
+      expect(phase.mode).toBe('summoner');
+      expect(m.currentPhase).toBe(1);
+    });
+
+    it('summoner phase emits boss_summon event when cooldown expires', () => {
+      const m = createMonster('boss_infernal', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 999;
+      m.hp = Math.floor(m.maxHp * 0.55); // below 60% → triggers summoner phase
+      m.currentPhase = 1;
+      m.summonCooldown = 0; // expired
+      const player = { id: 'p1', alive: true, x: 300, y: 100 };
+      const events = m.update(16, [player]);
+      const summon = events.find(e => e.type === 'boss_summon');
+      expect(summon).toBeDefined();
+      expect(summon.summonType).toBe('fire_imp');
+      expect(summon.positions.length).toBe(2);
+    });
+
+    it('summoner does not summon when cooldown is active', () => {
+      const m = createMonster('boss_infernal', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 999;
+      m.currentPhase = 1;
+      m.summonCooldown = 5000; // still active
+      const player = { id: 'p1', alive: true, x: 300, y: 100 };
+      const events = m.update(16, [player]);
+      const summon = events.find(e => e.type === 'boss_summon');
+      expect(summon).toBeUndefined();
+    });
+
+    it('enrage phase at 30% HP — 1.5x damage, halved cooldown', () => {
+      const m = createMonster('boss_infernal', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      m.hp = Math.floor(m.maxHp * 0.25);
+      const player = { id: 'p1', alive: true, x: 300, y: 100 };
+      const events = m.update(16, [player]);
+      const attacks = events.filter(e => e.type === 'monster_attack');
+      expect(attacks.length).toBeGreaterThan(0);
+      // enrage: 1.5x damage
+      const center = attacks[attacks.length - 1]; // last one is center
+      expect(center.damage).toBe(Math.floor(30 * 1.5));
+      // Cooldown should be halved
+      expect(m.attackCooldown).toBe(Math.floor(m.attackSpeed / 2));
+    });
+  });
+
+  // ── Phase 9.5: Boss Void Reaper Phase AI ──────────────────────
+  describe('boss_void phase AI', () => {
+    it('phase 0 is teleport_slash at full HP', () => {
+      const m = createMonster('boss_void', 100, 100);
+      expect(m.currentPhase).toBe(0);
+      expect(m.phases[0].mode).toBe('teleport_slash');
+    });
+
+    it('teleport_slash teleports behind player when cooldown expires', () => {
+      const m = createMonster('boss_void', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.bossTeleportCooldown = 0;
+      m.attackCooldown = 999;
+      const player = { id: 'p1', alive: true, x: 150, y: 100 }; // within attackRange*1.2
+      const events = m.update(16, [player]);
+      const tp = events.find(e => e.type === 'teleport');
+      expect(tp).toBeDefined();
+      // Boss should be ~50px from player (behind them)
+      const distToPlayer = Math.sqrt((m.x - 150) ** 2 + (m.y - 100) ** 2);
+      expect(distToPlayer).toBeCloseTo(50, 0);
+      // Teleport resets attackCooldown to 0, then attack block fires and sets it to attackSpeed
+      // So we just verify the teleport happened and boss repositioned
+    });
+
+    it('teleport_slash deals 1.5x damage', () => {
+      const m = createMonster('boss_void', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damage).toBe(Math.floor(35 * 1.5));
+      expect(attack.attackType).toBe('melee');
+    });
+
+    it('shadow_clones phase emits boss_shadow_clones on transition', () => {
+      const m = createMonster('boss_void', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 999;
+      m.hp = Math.floor(m.maxHp * 0.65); // below 70%
+      const player = { id: 'p1', alive: true, x: 300, y: 100 };
+      const events = m.update(16, [player]);
+      const clones = events.find(e => e.type === 'boss_shadow_clones');
+      expect(clones).toBeDefined();
+      expect(clones.count).toBe(2);
+      expect(clones.cloneHp).toBe(Math.floor(m.maxHp * 0.3));
+      expect(clones.cloneDamage).toBe(Math.floor(35 * 0.5));
+    });
+
+    it('void_storm phase emits void_pulse when cooldown expires', () => {
+      const m = createMonster('boss_void', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 999;
+      m.hp = Math.floor(m.maxHp * 0.35); // below 40% → triggers void_storm
+      m.currentPhase = 2;
+      m.voidPulseCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 150, y: 100 }; // within attackRange*1.2
+      const events = m.update(16, [player]);
+      const pulse = events.find(e => e.type === 'void_pulse');
+      expect(pulse).toBeDefined();
+      expect(pulse.radius).toBe(150);
+      expect(pulse.damage).toBe(40);
+      expect(pulse.damageType).toBe('cold');
+    });
+
+    it('void_storm melee attacks deal 1.2x damage', () => {
+      const m = createMonster('boss_void', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      m.hp = Math.floor(m.maxHp * 0.35); // below 40% → triggers void_storm
+      m.currentPhase = 2;
+      m.voidPulseCooldown = 999; // prevent pulse
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damage).toBe(Math.floor(35 * 1.2));
+    });
+  });
+
+  // ── Phase 9.5: Bug Fix Verification ───────────────────────────
+  describe('Phase 9.5 bug fixes', () => {
+    it('wraith teleport stays within leash distance', () => {
+      const m = createMonster('wraith', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 999;
+      m.attacksSinceLastTeleport = 2; // trigger teleport
+      const player = { id: 'p1', alive: true, x: 200, y: 100 };
+      // Run multiple times to check bounds
+      for (let trial = 0; trial < 20; trial++) {
+        m.attacksSinceLastTeleport = 2;
+        m.x = 100; m.y = 100;
+        m.update(16, [player]);
+        const dist = Math.sqrt((m.x - m.spawnX) ** 2 + (m.y - m.spawnY) ** 2);
+        expect(dist).toBeLessThan(m.leashDistance);
+      }
+    });
+
+    it('chargeCooldown decrements in ATTACK state', () => {
+      const m = createMonster('hell_hound', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.chargeCooldown = 5000;
+      m.attackCooldown = 999;
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      m.update(100, [player]); // 100ms tick
+      expect(m.chargeCooldown).toBe(4900);
+    });
+
+    it('armor only reduces physical damage on monsters', () => {
+      const m = createMonster('boss_knight', 0, 0); // armor = 15
+      const physDmg = m.takeDamage(50, 'physical');
+      const m2 = createMonster('boss_knight', 0, 0);
+      const fireDmg = m2.takeDamage(50, 'fire');
+      // Physical should be reduced by armor, fire should not
+      expect(physDmg).toBeLessThan(fireDmg);
+      expect(fireDmg).toBe(50); // fire bypasses armor
+    });
+  });
 });

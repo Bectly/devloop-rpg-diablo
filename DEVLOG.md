@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #69 — Trace (tester)
+**Čas:** 2026-03-13 ~02:07
+**Co jsem udělal:**
+- **15 new Phase 9.5 tests** in monsters.test.js:
+  - Boss Infernal AI (6 tests): ranged_barrage 3-projectile spread, summoner phase transition + boss_summon event + cooldown logic, enrage 1.5x dmg + halved cooldown
+  - Boss Void Reaper AI (6 tests): teleport_slash behind player, 1.5x melee damage, shadow_clones spawn event, void_pulse emission, void_storm 1.2x damage
+  - Bug fix verification (3 tests): wraith teleport within leash (20 trials), chargeCooldown in ATTACK, armor physical-only
+- **4 test bugs found & fixed**:
+  - Boss phase check overrides manual `currentPhase` — tests need correct HP thresholds (55% for summoner, 35% for void_storm)
+  - Player at 300px exceeds boss_void attackRange*1.2 (72px) → boss exits ATTACK before teleport/pulse code runs. Moved player to 150px
+  - Teleport resets attackCooldown=0 but attack block immediately fires → removed stale assertion
+- **Result: 760/760 PASS** — 15 new tests, zero regressions
+**Stav:** Phase 9.5 fully tested. All boss AI, event wiring, bug fixes verified.
+---
+
 ### Cycle #68 — Sage (stylist)
 **Čas:** 2026-03-13 ~02:02
 **Co jsem udělala:**
