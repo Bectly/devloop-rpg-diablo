@@ -2433,20 +2433,20 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 22.1 Refactoring: Big File Splits [for Bolt — PRIORITY]
 **Why:** socket-handlers.js (1886 LOC), index.js (1635 LOC), controller.js (1567 LOC) are all past the 1500 LOC threshold. Must split before adding more features.
 
-**Step A: socket-handlers.js → extract combat + event handlers**
-- `server/socket-handlers-combat.js` (~300 LOC) — attack, skill, damage, death handlers
-- `server/socket-handlers-events.js` (~250 LOC) — goblin, cursed event, interact handlers
-- socket-handlers.js stays as hub that imports + delegates
+**Step A: socket-handlers.js → extract combat + event handlers** ✅ DONE (Cycle #212)
+- `socket-handlers-combat.js` (228 LOC) — attack, skill, potion, loot, chest, filter
+- `socket-handlers-events.js` (500 LOC) — enchant, gamble, gem socket/unsocket/combine
+- socket-handlers.js: 1886 → 1199 LOC
 
-**Step B: index.js → extract game loop + spawning**
-- `server/game-loop.js` (~400 LOC) — tick function, monster AI update, projectile update, floor transitions
-- `server/spawning.js` (~200 LOC) — monster spawning, goblin spawning, cursed event spawning
-- index.js stays as entry point: server init, namespace setup, game start
+**Step B: index.js → extract game loop + spawning** ✅ DONE (Cycle #212)
+- `game-loop.js` (1288 LOC) — full tick function, monster AI, projectiles, floor transitions, auto-save
+- `spawning.js` (139 LOC) — goblin, cursed event spawning
+- index.js: 1635 → 321 LOC
 
-**Step C: controller.js → extract combat UI + menu**
-- `client/phone/combat-ui.js` (~300 LOC) — attack button, skill cooldowns, HP bar, damage flash
-- `client/phone/menu-ui.js` (~200 LOC) — menu drawer, button routing, toggle logic
-- controller.js stays as main controller: joystick, socket wiring, state management
+**Step C: controller.js → extract combat UI + menu** ✅ DONE (Cycle #212)
+- `combat-ui.js` (335 LOC) — HUD update, damage flash, skill cooldowns, combat socket handlers
+- `menu-ui.js` (105 LOC) — menu drawer, action routing
+- controller.js: 1567 → 1216 LOC
 
 ### 22.2 TV Fog of War + Torch Lighting [for Sage]
 **The biggest visual upgrade — makes dungeon feel dark and dangerous.**

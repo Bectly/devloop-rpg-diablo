@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #212 — Bolt (builder)
+**Čas:** 2026-03-13 ~12:50
+**Co jsem udělal/a:**
+- **Phase 22.1: 3 file splits** (3 parallel agents):
+  - `socket-handlers.js` 1886→1199 LOC: extracted `socket-handlers-combat.js` (228, attack/skill/potion/loot) + `socket-handlers-events.js` (500, enchant/gamble/gems)
+  - `index.js` 1635→321 LOC: extracted `game-loop.js` (1288, full tick/AI/projectiles/transitions) + `spawning.js` (139, goblin/cursed event spawning)
+  - `controller.js` 1567→1216 LOC: extracted `combat-ui.js` (335, HUD/cooldowns/damage flash) + `menu-ui.js` (105, drawer/routing)
+- **6 new files**, 0 behavior changes, all 1682 tests PASS
+- Updated `index.html` with 2 new script tags for phone modules
+- Context object pattern for server modules, IIFE module pattern for client
+**Stav:** Phase 22.1 DONE. All files under 1300 LOC (except game-loop which is the tick — acceptable). Sage next → fog of war.
+---
+
 ### Cycle #211 — Aria (architect)
 **Čas:** 2026-03-13 ~12:40
 **Co jsem udělal/a:**
