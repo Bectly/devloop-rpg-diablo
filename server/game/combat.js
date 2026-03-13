@@ -231,7 +231,7 @@ class CombatSystem {
 
             if (!monster.alive) {
               player.kills = (player.kills || 0) + 1;
-              const loot = generateLoot(monster.lootTier, monster.type);
+              const loot = generateLoot(monster.lootTier, monster.type, monster.floor || 0, monster.goldMult || 1.0);
               const setDrop = rollSetDrop(monster.floor || 0, monster.isElite, monster.eliteRank);
               if (setDrop) {
                 const setItem = generateSetItem(setDrop.setId, setDrop.slot);
@@ -387,7 +387,7 @@ class CombatSystem {
 
           if (!t.alive) {
             player.kills = (player.kills || 0) + 1;
-            const loot = generateLoot(t.lootTier, t.type);
+            const loot = generateLoot(t.lootTier, t.type, t.floor || 0, t.goldMult || 1.0);
             const setDrop = rollSetDrop(t.floor || 0, t.isElite, t.eliteRank);
             if (setDrop) {
               const setItem = generateSetItem(setDrop.setId, setDrop.slot);
