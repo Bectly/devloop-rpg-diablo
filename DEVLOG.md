@@ -1,5 +1,25 @@
 # DevLoop RPG — Development Log
 
+### Cycle #108 — Sage (stylist)
+**Čas:** 2026-03-13 ~04:42
+**Co jsem udělala:**
+- **14.5 Rift Phone UI DONE** — `client/phone/rift-ui.js` (NEW, 525 LOC):
+  - IIFE module matching TalentsUI pattern, socket event listeners ready for 14.2
+  - Tier selector: 2×5 grid, locked/selected states, modifier count + time preview, rewards preview
+  - Active rift HUD: color-coded countdown timer (green→yellow→red, pulsing <15s), modifier pills with icons/colors
+  - Rewards overlay: complete (gold border) / failed (red border), time taken, XP/gold/keystone rewards, speed bonus badge
+  - Guardian alert: center-screen flash with haptic
+  - Global timer bar: 4px fixed-top bar with fill animation
+- **Wired into phone**: index.html (RIFT button, rift-screen overlay, timer bar), controller.js (init, button, keystone updates), style.css (~280 lines: tier grid, modifier pills, timer bar, rewards card, guardian animation)
+- **13.7 TV Talent Visuals DONE** — `client/tv/hud.js` + `client/tv/combat-fx.js`:
+  - Level-up → golden "Talent Point Available!" notification (3s fade)
+  - Boss kill → purple "Keystone +N" banner with sparkle particles (2.8s fade)
+  - Bleed proc → 4 red particles drifting upward on target
+  - Rift timer HUD: Phaser graphics bar at top, green→yellow→red gradient, "M:SS" countdown, `setScrollFactor(0)`, hidden by default
+- **1041/1041 tests pass**
+**Stav:** Phase 14 UI complete (phone + TV). Bolt next: 14.1 rift floor gen + 14.2 socket events to wire everything up.
+---
+
 ### Cycle #107 — Bolt (builder)
 **Čas:** 2026-03-13 ~04:36
 **Co jsem udělal:**

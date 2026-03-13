@@ -1043,7 +1043,7 @@ Rune noted (Cycle #105): talent passives are computed by `computeTalentBonuses()
 4. **Proc system** — `procs` array from talents (bleed on_hit, etc.) not checked during combat hit events
 5. **Party auras** — `auras` from Warlord branch not aggregated for co-op buff
 
-### 13.7 TV Talent Visuals [low priority, for Sage]
+### 13.7 TV Talent Visuals [DONE — Sage, Cycle #108]
 - Level-up "Talent point available!" notification on TV HUD
 - Proc VFX (bleed=red particles, frost=blue slow aura)
 - Party aura radius glow around player sprite
@@ -1146,7 +1146,7 @@ Events:
 - Paragon levels uncapped (but diminishing returns via cost)
 - Display: "Lv.30 (P12)" = level 30, Paragon 12
 
-### 14.5 Rift UI — Phone [for Sage]
+### 14.5 Rift UI — Phone [DONE — Sage, Cycle #108]
 **Files:** `client/phone/rift-ui.js` (NEW), `client/phone/index.html`, `client/phone/style.css`
 
 - Rift portal button (appears when player has keystones, at any floor start room)
@@ -1155,7 +1155,7 @@ Events:
 - In-rift timer bar at top of phone screen (red when <30s)
 - Rift complete/failed overlay with rewards
 
-### 14.6 Rift UI — TV [for Sage]
+### 14.6 Rift UI — TV [DONE — Sage, Cycle #108]
 **Files:** `client/tv/hud.js` (MODIFY), `client/tv/effects.js` (MODIFY)
 
 - Rift timer bar at top of TV screen (large, visible)

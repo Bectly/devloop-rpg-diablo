@@ -51,6 +51,7 @@ const dialogueScreen = document.getElementById('dialogue-screen');
 
 DeathVictory.init(socket);
 TalentsUI.init(socket);
+RiftUI.init(socket);
 
 // ─── Join Screen — Class Card Selection ─────────────────────────
 document.querySelectorAll('.class-card').forEach(card => {
@@ -109,6 +110,7 @@ socket.on('joined', (data) => {
   controller.classList.remove('hidden');
 
   updateHUD(data.stats);
+  if (data.stats && data.stats.keystones !== undefined) RiftUI.updateKeystones(data.stats.keystones);
   updateFloorDisplay();
   initJoystick();
   initButtons();
@@ -153,6 +155,7 @@ socket.on('stats:update', (data) => {
 
   playerStats = data;
   updateHUD(data);
+  if (data.keystones !== undefined) RiftUI.updateKeystones(data.keystones);
 });
 
 socket.on('inventory:update', (data) => {
@@ -616,6 +619,22 @@ function initButtons() {
     talentClose.addEventListener('click', () => TalentsUI.hide());
   }
 
+  // Rift
+  const riftBtn = document.getElementById('btn-rift');
+  if (riftBtn) {
+    riftBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      Sound.uiClick();
+      RiftUI.show();
+    });
+    riftBtn.addEventListener('click', () => { Sound.uiClick(); RiftUI.show(); });
+  }
+  const riftClose = document.getElementById('rift-close');
+  if (riftClose) {
+    riftClose.addEventListener('touchstart', (e) => { e.preventDefault(); RiftUI.hide(); });
+    riftClose.addEventListener('click', () => RiftUI.hide());
+  }
+
   // Leaderboard
   const ldbBtn = document.getElementById('btn-leaderboard');
   if (ldbBtn) {
@@ -877,7 +896,7 @@ if (soundBtn) {
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
 document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items') || e.target.closest('.ldb-list')) return;
+  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items') || e.target.closest('.ldb-list') || e.target.closest('#rift-screen-content')) return;
   e.preventDefault();
 }, { passive: false });
 

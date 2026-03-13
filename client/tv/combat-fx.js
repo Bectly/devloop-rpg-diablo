@@ -47,6 +47,25 @@ const CombatFX = (() => {
     }
   }
 
+  function spawnBleedProc(scene, x, y) {
+    // 4 small red circles that drift upward and fade — indicates a bleed proc
+    for (let i = 0; i < 4; i++) {
+      const ox = (Math.random() - 0.5) * 18;
+      const oy = (Math.random() - 0.5) * 18;
+      const dot = scene.add.circle(x + ox, y + oy, 2 + Math.random() * 2, 0xcc1111, 0.85);
+      dot.setDepth(9);
+      scene.tweens.add({
+        targets: dot,
+        y: dot.y - 18 - Math.random() * 10,
+        alpha: 0,
+        duration: 600 + Math.floor(Math.random() * 200),
+        delay: i * 60,
+        ease: 'Cubic.easeOut',
+        onComplete: () => dot.destroy(),
+      });
+    }
+  }
+
   function spawnTeleportEffect(scene, fromX, fromY, toX, toY) {
     const vanish = scene.add.circle(fromX, fromY, 16, 0xbb44ff, 0.6);
     vanish.setDepth(9);
@@ -143,6 +162,22 @@ const CombatFX = (() => {
         const p = state.players?.find(p => p.id === ev.playerId);
         if (p) {
           HUD.spawnDamageText(scene, p.x, p.y - 50, `LEVEL ${ev.level}!`, false, false, '#ffcc00');
+          HUD.showTalentPointNotification(scene, p.x, p.y);
+        }
+      }
+      if (ev.type === 'combat:death' && ev.keystoneReward) {
+        const killer = state.players?.find(p => p.id === ev.killedBy);
+        const rx = killer ? killer.x : GAME_W / 2;
+        const ry = killer ? killer.y : GAME_H / 2;
+        HUD.showKeystoneNotification(scene, rx, ry, ev.keystoneReward);
+      }
+      if (ev.type === 'combat:proc') {
+        const target = state.world.monsters?.find(m => m.id === ev.targetId)
+          || state.players?.find(p => p.id === ev.targetId);
+        if (target) {
+          if (ev.procType === 'bleed') {
+            spawnBleedProc(scene, target.x, target.y);
+          }
         }
       }
       if (ev.type === 'buff:apply') {
@@ -185,5 +220,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc };
 })();

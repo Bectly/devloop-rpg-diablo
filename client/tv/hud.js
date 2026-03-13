@@ -109,6 +109,7 @@ window.HUD = {
     this._activeBannerObjs = [];
     this.bossBar = null;
     this.lastBossId = null;
+    this._riftTimer = null;
   },
 
   // ── Called every frame from GameScene.update() ──
@@ -870,6 +871,15 @@ window.HUD = {
       }
       HUD._chests = {};
     }
+    // Clean up rift timer
+    if (this._riftTimer) {
+      ['bg', 'fill', 'timeText'].forEach(k => {
+        if (this._riftTimer[k] && this._riftTimer[k].destroy) {
+          this._riftTimer[k].destroy();
+        }
+      });
+      this._riftTimer = null;
+    }
   },
 
   // ── Hide boss bar (used on floor transitions) ──
@@ -883,6 +893,182 @@ window.HUD = {
   // ── Direct access to waveText for color resets ──
   setWaveTextColor(color) {
     if (this.waveText) this.waveText.setColor(color);
+  },
+
+  // ── Talent Point Available notification (shown after level-up) ──
+  showTalentPointNotification(scene, x, y) {
+    const t = scene.add.text(x, y - 72, '\u2b50 Talent Point Available!', {
+      fontSize: '13px',
+      fontFamily: 'Courier New',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(101).setAlpha(0);
+
+    scene.tweens.add({
+      targets: t,
+      alpha: 1,
+      y: y - 88,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
+
+    scene.time.delayedCall(3000, () => {
+      scene.tweens.add({
+        targets: t,
+        alpha: 0,
+        y: t.y - 10,
+        duration: 400,
+        ease: 'Cubic.easeIn',
+        onComplete: () => t.destroy(),
+      });
+    });
+  },
+
+  // ── Keystone Award notification (shown near killer on boss death) ──
+  showKeystoneNotification(scene, x, y, count) {
+    const GAME_W = 1280;
+    const GAME_H = 720;
+    // Anchor to screen center-top area so it's always visible even at world edges
+    const sx = GAME_W / 2;
+    const sy = 110;
+    const n = count || 1;
+
+    const label = scene.add.text(sx, sy, `\uD83D\uDD11 Keystone +${n}`, {
+      fontSize: '18px',
+      fontFamily: 'Courier New',
+      color: '#bb44ff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(1005).setAlpha(0).setScale(0.6);
+
+    scene.tweens.add({
+      targets: label,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 400,
+      ease: 'Back.easeOut',
+    });
+
+    // Purple sparkles
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const px = sx + Math.cos(angle) * 120;
+      const py = sy + Math.sin(angle) * 18;
+      const spark = scene.add.circle(sx, sy, 2, 0xbb44ff, 0.9);
+      spark.setScrollFactor(0).setDepth(1006);
+      scene.tweens.add({
+        targets: spark,
+        x: px, y: py, alpha: 0,
+        duration: 500,
+        delay: 100 + i * 50,
+        ease: 'Cubic.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+
+    scene.time.delayedCall(2800, () => {
+      scene.tweens.add({
+        targets: label,
+        alpha: 0,
+        y: label.y - 12,
+        duration: 400,
+        ease: 'Cubic.easeIn',
+        onComplete: () => label.destroy(),
+      });
+    });
+  },
+
+  // ── Rift Timer HUD (Phase 14) ──
+  // Objects created lazily on first showRiftTimer() call.
+  _riftTimer: null,
+
+  _ensureRiftTimer(scene) {
+    if (this._riftTimer) return;
+    const GAME_W = 1280;
+    const barH = 14;
+    const barY = 0;
+
+    const bg = scene.add.rectangle(GAME_W / 2, barY + barH / 2, GAME_W, barH, 0x000000, 0.6)
+      .setScrollFactor(0).setDepth(1010).setVisible(false).setOrigin(0.5);
+
+    // Fill bar — drawn as a graphics object so we can update width and color each frame
+    const fill = scene.add.graphics().setScrollFactor(0).setDepth(1011).setVisible(false);
+
+    const timeText = scene.add.text(GAME_W / 2, barY + barH / 2, '', {
+      fontSize: '11px',
+      fontFamily: 'Courier New',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setScrollFactor(0).setDepth(1012).setOrigin(0.5).setVisible(false);
+
+    this._riftTimer = { bg, fill, timeText, timeLimit: 0, remaining: 0, GAME_W, barH, barY };
+  },
+
+  showRiftTimer(scene, timeLimit) {
+    this._ensureRiftTimer(scene);
+    const rt = this._riftTimer;
+    rt.timeLimit = timeLimit;
+    rt.remaining = timeLimit;
+    rt.bg.setVisible(true);
+    rt.fill.setVisible(true);
+    rt.timeText.setVisible(true);
+    this._renderRiftTimerFill();
+  },
+
+  hideRiftTimer() {
+    if (!this._riftTimer) return;
+    const rt = this._riftTimer;
+    rt.bg.setVisible(false);
+    rt.fill.setVisible(false);
+    rt.timeText.setVisible(false);
+  },
+
+  updateRiftTimer(remaining) {
+    if (!this._riftTimer) return;
+    this._riftTimer.remaining = remaining;
+    this._renderRiftTimerFill();
+  },
+
+  _renderRiftTimerFill() {
+    const rt = this._riftTimer;
+    if (!rt) return;
+    const { fill, timeText, timeLimit, remaining, GAME_W, barH, barY } = rt;
+
+    fill.clear();
+    if (timeLimit <= 0) return;
+
+    const pct = Math.max(0, Math.min(1, remaining / timeLimit));
+    const fillW = Math.floor(GAME_W * pct);
+
+    // Color: green → yellow → red based on remaining percentage
+    let color;
+    if (pct > 0.5) {
+      // green → yellow (pct 1.0 to 0.5)
+      const t = (pct - 0.5) / 0.5; // 1 at full, 0 at half
+      const r = Math.floor(255 * (1 - t));
+      const g = 200;
+      color = (r << 16) | (g << 8) | 0x00;
+    } else {
+      // yellow → red (pct 0.5 to 0.0)
+      const t = pct / 0.5; // 1 at half, 0 at empty
+      const g = Math.floor(180 * t);
+      color = (0xff << 16) | (g << 8) | 0x00;
+    }
+
+    fill.fillStyle(color, 0.85);
+    fill.fillRect(0, barY, fillW, barH);
+
+    // Format remaining seconds as M:SS
+    const totalSec = Math.ceil(remaining / 1000);
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    timeText.setText(`${mins}:${secs.toString().padStart(2, '0')}`);
   },
 
   // ── Chat System ──
