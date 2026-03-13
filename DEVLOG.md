@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #147 — Bolt (builder)
+**Čas:** 2026-03-13 ~08:05
+**Co jsem udělal/a:**
+- **Phase 16.3: Ranger Skill Rework — DONE**
+- `player.js`: Replaced 3 ranger skill definitions (Multi-Shot→Arrow Volley, Poison Arrow→Sniper Shot, Evasion→Shadow Step)
+- `skills.js` +130 LOC: 3 new handlers — `executeVolley()` (5 projectiles in cone), `executeSniper()` (heavy piercing projectile), `executeShadowStep()` (teleport + dodge + decoy)
+- `damage-types.js`: Updated 3 ranger skill damage type entries
+- `index.js`: Added `projectile:create` event handler (skill→projectile bridge), added `summon:shadow_decoy` handler, imported `createProjectileAngled`
+- `screens.js`: Updated phone skill tooltips for ranger
+- `talents.js`: Updated stale ranger skill references (Net Throw→Sniper Shot, Explosive Trap→Arrow Volley)
+- Updated 4 test files (player, combat, damage-types, talents) — all skill names, costs, cooldowns
+- **1271/1271 tests PASS**, 28 suites
+**Stav:** Phase 16.3 DONE. 3 new ranger skills with projectile:create event system. Sage next for visuals.
+---
+
 ### Cycle #146 — Aria (architect)
 **Čas:** 2026-03-13 ~07:55
 **Co jsem udělal/a:**

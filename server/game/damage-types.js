@@ -23,9 +23,9 @@ const SKILL_DAMAGE_TYPES = {
   'Frost Nova':   'cold',
   'Teleport':     'physical',
   // Ranger
-  'Multi-Shot':   'physical',
-  'Poison Arrow': 'poison',
-  'Evasion':      'physical',
+  'Arrow Volley':  'physical',
+  'Sniper Shot':   'physical',
+  'Shadow Step':   'physical',
 };
 
 // ─── Pure Functions ─────────────────────────────────────────────

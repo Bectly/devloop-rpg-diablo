@@ -615,6 +615,182 @@ function executeBuffDebuff(player, skill, monsters, allPlayers) {
   return results;
 }
 
+/**
+ * Volley skill (Arrow Volley): fire multiple projectiles in a cone.
+ * Emits projectile:create events for the game loop to spawn actual Projectile objects.
+ */
+function executeVolley(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+
+  // Find nearest monster to aim at
+  let targetAngle;
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
+    if (dist <= skill.range && dist < nearestDist) {
+      nearest = monster;
+      nearestDist = dist;
+    }
+  }
+
+  if (nearest) {
+    targetAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+  } else {
+    // No target — fire in facing direction
+    const dirMap = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
+    targetAngle = dirMap[player.facing] || 0;
+  }
+
+  // Spawn projectiles in a cone
+  const spreadRad = (skill.spreadAngle * Math.PI) / 180;
+  const count = skill.projectileCount || 5;
+  for (let i = 0; i < count; i++) {
+    const offset = spreadRad * ((i / (count - 1)) - 0.5);
+    const angle = targetAngle + offset;
+    const projDamage = Math.floor(player.attackPower * skill.damage);
+
+    results.push({
+      type: 'projectile:create',
+      ownerId: player.id,
+      x: player.x,
+      y: player.y,
+      angle,
+      speed: skill.speed || 450,
+      damage: projDamage,
+      damageType: skillDamageType,
+      piercing: skill.piercing || false,
+      visual: 'arrow',
+      skillName: skill.name,
+    });
+  }
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'arrow_volley',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    angle: targetAngle,
+    count,
+  });
+
+  return results;
+}
+
+/**
+ * Sniper Shot: fire a single heavy piercing projectile.
+ * Emits one projectile:create event. Slow speed but pierces ALL targets.
+ */
+function executeSniper(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+
+  // Find nearest monster to aim at
+  let targetAngle;
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
+    if (dist <= skill.range && dist < nearestDist) {
+      nearest = monster;
+      nearestDist = dist;
+    }
+  }
+
+  if (nearest) {
+    targetAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+  } else {
+    const dirMap = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
+    targetAngle = dirMap[player.facing] || 0;
+  }
+
+  const projDamage = Math.floor(player.attackPower * skill.damage);
+
+  results.push({
+    type: 'projectile:create',
+    ownerId: player.id,
+    x: player.x,
+    y: player.y,
+    angle: targetAngle,
+    speed: skill.speed || 200,
+    damage: projDamage,
+    damageType: skillDamageType,
+    piercing: true,
+    visual: 'sniper',
+    skillName: skill.name,
+    lifetime: 3000,
+  });
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'sniper_shot',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    angle: targetAngle,
+  });
+
+  return results;
+}
+
+/**
+ * Shadow Step: teleport in facing direction, gain dodge buff, leave shadow decoy.
+ * The decoy is a friendly "monster" that draws aggro for decoyDuration.
+ */
+function executeShadowStep(player, skill, monsters, allPlayers) {
+  const results = [];
+  const startX = player.x;
+  const startY = player.y;
+
+  // Teleport in facing direction
+  const dirMap = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  const dir = dirMap[player.facing] || [0, 0];
+  player.x += dir[0] * skill.range;
+  player.y += dir[1] * skill.range;
+  // Clamp to world bounds
+  player.x = Math.max(16, Math.min(1904, player.x));
+  player.y = Math.max(16, Math.min(1264, player.y));
+
+  // Apply dodge buff (100% dodge for dodgeDuration)
+  player.buffs.push({
+    effect: 'dodge_up',
+    duration: skill.dodgeDuration,
+    remaining: skill.dodgeDuration,
+  });
+
+  results.push({
+    type: 'buff:apply',
+    playerId: player.id,
+    effect: 'dodge_up',
+    duration: skill.dodgeDuration,
+    skillName: skill.name,
+  });
+
+  // Spawn shadow decoy at original position
+  results.push({
+    type: 'summon:shadow_decoy',
+    playerId: player.id,
+    x: startX,
+    y: startY,
+    duration: skill.decoyDuration,
+  });
+
+  // Teleport visual
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'shadow_step',
+    playerId: player.id,
+    fromX: startX,
+    fromY: startY,
+    toX: player.x,
+    toY: player.y,
+  });
+
+  return results;
+}
+
 // ── Main entry ──────────────────────────────────────────────────────
 
 /**
@@ -663,6 +839,15 @@ function executeSkill(combat, player, skillIndex, monsters, allPlayers) {
       break;
     case 'buff_debuff':
       results = executeBuffDebuff(player, skill, monsters, allPlayers);
+      break;
+    case 'volley':
+      results = executeVolley(player, skill, monsters, partyBuffs, skillDamageType);
+      break;
+    case 'sniper':
+      results = executeSniper(player, skill, monsters, partyBuffs, skillDamageType);
+      break;
+    case 'shadow_step':
+      results = executeShadowStep(player, skill, monsters, allPlayers);
       break;
     default:
       results = [];

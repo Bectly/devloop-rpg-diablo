@@ -17,9 +17,9 @@ const CLASS_SKILLS = {
     { name: 'Battle Shout',     shortName: 'SHT', mpCost: 25, cooldown: 15000, damage: 0, type: 'buff_debuff', effect: 'attack_up', duration: 8000, fearRadius: 150, fearDuration: 1500, description: 'Boost party attack 30% + terrorize nearby enemies' },
   ],
   ranger: [
-    { name: 'Multi-Shot',   shortName: 'MLT', mpCost: 18, cooldown: 4000, damage: 0.8, type: 'multi',  count: 3, description: 'Fire 3 arrows in a spread' },
-    { name: 'Poison Arrow',  shortName: 'PSN', mpCost: 12, cooldown: 3000, damage: 0.6, type: 'dot',    tickDamage: 5, duration: 5000, description: 'Poison dealing damage over time' },
-    { name: 'Evasion',       shortName: 'EVD', mpCost: 20, cooldown: 12000, damage: 0, type: 'buff',    effect: 'dodge_up', duration: 5000, description: 'Greatly increase dodge chance' },
+    { name: 'Arrow Volley',  shortName: 'VOL', mpCost: 18, cooldown: 3500, damage: 0.6, type: 'volley',       projectileCount: 5, spreadAngle: 30, piercing: true, range: 300, speed: 450, description: 'Fire 5 piercing arrows in a cone' },
+    { name: 'Sniper Shot',   shortName: 'SNP', mpCost: 25, cooldown: 8000, damage: 3.0, type: 'sniper',       piercing: true, range: 400, speed: 200, description: 'Heavy piercing shot through all targets in a line' },
+    { name: 'Shadow Step',   shortName: 'SHD', mpCost: 20, cooldown: 7000, damage: 0,   type: 'shadow_step',  range: 100, dodgeDuration: 1000, decoyDuration: 2000, description: 'Teleport forward, gain dodge, leave shadow decoy' },
   ],
   mage: [
     { name: 'Fireball',     shortName: 'FBL', mpCost: 22, cooldown: 3500, damage: 2.5, type: 'aoe',    radius: 50, description: 'Explosive fireball dealing area damage' },

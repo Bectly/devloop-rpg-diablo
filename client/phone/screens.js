@@ -351,9 +351,9 @@ window.Screens = (() => {
       { name: 'Battle Shout', desc: 'Party gains +30% attack 8s. Terrorizes nearby enemies (flee 1.5s).', type: 'Buff+Fear' },
     ],
     ranger: [
-      { name: 'Multi-Shot', desc: 'Fire 3 arrows at once. Each deals 0.8x damage to nearby targets.', type: 'Multi' },
-      { name: 'Poison Arrow', desc: 'Poison-tipped arrow. Deals damage over time for 5 seconds.', type: 'DoT' },
-      { name: 'Evasion', desc: 'Sharpen reflexes. Greatly increased dodge chance for 5 seconds.', type: 'Buff' },
+      { name: 'Arrow Volley', desc: 'Fire 5 piercing arrows in a 30° cone. Each deals 0.6x damage. Pierces first target.', type: 'Volley' },
+      { name: 'Sniper Shot', desc: 'Heavy piercing shot dealing 3x damage through ALL targets in a line. Range 400px.', type: 'Sniper' },
+      { name: 'Shadow Step', desc: 'Teleport 100px forward. 100% dodge for 1s. Leaves shadow decoy drawing aggro 2s.', type: 'Movement' },
     ],
     mage: [
       { name: 'Fireball', desc: 'Hurl a fireball. Deals 2.5x spell damage in 50px explosion.', type: 'AoE' },

@@ -225,25 +225,23 @@ describe('CombatSystem', () => {
       expect(p2.buffs[0].effect).toBe('attack_up');
     });
 
-    it('multi skill (Multi-Shot) hits up to count targets', () => {
+    it('volley skill (Arrow Volley) emits projectile:create events', () => {
       const ranger = new Player('R', 'ranger');
       const m1 = createMonster('skeleton', ranger.x + 20, ranger.y);
-      const m2 = createMonster('skeleton', ranger.x + 40, ranger.y);
-      const m3 = createMonster('skeleton', ranger.x + 60, ranger.y);
-      const m4 = createMonster('skeleton', ranger.x + 80, ranger.y);
 
-      const results = combat.playerSkill(ranger, 0, [m1, m2, m3, m4], [ranger]);
-      // Multi-Shot count = 3
-      const hits = results.filter(e => e.type === 'combat:hit');
-      expect(hits.length).toBe(3);
+      const results = combat.playerSkill(ranger, 0, [m1], [ranger]);
+      // Arrow Volley projectileCount = 5
+      const projEvents = results.filter(e => e.type === 'projectile:create');
+      expect(projEvents.length).toBe(5);
     });
 
-    it('dot skill (Poison Arrow) sets poison on target', () => {
+    it('sniper skill (Sniper Shot) emits single piercing projectile:create', () => {
       const ranger = new Player('R', 'ranger');
       const m = createMonster('skeleton', ranger.x + 30, ranger.y);
-      combat.playerSkill(ranger, 1, [m], [ranger]); // Poison Arrow
-      expect(m.poisonTick).toBeGreaterThan(0);
-      expect(m.poisonDamage).toBe(5);
+      const results = combat.playerSkill(ranger, 1, [m], [ranger]); // Sniper Shot
+      const projEvents = results.filter(e => e.type === 'projectile:create');
+      expect(projEvents.length).toBe(1);
+      expect(projEvents[0].piercing).toBe(true);
     });
 
     it('movement skill (Teleport) moves player in facing direction', () => {
@@ -411,15 +409,15 @@ describe('CombatSystem', () => {
       expect(hit.damageType).toBe('cold');
     });
 
-    it('Poison Arrow skill events have poison damageType', () => {
+    it('Sniper Shot skill events have physical damageType', () => {
       const ranger = new Player('Ranger', 'ranger');
       ranger.dodgeChance = 0;
       const m = createMonster('skeleton', ranger.x + 30, ranger.y);
-      combat.playerSkill(ranger, 1, [m], [ranger]); // Poison Arrow = poison
+      combat.playerSkill(ranger, 1, [m], [ranger]); // Sniper Shot = physical
       const events = combat.clearEvents();
-      const hit = events.find(e => e.type === 'combat:hit');
-      expect(hit).toBeDefined();
-      expect(hit.damageType).toBe('poison');
+      const projCreate = events.find(e => e.type === 'projectile:create');
+      expect(projCreate).toBeDefined();
+      expect(projCreate.damageType).toBe('physical');
     });
 
     it('monster attack events include damageType', () => {

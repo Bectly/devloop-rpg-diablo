@@ -366,13 +366,13 @@ describe('computeTalentBonuses', () => {
   });
 
   it('computes skill upgrades (numeric)', () => {
-    // Net Throw: Poison Arrow slow_percent +50 per rank
+    // Net Throw: Sniper Shot slow_percent +50 per rank
     const b = computeTalentBonuses({
       ranger_trapper_t1: 3, ranger_trapper_t2: 3,
       ranger_trapper_t3: 2
     }, 'ranger');
-    expect(b.skillUpgrades['Poison Arrow']).toBeDefined();
-    expect(b.skillUpgrades['Poison Arrow'].slow_percent).toBe(100);
+    expect(b.skillUpgrades['Sniper Shot']).toBeDefined();
+    expect(b.skillUpgrades['Sniper Shot'].slow_percent).toBe(100);
   });
 
   it('computes skill upgrades (toggle/object)', () => {

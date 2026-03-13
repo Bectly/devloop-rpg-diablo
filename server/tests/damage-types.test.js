@@ -88,10 +88,10 @@ describe('DamageTypes', () => {
       expect(SKILL_DAMAGE_TYPES['Teleport']).toBe('physical');
     });
 
-    it('ranger skills: Multi-Shot=physical, Poison Arrow=poison, Evasion=physical', () => {
-      expect(SKILL_DAMAGE_TYPES['Multi-Shot']).toBe('physical');
-      expect(SKILL_DAMAGE_TYPES['Poison Arrow']).toBe('poison');
-      expect(SKILL_DAMAGE_TYPES['Evasion']).toBe('physical');
+    it('ranger skills: Arrow Volley=physical, Sniper Shot=physical, Shadow Step=physical', () => {
+      expect(SKILL_DAMAGE_TYPES['Arrow Volley']).toBe('physical');
+      expect(SKILL_DAMAGE_TYPES['Sniper Shot']).toBe('physical');
+      expect(SKILL_DAMAGE_TYPES['Shadow Step']).toBe('physical');
     });
 
     it('all mapped types are valid DAMAGE_TYPES keys', () => {
@@ -199,7 +199,7 @@ describe('DamageTypes', () => {
     it('returns correct type for known skills', () => {
       expect(getSkillDamageType('Fireball')).toBe('fire');
       expect(getSkillDamageType('Frost Nova')).toBe('cold');
-      expect(getSkillDamageType('Poison Arrow')).toBe('poison');
+      expect(getSkillDamageType('Sniper Shot')).toBe('physical');
       expect(getSkillDamageType('Whirlwind')).toBe('physical');
     });
 

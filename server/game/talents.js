@@ -229,21 +229,21 @@ const RANGER_TREE = {
       {
         id: 'ranger_trapper_t3',
         name: 'Net Throw',
-        description: 'Poison Arrow also slows target movement by 50% per rank.',
+        description: 'Sniper Shot also slows target movement by 50% per rank.',
         tier: 3,
         maxRank: 2,
         effects: [
-          { type: 'skill_upgrade', skill: 'Poison Arrow', property: 'slow_percent', value: 50, per_rank: true }
+          { type: 'skill_upgrade', skill: 'Sniper Shot', property: 'slow_percent', value: 50, per_rank: true }
         ]
       },
       {
         id: 'ranger_trapper_t4',
         name: 'Explosive Trap',
-        description: 'Multi-Shot arrows leave fire trails dealing AoE damage for 2s.',
+        description: 'Arrow Volley arrows leave fire trails dealing AoE damage for 2s.',
         tier: 4,
         maxRank: 1,
         effects: [
-          { type: 'skill_upgrade', skill: 'Multi-Shot', property: 'fire_trail', value: 1, duration: 2000, damage_percent: 30, per_rank: false }
+          { type: 'skill_upgrade', skill: 'Arrow Volley', property: 'fire_trail', value: 1, duration: 2000, damage_percent: 30, per_rank: false }
         ]
       }
     ]

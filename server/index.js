@@ -13,7 +13,7 @@ const { getSellPrice } = require('./game/shop');
 const { createMonster, createSpiritWolf } = require('./game/monsters');
 const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
 const { getRiftRewards } = require('./game/rifts');
-const { updateProjectiles } = require('./game/projectiles');
+const { updateProjectiles, createProjectileAngled } = require('./game/projectiles');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
 const craftHandlers = require('./socket-handlers-craft');
@@ -656,6 +656,31 @@ function gameLoop() {
     }
   }
 
+  // Process projectile:create events from skills (Phase 16.3)
+  const projCreateEvents = combat.events.filter(e => e.type === 'projectile:create');
+  if (projCreateEvents.length > 0) {
+    if (!world.projectiles) world.projectiles = [];
+    for (const ev of projCreateEvents) {
+      const proj = createProjectileAngled(
+        { id: ev.ownerId, x: ev.x, y: ev.y },
+        ev.angle,
+        {
+          speed: ev.speed,
+          damage: ev.damage,
+          damageType: ev.damageType,
+          piercing: ev.piercing || false,
+          aoeRadius: ev.aoeRadius || 0,
+          visual: ev.visual || 'arrow',
+          skillName: ev.skillName || '',
+          lifetime: ev.lifetime || 2000,
+        },
+      );
+      world.projectiles.push(proj);
+    }
+    // Remove projectile:create events — they're internal, not for clients
+    combat.events = combat.events.filter(e => e.type !== 'projectile:create');
+  }
+
   // Update projectiles (Phase 16.1)
   if (world.projectiles && world.projectiles.length > 0) {
     const projEvents = updateProjectiles(world.projectiles, world.monsters, dt);
@@ -831,6 +856,17 @@ function gameLoop() {
           });
         }
       }
+    }
+
+    // Summon shadow decoy (Phase 16.3)
+    if (event.type === 'summon:shadow_decoy') {
+      const decoy = createMonster('shadow_decoy', event.x, event.y, 0);
+      decoy.friendly = true;
+      decoy.hp = 1;
+      decoy.maxHp = 1;
+      decoy.name = 'Shadow Decoy';
+      decoy.despawnTimer = event.duration || 2000;
+      world.monsters.push(decoy);
     }
 
     // Summon spirit wolf (Phase 15.4)

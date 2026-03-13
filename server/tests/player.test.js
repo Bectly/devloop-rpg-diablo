@@ -47,7 +47,7 @@ describe('Player', () => {
       const ranger = new Player('R', 'ranger');
       const mage = new Player('M', 'mage');
       expect(warrior.skills[0].name).toBe('Whirlwind');
-      expect(ranger.skills[0].name).toBe('Multi-Shot');
+      expect(ranger.skills[0].name).toBe('Arrow Volley');
       expect(mage.skills[0].name).toBe('Fireball');
     });
 
@@ -649,9 +649,9 @@ describe('Player', () => {
     it('ranger skills have correct shortNames', () => {
       const p = new Player('R', 'ranger');
       const s = p.serializeForPhone();
-      expect(s.skills[0].shortName).toBe('MLT');
-      expect(s.skills[1].shortName).toBe('PSN');
-      expect(s.skills[2].shortName).toBe('EVD');
+      expect(s.skills[0].shortName).toBe('VOL');
+      expect(s.skills[1].shortName).toBe('SNP');
+      expect(s.skills[2].shortName).toBe('SHD');
     });
 
     it('mage skills have correct shortNames', () => {
