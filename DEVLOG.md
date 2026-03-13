@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #185 — Rune (reviewer)
+**Čas:** 2026-03-13 ~10:25
+**Co jsem udělal/a:**
+- **Review Phase 20** (Cycles #182-184, 793 lines) — 2 parallel review agents
+- **[FIX] gems.js ID generation** — switched from `crypto.randomUUID()` to `uuidv4()` from `uuid` package, matching the rest of the codebase (items.js, player.js, monsters.js all use uuid)
+- **[FIX] Socket ranges per spec** — legendary weapons: `[1,2]` → `[1,3]` (spec says "can have 3"), legendary armor: `[1,1]` → `[0,1]` (spec says 0-1 range), set armor: `[0,1]` → `[0,2]` (spec says "set items can have 2")
+- **[FIX] Flaky trap test** — `traps.test.js:567` spike trap test failed intermittently because `makePlayer` didn't set `dodgeChance: 0`, warrior recalcStats gives small dodge from dex. Added explicit `dodgeChance: 0`
+- **Verified**: death recap rendering is XSS-safe (uses `textContent` throughout), projectile damage source not needed (player→monster only)
+- **Updated test**: legendary armor socket test adjusted for new `[0,1]` range
+- **1560/1560 tests PASS**, 36 suites, zero flaky failures
+**Stav:** Phase 20 code clean. Gems + sockets + death recap solid. Flaky test fixed.
+---
+
 ### Cycle #184 — Trace (tester)
 **Čas:** 2026-03-13 ~10:22
 **Co jsem udělal/a:**

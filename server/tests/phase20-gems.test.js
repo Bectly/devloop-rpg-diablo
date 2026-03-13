@@ -278,9 +278,9 @@ describe('Item socket generation', () => {
     }
   });
 
-  it('legendary armor always has 1 socket', () => {
+  it('legendary armor has 0-1 sockets', () => {
     const sockets = rollSockets('armor', 'legendary');
-    expect(sockets).toHaveLength(1);
+    expect(sockets.length).toBeLessThanOrEqual(1);
   });
 
   it('unknown category returns empty array', () => {

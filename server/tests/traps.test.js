@@ -564,7 +564,7 @@ describe('Player.applyDebuff', () => {
 describe('Integration: trap triggers on player', () => {
   it('spike trap full flow: damage + stun + cooldown', () => {
     const trap = makeTrap('spike', 100, 100);
-    const player = makePlayer({ x: 105, y: 100, hp: 200 });
+    const player = makePlayer({ x: 105, y: 100, hp: 200, dodgeChance: 0 });
 
     // Can trigger
     expect(trap.canTrigger(player)).toBe(true);

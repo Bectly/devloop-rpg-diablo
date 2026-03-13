@@ -3,7 +3,7 @@
  * 6 gem types × 3 tiers, combinable 3→1 upgrade.
  */
 
-const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 
 // ── Constants ──
 
@@ -75,7 +75,7 @@ function generateGem(type, tier) {
   if (!data) return null;
 
   return {
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     name: data.name,
     type: 'gem',
     gemType: type,

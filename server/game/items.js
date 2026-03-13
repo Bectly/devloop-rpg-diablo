@@ -208,11 +208,11 @@ function buildItemName(prefix, baseName, rarity, bonuses, category, subType) {
 const SOCKET_RANGES = {
   weapon: {
     common: [0, 0], uncommon: [0, 1], rare: [0, 1],
-    epic: [0, 2], legendary: [1, 2], set: [0, 2],
+    epic: [0, 2], legendary: [1, 3], set: [0, 2],
   },
   armor: {
     common: [0, 0], uncommon: [0, 0], rare: [0, 1],
-    epic: [0, 1], legendary: [1, 1], set: [0, 1],
+    epic: [0, 1], legendary: [0, 1], set: [0, 2],
   },
   accessory: {
     common: [0, 0], uncommon: [0, 0], rare: [0, 0],
