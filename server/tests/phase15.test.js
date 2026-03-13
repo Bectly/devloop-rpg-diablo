@@ -3,7 +3,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 const { CombatSystem } = require('../game/combat');
-const { Monster } = require('../game/monsters');
+const { Monster, createSpiritWolf } = require('../game/monsters');
 const { Player } = require('../game/player');
 
 // ── Helper: mock player for processMonsterAttack ────────────────
@@ -682,6 +682,162 @@ describe('Phase 15.3 — Party Auras', () => {
       p.auraMoveBuff = 15;
       const data = p.serializeForPhone();
       expect(data.auraMoveBuff).toBe(15);
+    });
+  });
+});
+
+// ── Phase 15.4: Spirit Wolf ──────────────────────────────────────
+
+describe('Phase 15.4 — Spirit Wolf', () => {
+  describe('createSpiritWolf() factory', () => {
+    it('creates a friendly wolf with correct stats from owner', () => {
+      const owner = new Player('WolfOwner', 'ranger');
+      owner.recalcStats();
+      const wolf = createSpiritWolf(100, 200, owner);
+
+      expect(wolf.friendly).toBe(true);
+      expect(wolf.ownerId).toBe(owner.id);
+      expect(wolf.maxHp).toBe(Math.floor(owner.maxHp * 0.3));
+      expect(wolf.hp).toBe(wolf.maxHp);
+      expect(wolf.damage).toBe(Math.floor(owner.attackPower * 0.8));
+      expect(wolf.speed).toBe(200);
+      expect(wolf.expireTimer).toBe(10000);
+    });
+
+    it('wolf position matches spawn coordinates', () => {
+      const owner = new Player('PosTest', 'warrior');
+      owner.recalcStats();
+      const wolf = createSpiritWolf(42, 84, owner);
+      expect(wolf.x).toBe(42);
+      expect(wolf.y).toBe(84);
+    });
+
+    it('wolf type is spirit_wolf', () => {
+      const owner = new Player('TypeTest', 'mage');
+      owner.recalcStats();
+      const wolf = createSpiritWolf(0, 0, owner);
+      expect(wolf.type).toBe('spirit_wolf');
+    });
+
+    it('wolf xpReward is 0 (no XP for killing friendly summon)', () => {
+      const owner = new Player('XPTest', 'warrior');
+      owner.recalcStats();
+      const wolf = createSpiritWolf(0, 0, owner);
+      expect(wolf.xpReward).toBe(0);
+    });
+
+    it('wolf scales with owner stats', () => {
+      const weak = new Player('Weak', 'ranger');
+      weak.recalcStats();
+      const strong = new Player('Strong', 'warrior');
+      strong.recalcStats();
+      strong.attackPower = 500;
+      strong.maxHp = 1000;
+
+      const weakWolf = createSpiritWolf(0, 0, weak);
+      const strongWolf = createSpiritWolf(0, 0, strong);
+
+      expect(strongWolf.maxHp).toBeGreaterThan(weakWolf.maxHp);
+      expect(strongWolf.damage).toBeGreaterThan(weakWolf.damage);
+    });
+  });
+
+  describe('on-kill proc emits summon event', () => {
+    it('emits summon:spirit_wolf event when proc triggers', () => {
+      const combat = new CombatSystem();
+      const player = {
+        id: 'wolf-summoner', name: 'Summoner', alive: true,
+        attackPower: 100, spellPower: 0, critChance: 0,
+        x: 90, y: 90, attackRange: 120,
+        attackCooldown: 0, attackSpeed: 1000,
+        canAttack() { return this.attackCooldown <= 0; },
+        startAttackCooldown() { this.attackCooldown = this.attackSpeed; },
+        equipment: {}, setBonuses: {}, buffs: [],
+        hp: 200, maxHp: 200,
+        kills: 0, gold: 0, difficulty: 'normal',
+        gainXp() { return null; },
+        questManager: { notifyKill() {} },
+        talentBonuses: {
+          passives: {},
+          procs: [
+            { trigger: 'on_kill', chance: 1.0, effect: 'summon_spirit_wolf' },
+          ],
+          auras: [],
+        },
+      };
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 100;
+      monster.hp = 1;
+
+      combat.playerAttack(player, [monster]);
+
+      const summonEvents = combat.events.filter(e => e.type === 'summon:spirit_wolf');
+      expect(summonEvents).toHaveLength(1);
+      expect(summonEvents[0].playerId).toBe('wolf-summoner');
+      expect(summonEvents[0].x).toBe(monster.x);
+      expect(summonEvents[0].y).toBe(monster.y);
+    });
+
+    it('does not emit summon event if monster survives', () => {
+      const combat = new CombatSystem();
+      const player = {
+        id: 'wolf-no-kill', name: 'NoKill', alive: true,
+        attackPower: 10, spellPower: 0, critChance: 0,
+        x: 90, y: 90, attackRange: 120,
+        attackCooldown: 0, attackSpeed: 1000,
+        canAttack() { return this.attackCooldown <= 0; },
+        startAttackCooldown() { this.attackCooldown = this.attackSpeed; },
+        equipment: {}, setBonuses: {}, buffs: [],
+        hp: 200, maxHp: 200,
+        kills: 0, gold: 0, difficulty: 'normal',
+        gainXp() { return null; },
+        questManager: { notifyKill() {} },
+        talentBonuses: {
+          passives: {},
+          procs: [
+            { trigger: 'on_kill', chance: 1.0, effect: 'summon_spirit_wolf' },
+          ],
+          auras: [],
+        },
+      };
+      const monster = new Monster('skeleton', 100, 100, 0);
+      monster.maxHp = 5000;
+      monster.hp = 5000;
+
+      combat.playerAttack(player, [monster]);
+
+      const summonEvents = combat.events.filter(e => e.type === 'summon:spirit_wolf');
+      expect(summonEvents).toHaveLength(0);
+    });
+  });
+
+  describe('friendly monster serialization', () => {
+    it('serialize() includes friendly and ownerId', () => {
+      const owner = new Player('SerOwner', 'warrior');
+      owner.recalcStats();
+      const wolf = createSpiritWolf(50, 50, owner);
+      const data = wolf.serialize();
+      expect(data.friendly).toBe(true);
+      expect(data.ownerId).toBe(owner.id);
+    });
+
+    it('normal monster has friendly=false in serialize', () => {
+      const m = new Monster('skeleton', 0, 0, 0);
+      const data = m.serialize();
+      expect(data.friendly).toBe(false);
+    });
+  });
+
+  describe('Player.summonedWolf tracking', () => {
+    it('defaults to null', () => {
+      const p = new Player('WolfTrack', 'ranger');
+      expect(p.summonedWolf).toBeNull();
+    });
+
+    it('can be set to wolf id', () => {
+      const p = new Player('WolfSet', 'warrior');
+      p.summonedWolf = 'wolf-123';
+      expect(p.summonedWolf).toBe('wolf-123');
     });
   });
 });

@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #134 — Trace (tester)
+**Čas:** 2026-03-13 ~06:30
+**Co jsem udělal:**
+- Wrote 11 new tests for Phase 15.4 Spirit Wolf (50 total in phase15.test.js)
+- `createSpiritWolf()` factory: friendly flag, ownerId, stats from owner, position, type, xpReward=0, scaling
+- On-kill proc: emits `summon:spirit_wolf` event with correct playerId and coordinates
+- No summon event if monster survives (kill guard)
+- Friendly monster serialization: `friendly` and `ownerId` in serialize(), normal monster=false
+- Player.summonedWolf tracking: defaults to null, can be set
+- Full suite: **1220 tests, 26 suites — all pass**
+**Stav:** Phase 15 fully tested. Spirit wolf coverage: factory, combat proc, serialization, player tracking.
+---
+
 ### Cycle #133 — Sage (stylist)
 **Čas:** 2026-03-13 ~06:28
 **Co jsem udělala:**
