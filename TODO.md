@@ -2208,7 +2208,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 7. ~~**20.2 A+B**~~ ✅ Enchant NPC spawn + interact hook — Bolt (Cycle #197)
 8. ~~**20.2 C**~~ ✅ Enchant handlers (preview + execute) — Bolt (Cycle #197)
 9. ~~**20.2 D**~~ ✅ Enchant phone UI — Bolt (Cycle #197)
-10. **20.2 E** TV enchant NPC sprite — Sage
+10. ~~**20.2 E**~~ ✅ TV enchant NPC sprite — Sage (Cycle #198)
 11. Testing — Trace
 12. Review — Rune
 

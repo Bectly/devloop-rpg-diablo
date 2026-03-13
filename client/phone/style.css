@@ -3705,10 +3705,29 @@ html, body {
   font-weight: bold;
 }
 
-/* ─── Enchant Panel ───────────────────────────────────────── */
+/* Enchant Panel */
 #enchant-panel {
   font-family: 'Courier New', monospace;
 }
+#enchant-panel > div:not(:first-child) {
+  transition: border-color 0.2s, background 0.2s;
+}
+#enchant-panel > div:not(:first-child):active {
+  border-color: #cc44ff;
+  background: #2a1a3e;
+}
 #enchant-preview {
   font-family: 'Courier New', monospace;
+  transition: transform 0.2s ease-out;
+  animation: enchantSlideUp 0.2s ease-out;
+}
+@keyframes enchantSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+#enchant-preview button {
+  transition: background 0.15s, transform 0.1s;
+}
+#enchant-preview button:active {
+  transform: scale(0.95);
 }

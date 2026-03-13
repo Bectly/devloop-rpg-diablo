@@ -35,6 +35,49 @@ const Effects = (() => {
     }
   }
 
+  // ── Enchant NPC (Mystic) ──
+  function updateEnchantNpc(scene, state) {
+    if (state.world.enchantNpc) {
+      const npc = state.world.enchantNpc;
+      if (!scene.enchantNpcSprite) {
+        scene.enchantNpcSprite = scene.add.sprite(npc.x, npc.y, 'enchant_npc').setDepth(9).setScale(1.2);
+        scene.enchantNpcLabel = scene.add.text(npc.x, npc.y - 26, '\u2727 MYSTIC', {
+          fontSize: '10px',
+          fill: '#cc44ff',
+          fontFamily: 'Courier New',
+          fontStyle: 'bold',
+          backgroundColor: '#00000088',
+          padding: { x: 4, y: 2 },
+        }).setOrigin(0.5).setDepth(10);
+        scene.enchantNpcGlow = scene.add.graphics().setDepth(8);
+      }
+      const bob = Math.sin(Date.now() / 500) * 2;
+      scene.enchantNpcSprite.setPosition(npc.x, npc.y + bob);
+      scene.enchantNpcLabel.setPosition(npc.x, npc.y - 26 + bob);
+
+      // Pulsing purple glow ring
+      const glowAlpha = 0.3 + Math.sin(Date.now() / 400) * 0.15;
+      scene.enchantNpcGlow.clear();
+      scene.enchantNpcGlow.fillStyle(0xcc44ff, glowAlpha * 0.3);
+      scene.enchantNpcGlow.fillCircle(npc.x, npc.y + bob, 22);
+      scene.enchantNpcGlow.lineStyle(1, 0xcc44ff, glowAlpha);
+      scene.enchantNpcGlow.strokeCircle(npc.x, npc.y + bob, 22);
+    } else {
+      if (scene.enchantNpcSprite) {
+        scene.enchantNpcSprite.destroy();
+        scene.enchantNpcSprite = null;
+      }
+      if (scene.enchantNpcLabel) {
+        scene.enchantNpcLabel.destroy();
+        scene.enchantNpcLabel = null;
+      }
+      if (scene.enchantNpcGlow) {
+        scene.enchantNpcGlow.destroy();
+        scene.enchantNpcGlow = null;
+      }
+    }
+  }
+
   // ── Healing Shrines ──
   function updateShrines(scene, state) {
     if (!state.world.rooms) return;
@@ -163,6 +206,19 @@ const Effects = (() => {
       scene.shopNpcLabel.destroy();
       scene.shopNpcLabel = null;
     }
+    // Enchant NPC
+    if (scene.enchantNpcSprite) {
+      scene.enchantNpcSprite.destroy();
+      scene.enchantNpcSprite = null;
+    }
+    if (scene.enchantNpcLabel) {
+      scene.enchantNpcLabel.destroy();
+      scene.enchantNpcLabel = null;
+    }
+    if (scene.enchantNpcGlow) {
+      scene.enchantNpcGlow.destroy();
+      scene.enchantNpcGlow = null;
+    }
     // Shrines
     for (const [, shrine] of scene.shrineSprites) {
       if (shrine.label) shrine.label.destroy();
@@ -180,5 +236,5 @@ const Effects = (() => {
     }
   }
 
-  return { updateShopNpc, updateShrines, updateTraps, cleanupAll };
+  return { updateShopNpc, updateEnchantNpc, updateShrines, updateTraps, cleanupAll };
 })();

@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #198 — Sage (stylist)
+**Čas:** 2026-03-13 ~11:23
+**Co jsem udělal/a:**
+- **TV Enchant NPC sprite** (Step E): Purple-robed Mystic texture (hood, glowing purple eyes, staff with gem)
+- `updateEnchantNpc()` in effects.js — bobbing sprite, "✧ MYSTIC" purple label, pulsing purple glow ring
+- Cleanup in `cleanupAll()` for floor transitions
+- Polished phone enchant panel CSS: tap feedback on item rows, slide-up animation on preview, button press scale effect
+**Stav:** Phase 20.2 Enchanting ALL STEPS DONE (A-E). Phase 20 COMPLETE (4/4). Remaining: tests (Trace) + review (Rune).
+---
+
 ### Cycle #197 — Bolt (builder)
 **Čas:** 2026-03-13 ~11:18
 **Co jsem udělal/a:**

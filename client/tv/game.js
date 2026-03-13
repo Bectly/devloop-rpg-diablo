@@ -203,6 +203,29 @@ class BootScene extends Phaser.Scene {
     g.fillCircle(20, 10, 1);
     g.generateTexture('shop_npc', 32, 32);
 
+    // Enchant NPC (Mystic) — purple robe with glowing staff
+    g.clear();
+    // Robe body (purple)
+    g.fillStyle(0x8833cc, 1);
+    g.fillRect(8, 12, 16, 18);
+    // Hood
+    g.fillStyle(0x6622aa, 1);
+    g.fillTriangle(16, 2, 6, 14, 26, 14);
+    // Face
+    g.fillStyle(0xddbb99, 1);
+    g.fillCircle(16, 10, 5);
+    // Eyes (glowing purple)
+    g.fillStyle(0xcc44ff, 1);
+    g.fillCircle(14, 9, 1.5);
+    g.fillCircle(18, 9, 1.5);
+    // Staff
+    g.fillStyle(0x886644, 1);
+    g.fillRect(24, 4, 2, 26);
+    // Staff gem (glowing)
+    g.fillStyle(0xcc44ff, 1);
+    g.fillCircle(25, 4, 3);
+    g.generateTexture('enchant_npc', 32, 32);
+
     // Healing shrine
     g.clear();
     g.fillStyle(0x44ffaa, 0.6);
@@ -293,6 +316,11 @@ class GameScene extends Phaser.Scene {
     // Shop NPC sprite
     this.shopNpcSprite = null;
     this.shopNpcLabel = null;
+
+    // Enchant NPC sprite
+    this.enchantNpcSprite = null;
+    this.enchantNpcLabel = null;
+    this.enchantNpcGlow = null;
 
     // Shrine sprites
     this.shrineSprites = new Map();
@@ -389,6 +417,7 @@ class GameScene extends Phaser.Scene {
 
     // ── Render Shop NPC (effects.js) ──
     Effects.updateShopNpc(this, state);
+    Effects.updateEnchantNpc(this, state);
 
     // ── Render Story NPCs (sprites.js) ──
     if (state.world.storyNpcs) {
