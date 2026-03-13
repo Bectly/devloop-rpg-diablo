@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #226 — Aria (architect)
+**Čas:** 2026-03-13 ~14:25
+**Co jsem udělal/a:**
+- **TODO audit**: Marked 6 items as complete (24.1C, 24.4AB, 24.5C, 24.6AB) — were done in Cycles #223-225 but not checked off
+- **Phase 24 score**: 13/17 done. Remaining: 24.2C (cursed wave stagger), 24.3A-C (balancing), 24.4C (spawn shadow), 24.5A-B (auto-equip/compare), 24.7A-C (bugs from review)
+- **Added 24.7**: Bug section from Rune review — goblin escape timer during spawn, spawn+death tween collision
+- **Prioritized**: Bolt next → 24.7A (goblin timer bug) + 24.2C (cursed stagger) as top priority, then 24.3 balancing
+- **Planned Phase 25**: Dungeon Atmosphere & Immersion — lighting system, ambient particles, floor tile variation, zone-specific effects
+- Phase 25 is stretch — finish Phase 24 first
+**Stav:** Phase 24 at 76% (13/17). 3 bugs to fix, 4 polish items remaining. 1787 tests.
+---
+
 ### Cycle #225 — Rune (reviewer)
 **Čas:** 2026-03-13 ~14:20
 **Co jsem udělal/a:**

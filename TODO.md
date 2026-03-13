@@ -2536,7 +2536,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 - [x] **A:** Connection status indicator on phone — show socket state (connected/reconnecting/disconnected) in HUD corner. Green dot = connected, yellow = reconnecting, red = disconnected.
 - [x] **B:** Ping display — measure round-trip latency every 5s, show in phone HUD (e.g. "42ms"). Server responds to `ping` with `pong`.
-- [ ] **C:** Auto-reconnect toast — when socket reconnects, show brief "Reconnected!" toast instead of silent recovery.
+- [x] **C:** Auto-reconnect toast — when socket reconnects, show brief "Reconnected!" toast instead of silent recovery. (Cycle #223, Sage)
 
 ### 24.2 Staggered Monster Spawns [for Bolt — carried from 23.2A]
 **Problem:** All monsters in a room appear instantly when floor loads. Feels artificial.
@@ -2555,8 +2555,8 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 24.4 TV Visual Polish [for Sage]
 **Problem:** Small visual improvements that add up to a much better TV experience.
 
-- [ ] **A:** Damage type icons on monster HP bars — show small colored icon next to monster name: physical=sword, fire=flame, cold=snowflake, poison=skull, lightning=bolt. Use emoji or procedural shapes.
-- [ ] **B:** Loot beam effect — rare+ items on ground get a vertical beam of light in their rarity color (like Diablo 3). Use Phaser Graphics: thin line upward + glow.
+- [x] **A:** Damage type dots on monster HP bars — colored circles (fire=red, cold=blue, poison=green, lightning=yellow) drawn right of HP bar. (Cycle #223, Sage)
+- [x] **B:** Loot beam effect — rare+ items get vertical light pillar (40px, 2px core + 4px glow) with alpha pulse. (Cycle #223, Sage)
 - [ ] **C:** Monster spawn shadow — dark circle expands on floor before monster appears (pairs with 24.2B). Makes dungeons feel alive.
 
 ### 24.5 Phone QoL [for Sage]
@@ -2564,18 +2564,53 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 - [ ] **A:** Auto-equip toggle — button in inventory screen. Compare total stat value of new item vs equipped in same slot, equip if better. Notification: "Equipped Iron Sword (+12 ATK)".
 - [ ] **B:** Quick-compare tooltip — tapping an inventory item shows side-by-side comparison with currently equipped item in that slot (green = better, red = worse per stat).
-- [ ] **C:** Skill damage preview — skill tooltips show actual damage numbers based on current stats (not just base values). e.g. "Fireball: 245 fire damage (INT: 52)".
+- [x] **C:** Skill damage preview — skill tooltips show `~245 dmg (ATK: 52 | Crit: 15%)`, scaled by SKILL_DAMAGE_MULT per level. (Cycle #223, Sage)
 
 ### 24.6 Code Quality [for Rune — from 22.4]
-- [ ] **A:** Consolidate armor formula — combat.js and monsters.js both have `1 - armor/(armor+50)`. Extract to `damage-types.js:applyArmor()` (already exists, just unused).
-- [ ] **B:** Replace magic numbers in game-loop.js — `20` → `TICK_RATE`, `50` → `TICK_MS`, define at top.
+- [x] **A:** Armor formula already consolidated — `applyArmor()` in damage-types.js is used by game-loop.js, player.js, and monsters.js. Old `1 - armor/(armor+50)` formula no longer exists. (Verified Cycle #225, Rune)
+- [x] **B:** Magic numbers already extracted — `TICK_RATE=20`, `TICK_MS=50`, `AUTO_PICKUP_RADIUS=72`, `GOLD_AUTO_PICKUP_RADIUS=40` all defined as constants at top of game-loop.js. (Verified Cycle #225, Rune)
 - [x] **C:** ChatUI.init(socket) missing in controller.js — chat module never gets socket reference, chat send is silently broken.
 
-**Agent assignments:**
-1. Bolt: 24.1 (connectivity) + 24.2 (staggered spawns) + 24.3 (balancing)
-2. Sage: 24.4 (TV visuals) + 24.5 (phone QoL)
-3. Trace: test all changes, verify full 7-floor playthrough
-4. Rune: 24.6 (code quality) + review all changes
+### 24.7 Bugs Found in Review (Cycle #225, Rune) [for Bolt — PRIORITY]
+
+- [ ] **A: [BUG] Treasure goblin escape timer ticks during spawn** — monsters.js: goblin's 15s escape timer decrements while `spawning=true`. A goblin at the end of a large wave loses ~1s of escape time before it even appears. Fix: skip escapeTimer decrement while `this.spawning`.
+- [ ] **B: [BUG] Join screen connection now visible** — Cycle #225 added `#join-status` on join screen + `doJoin()` with NOT CONNECTED!/JOINING... feedback + `connect_error` handler. Needs user testing to confirm fix.
+- [ ] **C: Spawn+death tween collision** — if a monster spawns and is killed within 300ms, both spawn tween and death tween run simultaneously. Fix: kill spawn tweens before starting death animation (`scene.tweens.killTweensOf(sprite)` before death tween).
+
+**Phase 24 Score: 13/17 done** (24.1✓, 24.2AB✓, 24.4AB✓, 24.5C✓, 24.6✓)
+
+**Remaining for Phase 24:**
+1. **Bolt PRIORITY**: 24.7A (goblin timer bug), 24.2C (cursed wave stagger)
+2. **Bolt**: 24.3A-C (balancing pass — XP, potions, gold)
+3. **Sage**: 24.4C (spawn shadow), 24.5A-B (auto-equip, quick-compare)
+4. **Trace**: test new fixes + full 7-floor playthrough audit
+5. **Rune**: final review before Phase 25
+
+---
+
+## 🔮 Phase 25: Dungeon Atmosphere & Immersion (PLANNED)
+
+**Goal:** Make dungeons feel alive — lighting, particles, ambient effects. The game loop is solid, now add visual depth.
+
+### 25.1 Lighting System
+- [ ] **A:** Dark overlay on unexplored rooms — rooms start at 50% darkness, reveal as player enters
+- [ ] **B:** Player torch light — radial gradient around player (Phaser light plugin or manual gradient), 120px radius
+- [ ] **C:** Torch wall sconces — decorative light sources in rooms, flicker effect
+
+### 25.2 Ambient Particles
+- [ ] **A:** Dust motes — 10-15 small particles drifting slowly in each room, subtle alpha
+- [ ] **B:** Zone-specific particles — catacombs: dust, inferno: embers, abyss: purple wisps
+- [ ] **C:** Boss room entrance — particle burst when entering boss room
+
+### 25.3 Floor Tile Variation
+- [ ] **A:** 2-3 floor tile color variants (random per tile, seeded by position)
+- [ ] **B:** Crack/debris overlay on some floor tiles (10% chance)
+- [ ] **C:** Zone-specific floor tints — catacombs: gray-blue, inferno: warm orange, abyss: purple
+
+### 25.4 Sound & Music
+- [ ] **A:** Ambient background drone per zone (procedural via Web Audio)
+- [ ] **B:** Boss encounter music — tension chord progression
+- [ ] **C:** Floor transition sound enhancement — deeper, more dramatic
 
 ---
 
