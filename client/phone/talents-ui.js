@@ -4,6 +4,7 @@ const TalentsUI = (() => {
   let _treeData = null;    // full tree from server
   let _talents = {};       // player's allocated talents { id: rank }
   let _availablePoints = 0;
+  let _skillLevels = [1, 1, 1]; // Skill levels 1-5
   let _visible = false;
 
   // Branch color themes per class
@@ -28,6 +29,7 @@ const TalentsUI = (() => {
       _treeData = data.tree;
       _talents = data.talents || {};
       _availablePoints = data.availablePoints || 0;
+      _skillLevels = data.skillLevels || [1, 1, 1];
       if (_visible) render();
     });
   }
@@ -72,6 +74,87 @@ const TalentsUI = (() => {
     header.appendChild(points);
     container.appendChild(header);
 
+    const charClass = _treeData.className || 'warrior';
+
+    // ── Skill Leveling Section ──
+    const skillSection = document.createElement('div');
+    skillSection.className = 'skill-level-section';
+
+    const skillTitle = document.createElement('div');
+    skillTitle.className = 'skill-section-title';
+    skillTitle.textContent = 'SKILL LEVELS';
+    skillSection.appendChild(skillTitle);
+
+    const skillGrid = document.createElement('div');
+    skillGrid.className = 'skill-level-grid';
+
+    // We need to know the class to get skill names
+    const skillNames = {
+      warrior: ['Whirlwind', 'Charging Strike', 'Battle Shout'],
+      ranger: ['Arrow Volley', 'Sniper Shot', 'Shadow Step'],
+      mage: ['Meteor Strike', 'Blizzard', 'Chain Lightning'],
+    };
+    const classNames = skillNames[charClass] || skillNames.warrior;
+    const shortNames = {
+      warrior: ['WHL', 'CHG', 'SHT'],
+      ranger: ['VOL', 'SNP', 'SHD'],
+      mage: ['MTR', 'BLZ', 'CLN'],
+    };
+    const classShort = shortNames[charClass] || shortNames.warrior;
+
+    for (let i = 0; i < 3; i++) {
+      const lv = _skillLevels[i] || 1;
+      const isMax = lv >= 5;
+      const canLevel = _availablePoints > 0 && !isMax;
+
+      const card = document.createElement('div');
+      card.className = 'skill-level-card';
+      if (isMax) card.classList.add('maxed');
+      if (canLevel) card.classList.add('available');
+
+      const sName = document.createElement('div');
+      sName.className = 'skill-level-name';
+      sName.textContent = classShort[i];
+
+      const sLevel = document.createElement('div');
+      sLevel.className = 'skill-level-display';
+      sLevel.textContent = `${lv}/5`;
+      if (isMax) sLevel.style.color = '#ffd700';
+
+      const sBar = document.createElement('div');
+      sBar.className = 'skill-level-bar';
+      const sFill = document.createElement('div');
+      sFill.className = 'skill-level-fill';
+      sFill.style.width = `${(lv / 5) * 100}%`;
+      sBar.appendChild(sFill);
+
+      card.appendChild(sName);
+      card.appendChild(sLevel);
+      card.appendChild(sBar);
+
+      if (canLevel) {
+        const levelUp = () => {
+          if (_socket) {
+            Sound.uiClick();
+            if (navigator.vibrate) navigator.vibrate(30);
+            _socket.emit('skill:level-up', { skillIndex: i });
+          }
+        };
+        card.addEventListener('touchstart', (e) => { e.preventDefault(); levelUp(); });
+        card.addEventListener('click', levelUp);
+
+        const upBtn = document.createElement('div');
+        upBtn.className = 'skill-level-up-btn';
+        upBtn.textContent = '+';
+        card.appendChild(upBtn);
+      }
+
+      skillGrid.appendChild(card);
+    }
+
+    skillSection.appendChild(skillGrid);
+    container.appendChild(skillSection);
+
     // Branch columns
     const branchGrid = document.createElement('div');
     branchGrid.className = 'talent-branches';
@@ -80,7 +163,6 @@ const TalentsUI = (() => {
     if (!branches) return;
 
     const branchKeys = Object.keys(branches);
-    const charClass = _treeData.className || 'warrior';
     const classColors = BRANCH_COLORS[charClass] || {};
 
     for (const branchKey of branchKeys) {
@@ -198,7 +280,7 @@ const TalentsUI = (() => {
     if (totalAllocated > 0) {
       const respecBtn = document.createElement('button');
       respecBtn.className = 'talent-respec-btn';
-      respecBtn.textContent = 'RESPEC TALENTS';
+      respecBtn.textContent = 'RESPEC ALL';
 
       const doRespec = () => {
         Sound.uiClick();

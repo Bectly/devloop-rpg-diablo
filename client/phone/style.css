@@ -3185,3 +3185,97 @@ html, body {
   flex-shrink: 0;
   letter-spacing: 1px;
 }
+
+/* ── Skill Level Badge (on action buttons) ── */
+.skill-level-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 9px;
+  font-weight: bold;
+  color: #7cf;
+  background: rgba(0,0,0,0.7);
+  padding: 1px 3px;
+  border-radius: 3px;
+  line-height: 1;
+}
+.skill-level-badge.max-level {
+  color: #ffd700;
+  text-shadow: 0 0 4px #ffa500;
+}
+
+/* ── Skill Level Section (in Talent Tree) ── */
+.skill-level-section {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+}
+.skill-section-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: #aaa;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+.skill-level-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+.skill-level-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 6px;
+  text-align: center;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.skill-level-card.available {
+  border-color: rgba(100,200,255,0.5);
+  cursor: pointer;
+}
+.skill-level-card.available:active {
+  background: rgba(100,200,255,0.15);
+}
+.skill-level-card.maxed {
+  border-color: rgba(255,215,0,0.4);
+}
+.skill-level-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ddd;
+  margin-bottom: 2px;
+}
+.skill-level-display {
+  font-size: 14px;
+  font-weight: bold;
+  color: #7cf;
+  margin-bottom: 4px;
+}
+.skill-level-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.skill-level-fill {
+  height: 100%;
+  background: linear-gradient(to right, #4488ff, #7cf);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+.skill-level-card.maxed .skill-level-fill {
+  background: linear-gradient(to right, #ffa500, #ffd700);
+}
+.skill-level-up-btn {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #7cf;
+  line-height: 1;
+}

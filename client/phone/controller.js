@@ -473,6 +473,14 @@ function updateHUD(stats) {
         mpEl.className = 'skill-mp-cost';
         mpEl.textContent = skill.mpCost;
         btn.appendChild(mpEl);
+        // Level badge
+        if (skill.level && skill.level > 1) {
+          const lvBadge = document.createElement('span');
+          lvBadge.className = 'skill-level-badge';
+          lvBadge.textContent = `L${skill.level}`;
+          if (skill.level >= 5) lvBadge.classList.add('max-level');
+          btn.appendChild(lvBadge);
+        }
         // Cooldown overlay
         let overlay = btn.querySelector('.cooldown-overlay');
         if (!overlay) {
@@ -495,6 +503,14 @@ function updateHUD(stats) {
         mpEl.className = 'skill-mp-cost';
         mpEl.textContent = skill.mpCost;
         btn.appendChild(mpEl);
+        // Level badge
+        if (skill.level && skill.level > 1) {
+          const lvBadge = document.createElement('span');
+          lvBadge.className = 'skill-level-badge';
+          lvBadge.textContent = `L${skill.level}`;
+          if (skill.level >= 5) lvBadge.classList.add('max-level');
+          btn.appendChild(lvBadge);
+        }
       }
     }
   }

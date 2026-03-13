@@ -377,13 +377,24 @@ window.Screens = (() => {
 
     const nameEl = document.createElement('div');
     nameEl.className = 'skill-tooltip-name';
-    nameEl.textContent = skillInfo.name;
+    const skillLevel = skill ? (skill.level || 1) : 1;
+    nameEl.textContent = skillLevel >= 5
+      ? `${skillInfo.name} [MAX]`
+      : `${skillInfo.name} Lv.${skillLevel}`;
 
     const statsEl = document.createElement('div');
     statsEl.className = 'skill-tooltip-stats';
-    const mpText = skill ? `MP: ${skill.mpCost}` : '';
-    const cdText = skill ? `CD: ${(skill.cooldown / 1000).toFixed(1)}s` : '';
-    statsEl.textContent = [mpText, cdText].filter(Boolean).join('  |  ');
+    if (skill) {
+      const mpBase = skill.baseMpCost || skill.mpCost;
+      const cdBase = skill.baseCooldown || skill.cooldown;
+      const mpText = skill.mpCost < mpBase
+        ? `MP: ${skill.mpCost} (${mpBase})`
+        : `MP: ${skill.mpCost}`;
+      const cdText = skill.cooldown < cdBase
+        ? `CD: ${(skill.cooldown / 1000).toFixed(1)}s (${(cdBase / 1000).toFixed(1)}s)`
+        : `CD: ${(skill.cooldown / 1000).toFixed(1)}s`;
+      statsEl.textContent = [mpText, cdText].join('  |  ');
+    }
 
     const descEl = document.createElement('div');
     descEl.className = 'skill-tooltip-desc';

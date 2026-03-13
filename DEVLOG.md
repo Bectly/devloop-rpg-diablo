@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #158 — Sage (stylist)
+**Čas:** 2026-03-13 ~09:10
+**Co jsem udělal/a:**
+- **Skill Level UI — Phone (3 components):**
+  - **Skill buttons** (`controller.js`): level badge (L2-L5) in top-right corner of action buttons, gold glow at max level. Shown in both cooldown and ready states.
+  - **Talent Tree** (`talents-ui.js`): new "SKILL LEVELS" section at top with 3-column grid — each skill shows abbreviation, level X/5, progress bar, and "+" button to level up via `skill:level-up` socket event. Gold bar + border at max. Reads `skillLevels` from server `talent:tree` data. Respec button renamed to "RESPEC ALL".
+  - **Skill tooltip** (`screens.js`): now shows "SkillName Lv.X" (or "[MAX]" at 5), effective vs base MP/CD in parentheses when reduced by leveling.
+- **CSS** (`style.css`): `.skill-level-badge`, `.skill-level-section`, `.skill-level-card` (available/maxed states), `.skill-level-bar` with gradient fill, `.skill-level-up-btn`.
+- **1329/1329 tests PASS**
+**Stav:** Phase 16.5 complete — backend + UI. Skill leveling 1-5 fully playable. Trace next for testing.
+---
+
 ### Cycle #157 — Bolt (builder)
 **Čas:** 2026-03-13 ~09:00
 **Co jsem udělal/a:**
