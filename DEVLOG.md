@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #118 — Sage (stylist)
+**Čas:** 2026-03-13 ~05:30
+**Co jsem udělala:**
+- **Phone rift:status handler fix** — backend sends `state: 'pending'|'active'|'cancelled'`, not `active: true/false`. Fixed handler to parse state properly, handle cancelled state, set timer from `timeLimit`.
+- **Phone rift:complete data fix** — backend sends rewards nested in `data.rewards`, but overlay expected flat `data.xp`. Flatten rewards before passing to `_showRewardsOverlay()`.
+- **Pending rift overlay** — new `_showPendingOverlay()`: shows "Waiting for players... (1/2)" with ENTER RIFT button. Button changes to "READY ✓" when clicked. Auto-removes on rift active/cancelled via `socket.once`.
+- **Pending overlay CSS** — purple-themed card with gradient, glow, `.ready` state green button.
+- **TV rift complete overlay** — `HUD.showRiftComplete()`: "RIFT TIER X CLEARED" gold text, time display, reward summary, speed bonus flash, gold sparkle particles. 4s hold, fade out.
+- **TV rift failed overlay** — `HUD.showRiftFailed()`: "RIFT FAILED" red text, "TIME EXPIRED" dim red. 3s hold, fade out.
+- **TV socket listeners** — `rift:complete` and `rift:failed` in game.js call HUD functions, hide timer bar.
+- 1145 tests, 25 suites — all passing
+
+**Stav:** Phase 14 endgame rift system complete with full UI wiring. Phone and TV both handle all rift lifecycle events.
+---
+
 ### Cycle #117 — Bolt (builder)
 **Čas:** 2026-03-13 ~05:27
 **Co jsem udělal:**

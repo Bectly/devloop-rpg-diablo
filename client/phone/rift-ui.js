@@ -55,15 +55,27 @@ const RiftUI = (() => {
     _socket = socket;
 
     socket.on('rift:status', (data) => {
-      _riftActive    = data.active || false;
+      // Backend sends state: 'pending' | 'active' | 'cancelled'
+      if (data.state === 'cancelled') {
+        _riftActive = false;
+        _stopTimerInterval();
+        _hideTimerBar();
+        if (_visible) render();
+        return;
+      }
+      _riftActive    = data.state === 'active';
       _riftTier      = data.tier   || 0;
       _riftModifiers = data.modifiers || [];
-      _riftTimer     = data.timeRemaining || 0;
-      _maxUnlockedTier = data.maxUnlockedTier || 1;
+      _riftTimer     = data.timeLimit || 0;
       if (data.keystones !== undefined) _keystones = data.keystones;
 
       _updateTimerBar();
       _updateKeystoneBadge();
+
+      // If pending, show waiting message
+      if (data.state === 'pending') {
+        _showPendingOverlay(data);
+      }
 
       if (_visible) render();
     });
@@ -77,8 +89,16 @@ const RiftUI = (() => {
       _riftActive = false;
       _stopTimerInterval();
       _hideTimerBar();
-      _showRewardsOverlay(data, false);
-      if (data.keystones !== undefined) _keystones = data.keystones;
+      // Flatten rewards for overlay: backend sends { rewards: { xp, gold, keystones, ... }, timeRemaining, ... }
+      const rewardData = {
+        ...(data.rewards || {}),
+        timeRemaining: data.timeRemaining,
+        timeLimit: data.tier ? _tierDef(data.tier).timeLimit : 0,
+      };
+      _showRewardsOverlay(rewardData, false);
+      if (data.rewards && data.rewards.keystones !== undefined) {
+        _keystones += data.rewards.keystones;
+      }
       _updateKeystoneBadge();
     });
 
@@ -501,6 +521,55 @@ const RiftUI = (() => {
     } else {
       if (navigator.vibrate) navigator.vibrate([50, 30, 80, 30, 120]);
     }
+  }
+
+  // ─── Pending Overlay (waiting for co-op partner) ─────────────────
+  function _showPendingOverlay(data) {
+    const existing = document.getElementById('rift-pending-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'rift-pending-overlay';
+    overlay.className = 'rift-pending-overlay';
+
+    const card = document.createElement('div');
+    card.className = 'rift-pending-card';
+
+    const title = document.createElement('div');
+    title.className = 'rift-pending-title';
+    title.textContent = `⚔️ Rift Tier ${data.tier || 1}`;
+
+    const status = document.createElement('div');
+    status.className = 'rift-pending-status';
+    status.textContent = `Waiting for players... (${data.readyCount || 1}/${data.totalPlayers || 2})`;
+
+    const enterBtn = document.createElement('button');
+    enterBtn.className = 'rift-pending-enter';
+    enterBtn.textContent = 'ENTER RIFT';
+    const doEnter = () => {
+      if (_socket) {
+        Sound.uiClick();
+        _socket.emit('rift:enter');
+        enterBtn.disabled = true;
+        enterBtn.textContent = 'READY ✓';
+        enterBtn.classList.add('ready');
+      }
+    };
+    enterBtn.addEventListener('touchstart', (e) => { e.preventDefault(); doEnter(); });
+    enterBtn.addEventListener('click', doEnter);
+
+    card.appendChild(title);
+    card.appendChild(status);
+    card.appendChild(enterBtn);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // Auto-remove when rift becomes active (handled by rift:status active)
+    const cleanup = () => {
+      const el = document.getElementById('rift-pending-overlay');
+      if (el) el.remove();
+    };
+    if (_socket) _socket.once('rift:status', (d) => { if (d.state === 'active' || d.state === 'cancelled') cleanup(); });
   }
 
   // ─── Guardian Alert Flash ─────────────────────────────────────────

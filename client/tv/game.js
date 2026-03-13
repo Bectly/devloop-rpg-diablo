@@ -788,6 +788,29 @@ socket.on('chest:opened', (data) => {
   }
 });
 
+socket.on('rift:complete', (data) => {
+  console.log('[TV] Rift complete:', data);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.hideRiftTimer();
+      HUD.showRiftComplete(scene, data);
+      Sound.victory();
+    }
+  }
+});
+
+socket.on('rift:failed', (data) => {
+  console.log('[TV] Rift failed:', data);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.hideRiftTimer();
+      HUD.showRiftFailed(scene, data);
+    }
+  }
+});
+
 socket.on('game:victory', (data) => {
   console.log('[TV] VICTORY!', data);
   if (window.gameInstance) {

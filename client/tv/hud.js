@@ -1125,6 +1125,154 @@ window.HUD = {
     timeText.setText(`${mins}:${secs.toString().padStart(2, '0')}`);
   },
 
+  // ── Rift Complete Overlay ──
+  showRiftComplete(scene, data) {
+    const GAME_W = 1280;
+    const GAME_H = 720;
+
+    const overlay = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.7)
+      .setScrollFactor(0).setDepth(2000);
+
+    // "RIFT TIER X CLEARED"
+    const titleText = scene.add.text(GAME_W / 2, GAME_H / 2 - 40, `RIFT TIER ${data.tier} CLEARED`, {
+      fontSize: '28px', fontFamily: 'Courier New', color: '#ffcc00', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+
+    // Time display "Time: M:SS"
+    const totalSec = Math.floor((data.timeElapsed || 0) / 1000);
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    const timeDisplay = scene.add.text(GAME_W / 2, GAME_H / 2 - 6, `Time: ${mins}:${secs.toString().padStart(2, '0')}`, {
+      fontSize: '18px', fontFamily: 'Courier New', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 3,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+
+    // Reward summary "+500xp +200g"
+    const r = data.rewards || {};
+    const rewardParts = [];
+    if (r.xp) rewardParts.push(`+${r.xp}xp`);
+    if (r.gold) rewardParts.push(`+${r.gold}g`);
+    if (r.keystones) rewardParts.push(`+${r.keystones} keystone${r.keystones > 1 ? 's' : ''}`);
+    const rewardStr = rewardParts.join(' ') || '';
+
+    const rewardText = scene.add.text(GAME_W / 2, GAME_H / 2 + 22, rewardStr, {
+      fontSize: '16px', fontFamily: 'Courier New', color: '#44ff44', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+
+    const allObjs = [overlay, titleText, timeDisplay, rewardText];
+
+    // Speed bonus flashing text
+    let bonusText = null;
+    if (r.timeBonus) {
+      bonusText = scene.add.text(GAME_W / 2, GAME_H / 2 + 48, 'SPEED BONUS!', {
+        fontSize: '18px', fontFamily: 'Courier New', color: '#ffcc00', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 3,
+      }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+      allObjs.push(bonusText);
+
+      // Flashing tween
+      scene.tweens.add({
+        targets: bonusText,
+        alpha: { from: 0.3, to: 1 },
+        duration: 300,
+        yoyo: true,
+        repeat: -1,
+        delay: 500,
+      });
+    }
+
+    // Fade in with scale pop on title
+    scene.tweens.add({
+      targets: titleText, alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 500, ease: 'Back.easeOut',
+    });
+    scene.tweens.add({
+      targets: timeDisplay, alpha: 1,
+      duration: 400, delay: 200,
+    });
+    scene.tweens.add({
+      targets: rewardText, alpha: 1,
+      duration: 400, delay: 350,
+    });
+    if (bonusText) {
+      scene.tweens.add({
+        targets: bonusText, alpha: 1,
+        duration: 400, delay: 500,
+      });
+    }
+
+    // Gold sparkle particles
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const px = GAME_W / 2 + Math.cos(angle) * 220;
+      const py = GAME_H / 2 + Math.sin(angle) * 50;
+      const spark = scene.add.circle(GAME_W / 2, GAME_H / 2, 2, 0xffcc00, 0.9);
+      spark.setScrollFactor(0).setDepth(2002);
+      scene.tweens.add({
+        targets: spark,
+        x: px, y: py, alpha: 0,
+        duration: 700,
+        delay: 100 + i * 40,
+        ease: 'Cubic.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+
+    // Hold 4 seconds, then fade out
+    scene.time.delayedCall(4000, () => {
+      scene.tweens.add({
+        targets: allObjs,
+        alpha: 0, duration: 500,
+        onComplete: () => { allObjs.forEach(o => o.destroy()); },
+      });
+    });
+  },
+
+  // ── Rift Failed Overlay ──
+  showRiftFailed(scene, data) {
+    const GAME_W = 1280;
+    const GAME_H = 720;
+
+    const overlay = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.7)
+      .setScrollFactor(0).setDepth(2000);
+
+    // "RIFT FAILED"
+    const titleText = scene.add.text(GAME_W / 2, GAME_H / 2 - 20, 'RIFT FAILED', {
+      fontSize: '28px', fontFamily: 'Courier New', color: '#ff4444', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+
+    // Reason text
+    const reasonStr = data.reason === 'timeout' ? 'TIME EXPIRED' : (data.reason || 'FAILED').toUpperCase();
+    const reasonText = scene.add.text(GAME_W / 2, GAME_H / 2 + 16, reasonStr, {
+      fontSize: '16px', fontFamily: 'Courier New', color: '#993333',
+      stroke: '#000000', strokeThickness: 3,
+    }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+
+    const allObjs = [overlay, titleText, reasonText];
+
+    // Fade in with scale pop
+    scene.tweens.add({
+      targets: titleText, alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 500, ease: 'Back.easeOut',
+    });
+    scene.tweens.add({
+      targets: reasonText, alpha: 1,
+      duration: 400, delay: 250,
+    });
+
+    // Hold 3 seconds, then fade out
+    scene.time.delayedCall(3000, () => {
+      scene.tweens.add({
+        targets: allObjs,
+        alpha: 0, duration: 500,
+        onComplete: () => { allObjs.forEach(o => o.destroy()); },
+      });
+    });
+  },
+
   // ── Chat System ──
   _chatBubbles: [],
   _chatLog: [],
