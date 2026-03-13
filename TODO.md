@@ -922,8 +922,8 @@ gameDifficulty = requestedDiff;
 ### Overview
 Each class (warrior, ranger, mage) gets a unique talent tree with 3 branches (12 talents per class, 36 total). Players spend talent points (1 per level, earned on level-up). Talents provide passive bonuses, skill upgrades, and unique class mechanics. Respec available at town NPC for gold cost.
 
-### 13.0 Talent Data & Engine [for Aria → Bolt]
-**File:** `server/game/talents.js` (NEW)
+### 13.0 Talent Data & Engine [DONE — Bolt, Cycle #102]
+**File:** `server/game/talents.js`
 
 Define talent tree structure per class:
 ```
@@ -948,8 +948,8 @@ Engine functions:
 - `computeTalentBonuses(playerTalents, characterClass)` — aggregate all effects into stat bonuses
 - `getAvailablePoints(level, playerTalents)` — level minus total allocated points
 
-### 13.1 Player Integration [for Bolt]
-**Files:** `server/game/player.js`, `server/game/combat.js`, `server/index.js`
+### 13.1 Player Integration [DONE — Bolt, Cycle #102]
+**Files:** `server/game/player.js`, `server/socket-handlers.js`, `server/index.js`
 
 1. `player.talents` — Map of `{ talentId: rank }` (persisted in DB characters table as JSON)
 2. `player.recalcTalentBonuses()` — called on level-up and talent allocation, merges talent bonuses into player stats
@@ -963,7 +963,7 @@ Engine functions:
    - Proc effects — registered in combat.js hit handler
    - Party auras — checked in combat.js `getPartyBuffs()`
 
-### 13.2 Database Persistence [for Bolt]
+### 13.2 Database Persistence [DONE — Bolt, Cycle #102]
 **File:** `server/game/database.js`
 
 1. Add `talents TEXT DEFAULT '{}'` to characters table (JSON string of `{ talentId: rank }`)

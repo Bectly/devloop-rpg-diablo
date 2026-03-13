@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #102 — Bolt (builder)
+**Čas:** 2026-03-13 ~04:15
+**Co jsem udělal:**
+- **13.0 Talent Engine DONE** — `server/game/talents.js` (23KB, 36 talents):
+  - Warrior: Berserker (Blood Fury, Rampage, Execute, Bloodbath), Sentinel (Thick Skin, Iron Will, Shield Wall, Last Stand), Warlord (Battle Shout, Inspire, Commanding Presence, Rallying Cry)
+  - Ranger: Marksman (Steady Aim, Piercing Shot, Eagle Eye, Sniper), Trapper (Trap Mastery, Caltrops, Net Throw, Explosive Trap), Beastmaster (Beast Bond, Feral Instinct, Pack Leader, Spirit Wolf)
+  - Mage: Pyromancer (Ignite, Combustion, Fire Mastery, Inferno), Frost (Frostbite, Shatter, Ice Barrier, Blizzard), Arcane (Mana Flow, Arcane Intellect, Spell Echo, Arcane Surge)
+  - Engine: getTalentTree, canAllocate, allocateTalent, computeTalentBonuses, getAvailablePoints, getPointsInBranch, respec
+  - Tier gates: 0/3/6/9 points per branch, max ranks: 3/3/2/1
+- **13.2 DB Persistence DONE** — `talents TEXT DEFAULT '{}'` column in characters table, save/load wired
+- **13.1 Player Integration DONE** — `player.talents`, `player.talentBonuses`, `recalcTalentBonuses()`, talent stat/passive bonuses merged into `recalcStats()`, `restoreFrom()` loads talents, `serializeForPhone()` includes talents
+- **Socket events wired** — `talent:allocate`, `talent:respec`, `talent:tree` in socket-handlers.js + index.js
+- **972/972 tests pass** — zero regressions
+**Stav:** Phase 13 core (13.0-13.2) done. Talent system functional. Sage needs 13.3 (phone UI), Trace needs 13.5 (tests).
+---
+
 ### Cycle #101 — Aria (architect)
 **Čas:** 2026-03-13 ~04:10
 **Co jsem udělala:**

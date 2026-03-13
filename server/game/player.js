@@ -136,6 +136,10 @@ class Player {
     // Kill counter (for victory stats)
     this.kills = 0;
 
+    // Talents (map of talentId → rank)
+    this.talents = {};
+    this.talentBonuses = null; // cached result from computeTalentBonuses
+
     // Quests
     this.questManager = new QuestManager();
 
@@ -146,13 +150,31 @@ class Player {
     this.debuffs = [];
   }
 
+  recalcTalentBonuses() {
+    try {
+      const { computeTalentBonuses } = require('./talents');
+      this.talentBonuses = computeTalentBonuses(this.talents, this.characterClass);
+    } catch (_) {
+      this.talentBonuses = null;
+    }
+    this.recalcStats();
+  }
+
   recalcStats() {
     const s = this.stats;
     const eb = this.equipBonuses;
-    const totalStr = s.str + eb.str;
-    const totalDex = s.dex + eb.dex;
-    const totalInt = s.int + eb.int;
-    const totalVit = s.vit + eb.vit;
+    const tb = this.talentBonuses;
+
+    // Talent stat bonuses (additive to base)
+    const tStr = tb ? (tb.statBonuses.str || 0) : 0;
+    const tDex = tb ? (tb.statBonuses.dex || 0) : 0;
+    const tInt = tb ? (tb.statBonuses.int || 0) : 0;
+    const tVit = tb ? (tb.statBonuses.vit || 0) : 0;
+
+    const totalStr = s.str + eb.str + tStr;
+    const totalDex = s.dex + eb.dex + tDex;
+    const totalInt = s.int + eb.int + tInt;
+    const totalVit = s.vit + eb.vit + tVit;
 
     this.maxHp = 100 + (totalVit * 10) + (this.level * 15);
     this.maxMp = 50 + (totalInt * 5) + (this.level * 8);
@@ -161,6 +183,14 @@ class Player {
     this.dodgeChance = totalDex * 0.5;
     this.attackPower = eb.damage + (totalStr * 2);
     this.spellPower = totalInt * 3;
+
+    // Talent passives
+    if (tb && tb.passives) {
+      if (tb.passives.armor) this.armor += tb.passives.armor;
+      if (tb.passives.crit_chance) this.critChance += tb.passives.crit_chance;
+      if (tb.passives.dodge_chance) this.dodgeChance += tb.passives.dodge_chance;
+      if (tb.passives.max_mp_percent) this.maxMp = Math.floor(this.maxMp * (1 + tb.passives.max_mp_percent / 100));
+    }
 
     if (this.equipment.weapon) {
       const w = this.equipment.weapon;
@@ -285,7 +315,9 @@ class Player {
     this.recalcStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
-    return { level: this.level, freeStatPoints: this.freeStatPoints };
+    const { getAvailablePoints } = require('./talents');
+    const talentPoints = getAvailablePoints(this.level, this.talents);
+    return { level: this.level, freeStatPoints: this.freeStatPoints, talentPoints };
   }
 
   allocateStat(stat) {
@@ -632,8 +664,14 @@ class Player {
       }
     }
 
+    // Restore talents
+    if (savedData.talents && typeof savedData.talents === 'object') {
+      this.talents = savedData.talents;
+    }
+
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
+    this.recalcTalentBonuses();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
   }
@@ -680,6 +718,8 @@ class Player {
       quests: this.questManager.getActiveQuests(),
       activeSets: this.activeSets,
       setBonuses: this.setBonuses,
+      talents: this.talents,
+      talentBonuses: this.talentBonuses,
     };
   }
 }

@@ -608,6 +608,75 @@ exports.handleLevelupStat = (socket, data, { players }) => {
   }
 };
 
+// ── Talent Allocation ──
+exports.handleTalentAllocate = (socket, data, { players, controllerSockets }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+  if (!data || !data.talentId) return;
+
+  const { canAllocate, allocateTalent, getTalentTree, getAvailablePoints } = require('./game/talents');
+  const check = canAllocate(player.characterClass, player.talents, data.talentId, player.level);
+  if (!check.ok) {
+    socket.emit('notification', { text: check.reason || 'Cannot allocate talent', type: 'error' });
+    return;
+  }
+
+  const result = allocateTalent(player.characterClass, player.talents, data.talentId, player.level);
+  if (!result.ok) {
+    socket.emit('notification', { text: result.reason || 'Allocation failed', type: 'error' });
+    return;
+  }
+
+  player.talents = result.talents;
+  player.recalcTalentBonuses();
+
+  socket.emit('talent:tree', {
+    tree: getTalentTree(player.characterClass),
+    talents: player.talents,
+    availablePoints: getAvailablePoints(player.level, player.talents),
+  });
+  socket.emit('stats:update', player.serializeForPhone());
+  socket.emit('notification', { text: 'Talent allocated!', type: 'info' });
+};
+
+// ── Talent Respec ──
+exports.handleTalentRespec = (socket, data, { players }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+
+  const { respec, getTalentTree, getAvailablePoints } = require('./game/talents');
+  const cost = 100 * player.level;
+  if (player.gold < cost) {
+    socket.emit('notification', { text: `Need ${cost} gold to respec`, type: 'error' });
+    return;
+  }
+
+  player.gold -= cost;
+  player.talents = respec();
+  player.recalcTalentBonuses();
+
+  socket.emit('talent:tree', {
+    tree: getTalentTree(player.characterClass),
+    talents: player.talents,
+    availablePoints: getAvailablePoints(player.level, player.talents),
+  });
+  socket.emit('stats:update', player.serializeForPhone());
+  socket.emit('notification', { text: `Respec done! (-${cost} gold)`, type: 'info' });
+};
+
+// ── Talent Tree Request ──
+exports.handleTalentTree = (socket, data, { players }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+
+  const { getTalentTree, getAvailablePoints } = require('./game/talents');
+  socket.emit('talent:tree', {
+    tree: getTalentTree(player.characterClass),
+    talents: player.talents,
+    availablePoints: getAvailablePoints(player.level, player.talents),
+  });
+};
+
 // ── Request Inventory ──
 exports.handleInventoryRequest = (socket, data, { players, inventories }) => {
   const player = players.get(socket.id);
