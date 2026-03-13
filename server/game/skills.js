@@ -572,8 +572,22 @@ function executeBuffDebuff(player, skill, monsters, allPlayers, skillLevel = 1) 
       effect: skill.effect,
       duration: skill.duration,
       skillName: skill.name,
-      partyCritBonus: l5 && l5.partyCrit ? l5.partyCrit : 0,
     });
+  }
+
+  // L5 bonus: party crit buff
+  if (l5 && l5.partyCrit) {
+    for (const p of targets) {
+      if (!p.alive) continue;
+      p.buffs.push({ effect: 'crit_up', value: l5.partyCrit, remaining: skill.duration });
+      results.push({
+        type: 'buff:apply',
+        targetId: p.id,
+        effect: 'crit_up',
+        value: l5.partyCrit,
+        duration: skill.duration,
+      });
+    }
   }
 
   if (skill.fearRadius && skill.fearDuration) {

@@ -33,9 +33,11 @@ class CombatSystem {
     const variance = 0.85 + Math.random() * 0.3;
     baseDamage = Math.floor(baseDamage * variance);
 
-    // Crit check
+    // Crit check (includes crit_up buff from Battle Shout L5)
+    const critBuff = player.buffs.find(b => b.effect === 'crit_up');
+    const effectiveCrit = player.critChance + (critBuff ? critBuff.value : 0);
     let isCrit = false;
-    if (Math.random() * 100 < player.critChance) {
+    if (Math.random() * 100 < effectiveCrit) {
       baseDamage = Math.floor(baseDamage * 2.0);
       isCrit = true;
     }

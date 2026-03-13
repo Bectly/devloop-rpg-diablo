@@ -330,6 +330,38 @@ describe('Battle Shout (buff_debuff)', () => {
     expect(effectEvent.y).toBe(player.y);
     expect(effectEvent.radius).toBe(150);
   });
+
+  it('L5: applies crit_up buff to all party members (+5% crit)', () => {
+    const p2 = new Player('Ally', 'ranger');
+    p2.recalcStats();
+    player.skillLevels = [1, 1, 5];
+
+    combat.playerSkill(player, 2, [], [player, p2]);
+
+    const critBuff1 = player.buffs.find(b => b.effect === 'crit_up');
+    const critBuff2 = p2.buffs.find(b => b.effect === 'crit_up');
+
+    expect(critBuff1).toBeDefined();
+    expect(critBuff1.value).toBe(5);
+    expect(critBuff2).toBeDefined();
+    expect(critBuff2.value).toBe(5);
+  });
+
+  it('L5: crit_up buff makes player always crit when critChance=0 + value=100', () => {
+    player.critChance = 0;
+    player.buffs.push({ effect: 'crit_up', value: 100, remaining: 8000 });
+
+    const result = combat.calcPlayerDamage(player);
+    expect(result.isCrit).toBe(true);
+  });
+
+  it('L5: no crit_up buff at skill level < 5', () => {
+    player.skillLevels = [1, 1, 4];
+    combat.playerSkill(player, 2, [], [player]);
+
+    const critBuff = player.buffs.find(b => b.effect === 'crit_up');
+    expect(critBuff).toBeUndefined();
+  });
 });
 
 // ── Fear mechanic (monsters.js) ──────────────────────────────────
