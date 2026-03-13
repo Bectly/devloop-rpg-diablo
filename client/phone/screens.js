@@ -748,7 +748,7 @@ window.Screens = (() => {
     screen.className = 'hidden';
     screen.innerHTML = `
       <div class="ldb-header">
-        <span class="ldb-title">LEADERBOARD</span>
+        <span class="ldb-title">\uD83C\uDFC6 LEADERBOARD</span>
         <button class="ldb-close" id="ldb-close">&times;</button>
       </div>
       <div class="ldb-tabs">

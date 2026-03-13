@@ -466,6 +466,19 @@ function showVictoryScreen(data) {
     handleNewGame();
   });
   freshBtn.addEventListener('click', handleNewGame);
+
+  // "View Leaderboard" button on victory screen
+  const ldbVicBtn = document.getElementById('btn-victory-leaderboard');
+  if (ldbVicBtn) {
+    const freshLdbBtn = ldbVicBtn.cloneNode(true);
+    ldbVicBtn.parentNode.replaceChild(freshLdbBtn, ldbVicBtn);
+    const openLdb = () => {
+      Sound.uiClick();
+      Screens.toggleLeaderboard(socket);
+    };
+    freshLdbBtn.addEventListener('touchstart', (e) => { e.preventDefault(); openLdb(); });
+    freshLdbBtn.addEventListener('click', openLdb);
+  }
 }
 
 function hideVictoryScreen() {

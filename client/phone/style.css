@@ -2274,3 +2274,44 @@ html, body {
 .ldb-badge { width: 18px; text-align: center; }
 
 .action-btn.ldb-btn { background: linear-gradient(135deg, #b8860b, #daa520); font-size: 11px; }
+
+/* Top-3 rank highlights */
+.ldb-row:nth-child(2) .ldb-rank { color: #ffd700; font-weight: bold; } /* 1st - gold */
+.ldb-row:nth-child(3) .ldb-rank { color: #c0c0c0; font-weight: bold; } /* 2nd - silver */
+.ldb-row:nth-child(4) .ldb-rank { color: #cd7f32; font-weight: bold; } /* 3rd - bronze */
+
+/* Row hover/active feedback */
+.ldb-row:not(.ldb-header-row):active { background: rgba(255, 255, 255, 0.04); }
+
+/* Tab transition */
+.ldb-tab { transition: background 0.2s, color 0.2s, border-color 0.2s; }
+
+/* Leaderboard screen slide-in */
+#leaderboard-screen {
+  animation: ldbSlideIn 0.25s ease;
+}
+@keyframes ldbSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Victory screen leaderboard button */
+#btn-victory-leaderboard {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid #ffd700;
+  border-radius: 10px;
+  color: #ffd700;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  animation: victory-title-in 0.5s ease backwards 1.5s;
+  transition: background 0.2s, color 0.2s;
+}
+#btn-victory-leaderboard:active {
+  background: rgba(255, 215, 0, 0.15);
+}
