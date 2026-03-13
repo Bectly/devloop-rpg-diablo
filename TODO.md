@@ -409,7 +409,7 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 ---
 
 ## Architecture Notes (Updated Cycle #66)
-**Current LOC:** ~21,500 source JS (45 files). Largest: player.test.js 1283, controller.js 1184, socket-handlers.js 1100, game.js 1108, world.test.js 1012, crafting.test.js 570, monsters.test.js 1053, monsters.js 923, screens.js 670, world.js 806.
+**Current LOC:** ~22,000 source JS (47 files). Largest: player.test.js 1283, controller.js 1184, game.js 1108, monsters.test.js 1053, world.test.js 1012, monsters.js 923, socket-handlers.js 886, world.js ~840, screens.js 670, crafting.test.js 570, socket-handlers-craft.js 230, traps.js 138.
 **Tests:** 830/830 PASS, 18 suites.
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
@@ -599,54 +599,27 @@ Add "Craft" tab/section to the NPC shop interaction (merchant already has shop):
 
 **Goal:** Three quick-win features that add gameplay depth (traps), social layer (chat), and replayability (leaderboard). Plus refactoring to keep code healthy.
 
-### 11.0 Refactoring: socket-handlers.js split [for Bolt]
+### 11.0 Refactoring: socket-handlers.js split [DONE — Bolt, Cycle #77]
 **Why:** socket-handlers.js hit 1100 LOC. Extract crafting handlers.
-- [ ] Extract crafting handlers → `server/socket-handlers-craft.js` (~210 LOC)
-- [ ] Update imports in index.js
-- [ ] Verify 830/830 tests still pass
+- [x] Extract crafting handlers → `server/socket-handlers-craft.js` (230 LOC)
+- [x] Update imports in index.js (craftHandlers separate from handlers)
+- [x] Verify 830/830 tests still pass
+- socket-handlers.js: 1110 → 886 LOC
 
-### 11.1 Environmental Traps — Server [for Bolt]
+### 11.1 Environmental Traps — Server [DONE — Bolt, Cycle #77]
 **File:** `server/game/world.js` (modify room generation) + `server/game/traps.js` (NEW)
 
 Traps are floor hazards placed during dungeon generation. Step on them → take damage or get debuffed.
 
-**4 trap types:**
-| Trap | Zone | Damage | Effect | Visual |
-|------|------|--------|--------|--------|
-| Spike Trap | Catacombs | 15 physical | Stuns 0.5s | Metal grate |
-| Fire Grate | Inferno | 20 fire | Burning DoT 3s | Glowing red floor |
-| Poison Pool | Any | 10 poison | Poison DoT 5s | Green bubbles |
-| Void Rift | Abyss | 25 cold | Slows 50% for 3s | Purple swirl |
+- [x] `server/game/traps.js` (138 LOC) — TRAP_DEFS, Trap class, generateTrapsForRoom()
+- [x] 4 trap types: spike (15 phys + stun), fire (20 fire + burning), poison (10 poison + DoT), void (25 cold + slow)
+- [x] ZONE_TRAP_POOLS: catacombs→spike/poison, inferno→fire/spike, abyss→void/poison
+- [x] 2-4 traps per room (monster/treasure rooms only, not start/boss)
+- [x] Per-player cooldown tracking (5s), radius-based trigger (20px)
+- [x] World.traps[] integrated — generation in generateFloor(), serialized for TV
+- [x] Game loop trap check — damage + debuff + phone notification + death handling
+- [x] player.applyDebuff() method added for stun/burning/poison/slow effects
 
-**Mechanics:**
-- 2-4 traps per room (placed during `generateRoom()`, not in start/boss rooms)
-- Traps have position (x, y) and radius (20px)
-- Player enters radius → trap triggers → cooldown 5s before re-trigger
-- Traps are visible but can be walked through (risk/reward for shortcuts)
-- `trap.triggered` Map tracks per-player cooldown
-
-**Server data:**
-```javascript
-const TRAP_DEFS = {
-  spike:  { damage: 15, damageType: 'physical', effect: 'stun', effectDuration: 500, cooldown: 5000 },
-  fire:   { damage: 20, damageType: 'fire', effect: 'burning', effectDuration: 3000, cooldown: 5000 },
-  poison: { damage: 10, damageType: 'poison', effect: 'poison', effectDuration: 5000, cooldown: 5000 },
-  void:   { damage: 25, damageType: 'cold', effect: 'slow', effectDuration: 3000, cooldown: 5000 },
-};
-```
-
-**Trap check in game loop** (index.js update loop):
-```javascript
-for (const trap of world.getTrapsForCurrentRoom()) {
-  for (const [sid, player] of players) {
-    if (player.alive && !player.isDying && trap.canTrigger(player)) {
-      trap.trigger(player); // applies damage + effect
-      // emit to phone: debuff indicator
-      // emit to TV: trap animation
-    }
-  }
-}
-```
 
 ### 11.2 Multiplayer Chat — Server + Client [for Bolt]
 **Files:** `server/socket-handlers.js` (add handler), `client/phone/controller.js`, `client/tv/hud.js`

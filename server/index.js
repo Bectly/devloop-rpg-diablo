@@ -14,6 +14,7 @@ const { createMonster } = require('./game/monsters');
 const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
+const craftHandlers = require('./socket-handlers-craft');
 const { GameDatabase } = require('./game/database');
 
 const gameDb = new GameDatabase();
@@ -126,11 +127,11 @@ controllerNs.on('connection', (socket) => {
   socket.on('shop:buy', (data) => handlers.handleShopBuy(socket, data, ctx));
   socket.on('shop:sell', (data) => handlers.handleShopSell(socket, data, ctx));
   socket.on('shrine:use', () => handlers.handleShrineUse(socket, null, ctx));
-  socket.on('craft:info', (data) => handlers.handleCraftInfo(socket, data, ctx));
-  socket.on('craft:salvage', (data) => handlers.handleCraftSalvage(socket, data, ctx));
-  socket.on('craft:reforge', (data) => handlers.handleCraftReforge(socket, data, ctx));
-  socket.on('craft:reforge_accept', (data) => handlers.handleCraftReforgeAccept(socket, data, ctx));
-  socket.on('craft:upgrade', (data) => handlers.handleCraftUpgrade(socket, data, ctx));
+  socket.on('craft:info', (data) => craftHandlers.handleCraftInfo(socket, data, ctx));
+  socket.on('craft:salvage', (data) => craftHandlers.handleCraftSalvage(socket, data, ctx));
+  socket.on('craft:reforge', (data) => craftHandlers.handleCraftReforge(socket, data, ctx));
+  socket.on('craft:reforge_accept', (data) => craftHandlers.handleCraftReforgeAccept(socket, data, ctx));
+  socket.on('craft:upgrade', (data) => craftHandlers.handleCraftUpgrade(socket, data, ctx));
   socket.on('quest:claim', (data) => handlers.handleQuestClaim(socket, data, ctx));
   socket.on('chest:open', (data) => handlers.handleChestOpen(socket, data, ctx));
 
@@ -414,6 +415,50 @@ function gameLoop() {
           playerName: player.name,
           killedBy: 'affix_debuff',
         });
+      }
+    }
+  }
+
+  // ── Trap check ──
+  for (const trap of world.traps) {
+    for (const player of allPlayers) {
+      if (!player.alive || player.isDying || player.disconnected) continue;
+      if (trap.canTrigger(player)) {
+        const result = trap.trigger(player);
+        // Send trap trigger event for TV visual
+        combat.events.push({
+          type: 'trap:trigger',
+          trapId: result.trapId,
+          trapType: result.trapType,
+          trapName: result.trapName,
+          playerId: result.playerId,
+          damage: result.damage,
+          dodged: result.dodged,
+          effect: result.effect,
+          x: result.x,
+          y: result.y,
+        });
+        // Notify phone
+        for (const [sid, p] of players) {
+          if (p.id === result.playerId) {
+            const sock = controllerNs.sockets.get(sid);
+            if (sock) {
+              sock.emit('stats:update', p.serializeForPhone());
+              if (!result.dodged) {
+                sock.emit('notification', { text: `${result.trapName}! -${result.damage} HP`, type: 'error' });
+              }
+            }
+          }
+        }
+        // Check for death from trap
+        if (!player.alive || player.isDying) {
+          combat.events.push({
+            type: 'combat:player_death',
+            playerId: player.id,
+            playerName: player.name,
+            killedBy: result.trapName,
+          });
+        }
       }
     }
   }

@@ -3,6 +3,7 @@ const { createMonster } = require('./monsters');
 const { generateConsumable } = require('./items');
 const { generateShopInventory } = require('./shop');
 const { rollAffixes, applyAffixes } = require('./affixes');
+const { generateTrapsForRoom } = require('./traps');
 
 const TILE_SIZE = 32;
 const GRID_W = 60;
@@ -444,6 +445,9 @@ class World {
     // Story NPCs placed in rooms
     this.storyNpcs = [];
 
+    // Environmental traps
+    this.traps = [];
+
     // Zone
     this.zone = null;
   }
@@ -473,6 +477,14 @@ class World {
 
     // Place story NPCs in dungeon rooms
     this.placeStoryNpcs(floorNum);
+
+    // Generate environmental traps in monster/treasure rooms (not start/boss)
+    this.traps = [];
+    for (const rd of this.rooms) {
+      if (rd.type === 'start' || rd.type === 'boss') continue;
+      const roomTraps = generateTrapsForRoom(rd.room, this.zone.id, TILE_SIZE);
+      this.traps.push(...roomTraps);
+    }
 
     console.log(`[World] Generated floor ${floorNum + 1}: ${this.floorName} with ${this.rooms.length} rooms`);
     return this.getFloorInfo();
@@ -741,6 +753,16 @@ class World {
     return tile !== TILE.VOID && tile !== TILE.WALL;
   }
 
+  getTrapsInRoom(roomData) {
+    if (!roomData) return [];
+    const r = roomData.room;
+    return this.traps.filter(trap => {
+      const tx = trap.x / TILE_SIZE;
+      const ty = trap.y / TILE_SIZE;
+      return tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h;
+    });
+  }
+
   serialize() {
     return {
       roomName: this.roomName,
@@ -799,6 +821,7 @@ class World {
         x: Math.round(npc.x),
         y: Math.round(npc.y),
       })),
+      traps: (this.traps || []).map(t => t.serialize()),
     };
   }
 }

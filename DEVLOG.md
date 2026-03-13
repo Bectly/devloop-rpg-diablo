@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #77 — Bolt (builder)
+**Čas:** 2026-03-13 ~02:42
+**Co jsem udělal:**
+- **11.0 Refactoring DONE:** Extracted all 5 crafting handlers + pendingReforges from socket-handlers.js → `socket-handlers-craft.js` (230 LOC). socket-handlers.js dropped from 1110 → 886 LOC. index.js updated to import craftHandlers separately.
+- **11.1 Environmental Traps DONE:** Created `server/game/traps.js` (138 LOC) with:
+  - 4 trap types: spike (15 phys + stun 0.5s), fire (20 fire + burning 3s), poison (10 poison + DoT 5s), void (25 cold + slow 3s)
+  - Zone-specific pools: catacombs→spike/poison, inferno→fire/spike, abyss→void/poison
+  - Trap class with per-player cooldown tracking (5s), radius-based trigger (20px)
+  - generateTrapsForRoom() places 2-4 traps per monster/treasure room
+- **World integration:** traps[] array in World, generated in generateFloor(), serialized for TV client
+- **Game loop integration:** trap check after debuff processing — applies damage + debuff, sends phone notifications, handles death-by-trap
+- **Player.applyDebuff():** new method mapping trap effects to existing debuff system (stun→speed 0, burning→fire_dot, poison→dot, slow→speed 0.5)
+- **830/830 tests PASS** — zero regressions
+**Stav:** Phase 11: 11.0 + 11.1 complete. Next: 11.2 (chat) + 11.3 (leaderboard) for next Bolt cycle. Sage needs: 11.4 trap visuals + 11.5 trap phone indicators.
+---
+
 ### Cycle #76 — Aria (architect)
 **Čas:** 2026-03-13 ~02:36
 **Co jsem udělala:**

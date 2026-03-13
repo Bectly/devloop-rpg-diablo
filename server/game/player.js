@@ -492,6 +492,56 @@ class Player {
     return null;
   }
 
+  /**
+   * Apply a named debuff from traps/environment.
+   * Maps high-level effect names to the internal debuff format used by addDebuff/processDebuffs.
+   * @param {string} effect - 'stun', 'burning', 'poison', 'slow'
+   * @param {number} duration - Duration in milliseconds
+   */
+  applyDebuff(effect, duration) {
+    const tickInterval = 500; // debuffs tick every 500ms in the game loop (20 ticks/s, process each tick)
+    const ticks = Math.max(1, Math.ceil(duration / tickInterval));
+
+    switch (effect) {
+      case 'stun':
+        // Stun: stop movement for duration (reuse slow with 0 speed)
+        this.addDebuff({
+          source: 'trap_stun',
+          effect: 'slow',
+          speedMult: 0,
+          ticksRemaining: ticks,
+        });
+        break;
+      case 'burning':
+        // Burning: fire DoT
+        this.addDebuff({
+          source: 'trap_burning',
+          effect: 'fire_dot',
+          damage: 3,
+          ticksRemaining: ticks,
+        });
+        break;
+      case 'poison':
+        // Poison: poison DoT (uses fire_dot mechanic for damage ticks)
+        this.addDebuff({
+          source: 'trap_poison',
+          effect: 'fire_dot',
+          damage: 2,
+          ticksRemaining: ticks,
+        });
+        break;
+      case 'slow':
+        // Slow: 50% movement speed
+        this.addDebuff({
+          source: 'trap_slow',
+          effect: 'slow',
+          speedMult: 0.5,
+          ticksRemaining: ticks,
+        });
+        break;
+    }
+  }
+
   addDebuff(debuff) {
     // Replace existing debuff from same source
     this.debuffs = this.debuffs.filter(d => d.source !== debuff.source || d.effect !== debuff.effect);
