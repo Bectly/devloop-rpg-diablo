@@ -173,6 +173,9 @@ class Player {
 
     // Loot filter: 'off' | 'basic' | 'smart'
     this.lootFilter = 'off';
+
+    // Auto-equip: automatically equip picked-up items if better than current
+    this.autoEquip = true;
   }
 
   recalcTalentBonuses() {
@@ -800,6 +803,7 @@ class Player {
       paragonXp: this.paragonXp,
       hardcore: this.hardcore,
       lootFilter: this.lootFilter,
+      autoEquip: this.autoEquip,
       paragonXpToNext: (this.paragonLevel + 1) * 1000,
       talentBonuses: this.talentBonuses,
       skillLevels: [...this.skillLevels],
@@ -855,6 +859,7 @@ class Player {
     this.hardcore = savedData.hardcore ?? false;
     const validFilters = ['off', 'basic', 'smart'];
     this.lootFilter = validFilters.includes(savedData.lootFilter) ? savedData.lootFilter : 'off';
+    this.autoEquip = savedData.autoEquip ?? true;
 
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
@@ -888,6 +893,7 @@ class Player {
       gold: this.gold,
       hardcore: this.hardcore,
       lootFilter: this.lootFilter,
+      autoEquip: this.autoEquip,
       healthPotions: this.healthPotions,
       manaPotions: this.manaPotions,
       equipment: this.equipment,

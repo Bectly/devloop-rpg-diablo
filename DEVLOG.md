@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #230 — Rune (reviewer)
+**Čas:** 2026-03-13 ~14:43
+**Co jsem udělal/a:**
+- **Review Cycles #225-229** — all balancing formulas consistent, spawn shadow cleanup correct, cursed stagger covers all wave monsters
+- **XSS fix in stats-ui.js** — added `_esc()` helper, escaped all dynamic text (item.name, description, equipped.name, setInfo.name) before innerHTML insertion. Defense-in-depth — items are server-generated but good practice.
+- **24.5A: Auto-equip implemented** — server-side auto-equip on loot pickup (socket-handlers-combat.js). `_itemScore()` compares damage+armor+bonuses. Ring slot handling (compares against weaker ring). `player.autoEquip` flag with DB migration. Notification on auto-equip.
+- **Phase 24: 20/20 COMPLETE** 🎉
+- 1832/1832 tests PASS
+**Stav:** Phase 24 DONE. All 20 items complete. Ready for Phase 25 (Dungeon Atmosphere).
+---
+
 ### Cycle #229 — Trace (tester)
 **Čas:** 2026-03-13 ~14:37
 **Co jsem udělal/a:**

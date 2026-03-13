@@ -3,6 +3,61 @@
  * Handles: attack, skills, potions, loot pickup, loot filter, chest open.
  */
 
+// ── Auto-equip helper ──
+function _itemScore(item) {
+  if (!item) return 0;
+  return (item.damage || 0) + (item.armor || 0) +
+    Object.values(item.bonuses || {}).reduce((s, v) => s + v, 0);
+}
+
+/**
+ * If the picked-up item is better than what's currently equipped in the same slot,
+ * swap them: move old gear into inventory, equip the new item.
+ */
+function _tryAutoEquip(player, inv, item, socket) {
+  let slot = item.slot;
+
+  // Ring handling: pick the weaker of the two ring slots (or empty one)
+  if (item.subType === 'ring') {
+    const r1 = player.equipment.ring1;
+    const r2 = player.equipment.ring2;
+    if (!r1) {
+      slot = 'ring1';
+    } else if (!r2) {
+      slot = 'ring2';
+    } else {
+      // Both occupied — compare against weaker one
+      slot = _itemScore(r1) <= _itemScore(r2) ? 'ring1' : 'ring2';
+    }
+  }
+
+  const equipped = player.equipment[slot];
+  const newScore = _itemScore(item);
+  const eqScore = _itemScore(equipped);
+
+  if (newScore > eqScore) {
+    // Remove new item from inventory grid (it was just added)
+    inv.removeItem(item.id);
+
+    // Put old item back into inventory (if any)
+    if (equipped) {
+      const putBack = inv.addItem(equipped);
+      if (!putBack.success) {
+        // No room to store old item — abort: put new item back in inventory
+        inv.addItem(item);
+        return;
+      }
+    }
+
+    // Equip the new item
+    player.equipment[slot] = item;
+    player.recalcEquipBonuses();
+
+    socket.emit('notification', { text: `Auto-equipped ${item.name}`, type: 'info' });
+    socket.emit('stats:update', player.serializeForPhone());
+  }
+}
+
 // ── Attack ──
 exports.handleAttack = (socket, data, { players, world, combat }) => {
   const player = players.get(socket.id);
@@ -88,6 +143,12 @@ exports.handleLootPickup = (socket, data, { players, inventories, world, gameNs 
   const result = inv.addItem(item);
   if (result.success) {
     socket.emit('notification', { text: `Picked up ${item.name}`, type: item.rarity });
+
+    // Auto-equip: if item has an equipment slot and is better than current, equip it
+    if (item.slot && player.autoEquip !== false) {
+      _tryAutoEquip(player, inv, item, socket);
+    }
+
     socket.emit('inventory:update', inv.serialize());
   } else {
     world.addGroundItem(item, player.x, player.y);
@@ -150,6 +211,12 @@ exports.handleLootPickupNearest = (socket, data, { players, inventories, world, 
     const result = inv.addItem(item);
     if (result.success) {
       socket.emit('notification', { text: `Picked up ${item.name}`, type: item.rarity });
+
+      // Auto-equip: if item has an equipment slot and is better than current, equip it
+      if (item.slot && player.autoEquip !== false) {
+        _tryAutoEquip(player, inv, item, socket);
+      }
+
       socket.emit('inventory:update', inv.serialize());
     } else {
       world.addGroundItem(item, player.x, player.y);

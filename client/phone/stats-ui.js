@@ -3,6 +3,9 @@
 
 const StatsUI = (() => {
 
+  // HTML escape to prevent XSS from any dynamic text in tooltips
+  function _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
   function renderStats(playerStats, socket) {
     if (!playerStats) return;
 
@@ -122,8 +125,8 @@ const StatsUI = (() => {
     const tt = document.getElementById('item-tooltip');
     tt.classList.remove('hidden');
 
-    let html = `<div class="tt-name" style="color:${item.rarityColor || '#aaa'}">${item.name}</div>`;
-    html += `<div class="tt-type">${(item.rarity || '').toUpperCase()} ${item.type || ''} ${item.subType ? '(' + item.subType + ')' : ''}</div>`;
+    let html = `<div class="tt-name" style="color:${item.rarityColor || '#aaa'}">${_esc(item.name)}</div>`;
+    html += `<div class="tt-type">${_esc((item.rarity || '').toUpperCase())} ${_esc(item.type || '')} ${item.subType ? '(' + _esc(item.subType) + ')' : ''}</div>`;
 
     if (item.damage) html += `<div class="tt-stat">Damage: ${item.damage}</div>`;
     if (item.armor) html += `<div class="tt-stat">Armor: ${item.armor}</div>`;
@@ -148,14 +151,14 @@ const StatsUI = (() => {
       html += '<div class="tt-sockets" id="tt-sockets-area"></div>';
     }
 
-    if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;
+    if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${_esc(item.description)}</div>`;
 
     // ── Quick-compare vs equipped item ──
     if (!isEquipped && item.slot && playerStats && playerStats.equipment) {
       const equipped = playerStats.equipment[item.slot];
       if (equipped) {
         html += '<div class="compare-section">';
-        html += `<div class="compare-header">vs ${equipped.name}</div>`;
+        html += `<div class="compare-header">vs ${_esc(equipped.name)}</div>`;
 
         // Compare damage
         if (item.damage || equipped.damage) {
@@ -195,13 +198,13 @@ const StatsUI = (() => {
       const setInfo = playerStats.activeSets.find(s => s.setId === item.setId);
       const pieces = setInfo ? setInfo.pieces : 0;
       const total = setInfo ? setInfo.totalPieces : 3;
-      html += `<div class="tt-set-header">Set: ${setInfo ? setInfo.name : item.setId} (${pieces}/${total})</div>`;
+      html += `<div class="tt-set-header">Set: ${_esc(setInfo ? setInfo.name : item.setId)} (${pieces}/${total})</div>`;
 
       if (playerStats.equipment) {
         html += '<div class="tt-set-pieces">';
         for (const [slot, eq] of Object.entries(playerStats.equipment)) {
           if (eq && eq.setId === item.setId) {
-            html += `<div class="set-piece-owned">\u2713 ${eq.name}</div>`;
+            html += `<div class="set-piece-owned">\u2713 ${_esc(eq.name)}</div>`;
           }
         }
         html += '</div>';

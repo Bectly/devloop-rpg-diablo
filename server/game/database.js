@@ -62,6 +62,7 @@ class GameDatabase {
         paragon_level INTEGER NOT NULL DEFAULT 0,
         paragon_xp INTEGER NOT NULL DEFAULT 0,
         loot_filter TEXT NOT NULL DEFAULT 'off',
+        auto_equip INTEGER NOT NULL DEFAULT 1,
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
@@ -108,6 +109,7 @@ class GameDatabase {
     if (!cols.includes('paragon_xp'))    this.db.exec("ALTER TABLE characters ADD COLUMN paragon_xp INTEGER NOT NULL DEFAULT 0");
     if (!cols.includes('hardcore'))      this.db.exec("ALTER TABLE characters ADD COLUMN hardcore INTEGER NOT NULL DEFAULT 0");
     if (!cols.includes('loot_filter'))  this.db.exec("ALTER TABLE characters ADD COLUMN loot_filter TEXT NOT NULL DEFAULT 'off'");
+    if (!cols.includes('auto_equip'))  this.db.exec("ALTER TABLE characters ADD COLUMN auto_equip INTEGER NOT NULL DEFAULT 1");
   }
 
   _prepareStatements() {
@@ -115,11 +117,11 @@ class GameDatabase {
       INSERT OR REPLACE INTO characters
         (name, class, level, xp, stats, equipment, inventory, gold, floor, kills,
          health_potions, mana_potions, free_stat_points, talents, keystones,
-         paragon_level, paragon_xp, hardcore, loot_filter, updated_at)
+         paragon_level, paragon_xp, hardcore, loot_filter, auto_equip, updated_at)
       VALUES
         (@name, @class, @level, @xp, @stats, @equipment, @inventory, @gold, @floor, @kills,
          @health_potions, @mana_potions, @free_stat_points, @talents, @keystones,
-         @paragonLevel, @paragonXp, @hardcore, @lootFilter, datetime('now'))
+         @paragonLevel, @paragonXp, @hardcore, @lootFilter, @autoEquip, datetime('now'))
     `);
 
     this._stmtLoad = this.db.prepare(`
@@ -239,6 +241,7 @@ class GameDatabase {
       paragonXp: player.paragonXp || 0,
       hardcore: player.hardcore ? 1 : 0,
       lootFilter: player.lootFilter || 'off',
+      autoEquip: player.autoEquip !== false ? 1 : 0,
     });
   }
 
@@ -294,6 +297,7 @@ class GameDatabase {
       paragonXp: row.paragon_xp || 0,
       hardcore: row.hardcore === 1,
       lootFilter: row.loot_filter || 'off',
+      autoEquip: row.auto_equip !== 0,
     };
   }
 

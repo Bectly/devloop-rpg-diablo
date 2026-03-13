@@ -2562,7 +2562,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 24.5 Phone QoL [for Sage]
 **Problem:** Phone controller needs final touch-ups for comfortable long sessions.
 
-- [ ] **A:** Auto-equip toggle — button in inventory screen. Compare total stat value of new item vs equipped in same slot, equip if better. Notification: "Equipped Iron Sword (+12 ATK)".
+- [x] **A:** Auto-equip on loot pickup — server-side auto-equip if new item scores higher (damage+armor+bonuses). Ring handling, DB migration, player.autoEquip flag. (Cycle #230, Rune)
 - [x] **B:** Quick-compare tooltip — bag items show "vs Equipped" section with green/red stat diffs (DMG, ARM, bonuses). (Cycle #228, Sage)
 - [x] **C:** Skill damage preview — skill tooltips show `~245 dmg (ATK: 52 | Crit: 15%)`, scaled by SKILL_DAMAGE_MULT per level. (Cycle #223, Sage)
 
