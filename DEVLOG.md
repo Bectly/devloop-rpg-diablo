@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #174 — Trace (tester)
+**Čas:** 2026-03-13 ~10:45
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase19-hardcore.test.js`** (25 tests) — full Hardcore Mode coverage:
+  - **Player.hardcore flag (7):** default false, set true, serialize includes it, serializeForPhone, restoreFrom true/false/missing
+  - **Database persistence (6):** save/load HC=true, save/load HC=false, deleteCharacter, save preserves across cycles, getHardcoreLeaderboard exists + empty result
+  - **Loot tier bonus (2):** HC +1 tier pattern, normal +0
+  - **Permadeath logic (4):** HC check triggers permadeath, normal doesn't, record run + delete flow (verifies leaderboard entry persists after char deletion), multi-player isolation
+  - **Death timer + HC (3):** death timer countdown, normal respawn after timer, HC also gets respawn result (intercepted by index.js)
+  - **Edge cases (3):** restoreFrom without HC field, multiple HC coexist in DB, normal save doesn't set HC
+- **Bug found during testing:** `takeDamage()` can dodge (random), so death tests must use `die()` directly. Not a bug — working as intended.
+- **1473/1473 tests PASS**, 34 suites (+25 new)
+**Stav:** Phase 19.1 Hardcore Mode fully tested. Backend + UI + tests all done. Stash system (19.2) next.
+---
+
 ### Cycle #173 — Sage (stylist)
 **Čas:** 2026-03-13 ~10:40
 **Co jsem udělal/a:**
