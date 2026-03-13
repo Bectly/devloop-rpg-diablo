@@ -275,30 +275,36 @@ describe('Phase 15.1 — Shatter Bonus (applyShatter)', () => {
     expect(hpLost).toBeGreaterThan(0);
   });
 
-  it('does NOT apply shatter to non-stunned monsters', () => {
-    const player = attackPlayer();
-    const monsterStunned = new Monster('skeleton', 100, 100, 0);
-    monsterStunned.stunned = 2000;
-    monsterStunned.maxHp = 5000;
-    monsterStunned.hp = 5000;
+  it('stunned monsters take more damage than non-stunned (30% shatter bonus)', () => {
+    // Run 50 samples to reliably detect the 30% shatter bonus despite attack variance
+    let stunnedTotal = 0;
+    let normalTotal = 0;
 
-    const monsterNormal = new Monster('skeleton', 100, 100, 0);
-    monsterNormal.stunned = 0;
-    monsterNormal.maxHp = 5000;
-    monsterNormal.hp = 5000;
+    for (let i = 0; i < 50; i++) {
+      const player = attackPlayer();
 
-    // Attack stunned monster
-    combat.playerAttack(player, [monsterStunned]);
-    const stunnedDmg = 5000 - monsterStunned.hp;
+      const monsterStunned = new Monster('skeleton', 100, 100, 0);
+      monsterStunned.stunned = 2000;
+      monsterStunned.maxHp = 5000;
+      monsterStunned.hp = 5000;
 
-    // Reset combat and attack normal monster
-    combat.clearEvents();
-    player.attackCooldown = 0;
-    combat.playerAttack(player, [monsterNormal]);
-    const normalDmg = 5000 - monsterNormal.hp;
+      combat.playerAttack(player, [monsterStunned]);
+      stunnedTotal += 5000 - monsterStunned.hp;
+      combat.clearEvents();
 
-    // Stunned monster should take more damage (shatter bonus)
-    expect(stunnedDmg).toBeGreaterThan(normalDmg);
+      player.attackCooldown = 0;
+      const monsterNormal = new Monster('skeleton', 100, 100, 0);
+      monsterNormal.stunned = 0;
+      monsterNormal.maxHp = 5000;
+      monsterNormal.hp = 5000;
+
+      combat.playerAttack(player, [monsterNormal]);
+      normalTotal += 5000 - monsterNormal.hp;
+      combat.clearEvents();
+    }
+
+    // Over 50 samples the 30% shatter bonus is unmistakable
+    expect(stunnedTotal).toBeGreaterThan(normalTotal);
   });
 
   it('no crash when player has no shatter_bonus', () => {
