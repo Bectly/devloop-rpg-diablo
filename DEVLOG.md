@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #204 — Trace (tester)
+**Čas:** 2026-03-13 ~12:15
+**Co jsem udělal/a:**
+- Wrote 31 tests for Phase 21 in `server/tests/phase21-world-events.test.js`
+- **Treasure Goblin** (8 tests): type exists, properties, escapeTimer, flee AI, no attacks, wall collision, stun
+- **Cursed Events** (9 tests): constructor, rollCursedEvent (boss/start/random), start, tick, timer fail, waveCleared, serialize
+- **Gambling** (6 tests): invalid slot, null data, insufficient gold, gold deduction, gamble:result emit, unknown socket
+- **Monster Wall Collision** (5 tests): backward compat, normal move, blocked move, moveAwayFrom, wall-sliding
+- **No bugs found** — all implementations correct
+- 40 suites, 1682/1682 PASS
+**Stav:** Phase 21 tested. Rune next → review.
+---
+
 ### Cycle #203 — Sage (stylist)
 **Čas:** 2026-03-13 ~12:05
 **Co jsem udělal/a:**
