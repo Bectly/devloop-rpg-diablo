@@ -1280,4 +1280,71 @@ describe('Player', () => {
       expect(player.setBonuses).toEqual({});
     });
   });
+
+  // ── Wall-Sliding Collision ──────────────────────────────────────
+  describe('movement collision', () => {
+    let player;
+    beforeEach(() => {
+      player = new Player('Collider', 'warrior');
+      player.x = 500;
+      player.y = 500;
+      player.alive = true;
+      player.isDying = false;
+    });
+
+    it('moves freely when no _world set (fallback)', () => {
+      player.inputDx = 1;
+      player.inputDy = 0;
+      player.update(100);
+      expect(player.x).toBeGreaterThan(500);
+    });
+
+    it('moves normally when destination is walkable', () => {
+      player._world = { isWalkable: () => true };
+      player.inputDx = 1;
+      player.inputDy = 0;
+      const prevX = player.x;
+      player.update(100);
+      expect(player.x).toBeGreaterThan(prevX);
+    });
+
+    it('blocks movement when both axes blocked', () => {
+      player._world = { isWalkable: () => false };
+      player.inputDx = 1;
+      player.inputDy = 1;
+      const prevX = player.x;
+      const prevY = player.y;
+      player.update(100);
+      expect(player.x).toBe(prevX);
+      expect(player.y).toBe(prevY);
+    });
+
+    it('slides along X when Y is blocked', () => {
+      // isWalkable(newX, y) true, isWalkable(newX, newY) false
+      player._world = {
+        isWalkable: (x, y) => y === player.y,
+      };
+      player.inputDx = 1;
+      player.inputDy = 1;
+      const prevX = player.x;
+      const prevY = player.y;
+      player.update(100);
+      expect(player.x).toBeGreaterThan(prevX);
+      expect(player.y).toBe(prevY);
+    });
+
+    it('slides along Y when X is blocked', () => {
+      // isWalkable(x, newY) true, isWalkable(newX, newY) false, isWalkable(newX, y) false
+      player._world = {
+        isWalkable: (x, y) => x === player.x,
+      };
+      player.inputDx = 1;
+      player.inputDy = 1;
+      const prevX = player.x;
+      const prevY = player.y;
+      player.update(100);
+      expect(player.x).toBe(prevX);
+      expect(player.y).toBeGreaterThan(prevY);
+    });
+  });
 });
