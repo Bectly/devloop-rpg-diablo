@@ -177,6 +177,28 @@ html, body {
   flex-shrink: 0;
 }
 
+/* Connection indicator */
+.conn-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.conn-dot.connected { background: #44ff44; box-shadow: 0 0 4px #44ff44; }
+.conn-dot.reconnecting { background: #ffcc00; box-shadow: 0 0 4px #ffcc00; }
+.conn-dot.disconnected { background: #ff4444; box-shadow: 0 0 4px #ff4444; }
+
+#hud-ping {
+  font-size: 10px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.ping-good { color: #44ff44; }
+.ping-ok { color: #ffcc00; }
+.ping-bad { color: #ff4444; }
+
 #hud-info {
   display: flex;
   flex-direction: column;

@@ -247,6 +247,11 @@ controllerNs.on('connection', (socket) => {
     }
   });
 
+  // ── Ping / Connectivity ──
+  socket.on('ping:check', (cb) => {
+    if (typeof cb === 'function') cb();
+  });
+
   socket.on('disconnect', () => handlers.handleDisconnect(socket, null, ctx));
 });
 

@@ -58,6 +58,7 @@ DeathVictory.init(socket);
 TalentsUI.init(socket);
 RiftUI.init(socket);
 CombatUI.init(socket);
+ChatUI.init(socket);
 MenuUI.init({
   socket,
   getInventoryData: () => inventoryData,
@@ -104,9 +105,32 @@ document.getElementById('btn-join').addEventListener('click', () => {
   socket.emit('join', { name: joinedName, characterClass: selectedClass, hardcore: hardcoreMode });
 });
 
+// ─── Ping / Connection Status ────────────────────────────────────
+let _pingMs = 0;
+let _pingInterval = null;
+
+function measurePing() {
+  const start = performance.now();
+  socket.emit('ping:check', () => {
+    _pingMs = Math.round(performance.now() - start);
+    const pingEl = document.getElementById('hud-ping');
+    if (pingEl) {
+      pingEl.textContent = `${_pingMs}ms`;
+      pingEl.className = _pingMs < 50 ? 'ping-good' : _pingMs < 150 ? 'ping-ok' : 'ping-bad';
+    }
+  });
+}
+
 // ─── Socket Events ──────────────────────────────────────────────
 socket.on('connect', () => {
   console.log('[Phone] Connected');
+
+  // Update connection dot
+  const dot = document.getElementById('conn-dot');
+  if (dot) dot.className = 'conn-dot connected';
+  // Start ping interval
+  if (!_pingInterval) _pingInterval = setInterval(measurePing, 5000);
+  measurePing();
 
   const wasReconnect = Reconnect.onConnect();
   if (wasReconnect) {
@@ -828,7 +852,17 @@ socket.on('event:buff', (data) => {
 // ─── Reconnect Overlay — delegated to reconnect.js (window.Reconnect) ──
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');
+  const dot = document.getElementById('conn-dot');
+  if (dot) dot.className = 'conn-dot disconnected';
+  if (_pingInterval) { clearInterval(_pingInterval); _pingInterval = null; }
+  const pingEl = document.getElementById('hud-ping');
+  if (pingEl) pingEl.textContent = '--';
   Reconnect.onDisconnect();
+});
+
+socket.on('reconnect_attempt', () => {
+  const dot = document.getElementById('conn-dot');
+  if (dot) dot.className = 'conn-dot reconnecting';
 });
 
 // ─── Floor Display ──────────────────────────────────────────────
