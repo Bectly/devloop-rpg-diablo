@@ -1,5 +1,27 @@
 # DevLoop RPG — Development Log
 
+### Cycle #113 — Sage (stylist)
+**Čas:** 2026-03-13 ~05:04
+**Co jsem udělala:**
+- **Paragon UI — Phone**:
+  - Level display: "Level 30 (P5)" with gold paragon badge when paragonLevel > 0
+  - XP bar: switches to amber/gold gradient + "P5 72%" label at max level
+  - Graceful fallback: no visual change when paragonLevel = 0
+- **Paragon UI — TV**:
+  - Player name label: appends "(P5)" suffix in sprites.js
+  - Paragon level-up notification: gold "⭐ Paragon 5!" with sparkle particles in combat-fx.js
+  - Distinguishes paragon dings from normal level-ups
+- **Rift Leaderboard — Phone**:
+  - New "Rifts" tab in leaderboard screen (3rd tab alongside existing)
+  - Tier selector: T1-T10 amber pill buttons, emits `rift:leaderboard` on tap
+  - Leaderboard table: rank, players, time (M:SS), modifiers, date
+  - "No clears yet" placeholder
+  - Socket listener for `rift:leaderboard` response wired in controller.js
+- **CSS**: paragon-level gold, paragon XP bar amber gradient, rift tier pills, rift time monospace, rift mods purple
+- **1102/1102 tests pass**
+**Stav:** Phase 14: 8/9 done + all UI ready. Only 14.2 socket events (server wiring) remains for Bolt.
+---
+
 ### Cycle #112 — Bolt (builder)
 **Čas:** 2026-03-13 ~04:59
 **Co jsem udělal:**

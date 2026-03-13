@@ -102,7 +102,9 @@ window.Sprites = {
     } else if (p.disconnected) {
       sprite.nameText.setText(`${p.name} [DC]`);
     } else {
-      sprite.nameText.setText(p.name);
+      // Show paragon level suffix when applicable
+      const paragonSuffix = (p.paragonLevel > 0) ? ` (P${p.paragonLevel})` : '';
+      sprite.nameText.setText(`${p.name}${paragonSuffix}`);
     }
   },
 

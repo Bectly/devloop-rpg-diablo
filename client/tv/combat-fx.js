@@ -161,8 +161,15 @@ const CombatFX = (() => {
       if (ev.type === 'player:levelup') {
         const p = state.players?.find(p => p.id === ev.playerId);
         if (p) {
-          HUD.spawnDamageText(scene, p.x, p.y - 50, `LEVEL ${ev.level}!`, false, false, '#ffcc00');
-          HUD.showTalentPointNotification(scene, p.x, p.y);
+          if (ev.isParagon || p.paragonLevel > 0) {
+            // Paragon level-up: use gold star notification
+            const paragonLevel = ev.paragonLevel || p.paragonLevel || 1;
+            HUD.spawnDamageText(scene, p.x, p.y - 50, `\u2B50 P${paragonLevel}!`, false, false, '#ffcc00');
+            HUD.showParagonLevelNotification(scene, p.x, p.y, paragonLevel);
+          } else {
+            HUD.spawnDamageText(scene, p.x, p.y - 50, `LEVEL ${ev.level}!`, false, false, '#ffcc00');
+            HUD.showTalentPointNotification(scene, p.x, p.y);
+          }
         }
       }
       if (ev.type === 'combat:death' && ev.keystoneReward) {

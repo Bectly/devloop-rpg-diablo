@@ -321,6 +321,10 @@ socket.on('leaderboard:data', (data) => {
   Screens.renderLeaderboard(data.entries, data.type);
 });
 
+socket.on('rift:leaderboard', (data) => {
+  Screens.renderRiftLeaderboard(data.records || []);
+});
+
 socket.on('game:victory', (data) => {
   console.log('[Phone] VICTORY!', data);
 
@@ -389,7 +393,15 @@ function updateHUD(stats) {
   if (!stats) return;
 
   document.getElementById('hud-name').textContent = stats.name;
-  document.getElementById('hud-level').textContent = `Lv.${stats.level}`;
+
+  // Level display — show paragon suffix when at max level
+  const MAX_LEVEL = 30;
+  const hudLevel = document.getElementById('hud-level');
+  if (stats.paragonLevel > 0) {
+    hudLevel.innerHTML = `Lv.${stats.level} <span class="paragon-level">(P${stats.paragonLevel})</span>`;
+  } else {
+    hudLevel.textContent = `Lv.${stats.level}`;
+  }
 
   // HP bar with label and color class
   const hpPct = (stats.hp / stats.maxHp) * 100;
@@ -403,10 +415,21 @@ function updateHUD(stats) {
   document.getElementById('mp-bar').style.width = mpPct + '%';
   document.getElementById('mp-label').textContent = `${stats.mp}/${stats.maxMp}`;
 
-  // XP bar with label
-  const xpPct = stats.xpToNext > 0 ? Math.round((stats.xp / stats.xpToNext) * 100) : 0;
-  document.getElementById('xp-bar').style.width = xpPct + '%';
-  document.getElementById('xp-label').textContent = `${xpPct}%`;
+  // XP bar — switch to paragon XP display when at max level
+  const xpBar = document.getElementById('xp-bar');
+  const xpLabel = document.getElementById('xp-label');
+  const isParagon = stats.paragonLevel > 0 || stats.level >= MAX_LEVEL;
+  if (isParagon && stats.paragonXpToNext > 0) {
+    const pxpPct = Math.round((stats.paragonXp / stats.paragonXpToNext) * 100);
+    xpBar.style.width = pxpPct + '%';
+    xpBar.className = 'stat-bar xp paragon-xp-bar';
+    xpLabel.textContent = `P${stats.paragonLevel} ${pxpPct}%`;
+  } else {
+    const xpPct = stats.xpToNext > 0 ? Math.round((stats.xp / stats.xpToNext) * 100) : 0;
+    xpBar.style.width = xpPct + '%';
+    xpBar.className = 'stat-bar xp';
+    xpLabel.textContent = `${xpPct}%`;
+  }
 
   // Skill button labels + cooldowns
   if (stats.skills) {

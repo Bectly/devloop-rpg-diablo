@@ -754,8 +754,13 @@ window.Screens = (() => {
       <div class="ldb-tabs">
         <button class="ldb-tab active" id="ldb-tab-top">Top 10</button>
         <button class="ldb-tab" id="ldb-tab-personal">My Runs</button>
+        <button class="ldb-tab" id="ldb-tab-rifts">Rifts</button>
       </div>
       <div class="ldb-list" id="ldb-list"></div>
+      <div class="rift-leaderboard hidden" id="rift-ldb-panel">
+        <div class="rift-tier-pills" id="rift-tier-pills"></div>
+        <div class="ldb-list" id="rift-ldb-list"></div>
+      </div>
     `;
     document.body.appendChild(screen);
 
@@ -770,8 +775,109 @@ window.Screens = (() => {
   }
 
   let _ldbSocket = null;
-
   let _ldbTabsWired = false;
+  let _riftSelectedTier = 1;
+
+  function _switchLdbTab(activeId) {
+    const tabs = ['ldb-tab-top', 'ldb-tab-personal', 'ldb-tab-rifts'];
+    tabs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', id === activeId);
+    });
+    const ldbList = document.getElementById('ldb-list');
+    const riftPanel = document.getElementById('rift-ldb-panel');
+    if (activeId === 'ldb-tab-rifts') {
+      if (ldbList) ldbList.classList.add('hidden');
+      if (riftPanel) riftPanel.classList.remove('hidden');
+      _renderRiftTierPills();
+      if (_ldbSocket) _ldbSocket.emit('rift:leaderboard', { tier: _riftSelectedTier });
+    } else {
+      if (ldbList) ldbList.classList.remove('hidden');
+      if (riftPanel) riftPanel.classList.add('hidden');
+      if (activeId === 'ldb-tab-top' && _ldbSocket) _ldbSocket.emit('leaderboard:get');
+      if (activeId === 'ldb-tab-personal' && _ldbSocket) _ldbSocket.emit('leaderboard:personal');
+    }
+  }
+
+  function _renderRiftTierPills() {
+    const container = document.getElementById('rift-tier-pills');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let tier = 1; tier <= 10; tier++) {
+      const btn = document.createElement('button');
+      btn.className = 'rift-tier-pill' + (tier === _riftSelectedTier ? ' active' : '');
+      btn.textContent = `T${tier}`;
+      const t = tier;
+      const handler = () => {
+        _riftSelectedTier = t;
+        container.querySelectorAll('.rift-tier-pill').forEach((p, i) => {
+          p.classList.toggle('active', i + 1 === t);
+        });
+        if (_ldbSocket) _ldbSocket.emit('rift:leaderboard', { tier: t });
+      };
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+      btn.addEventListener('click', handler);
+      container.appendChild(btn);
+    }
+  }
+
+  function renderRiftLeaderboard(records) {
+    const container = document.getElementById('rift-ldb-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!records || records.length === 0) {
+      container.innerHTML = '<div class="ldb-empty">No clears yet. Be the first!</div>';
+      return;
+    }
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'ldb-row ldb-header-row';
+    header.innerHTML = '<span class="ldb-rank">#</span><span class="ldb-name">Players</span><span class="rift-time">Time</span><span class="rift-mods">Mods</span>';
+    container.appendChild(header);
+
+    records.forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'ldb-row';
+
+      const rankEl = document.createElement('span');
+      rankEl.className = 'ldb-rank';
+      rankEl.textContent = `${i + 1}`;
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'ldb-name';
+      const players = [entry.player1, entry.player2].filter(Boolean).join(', ');
+      nameEl.textContent = players || '???';
+
+      const timeEl = document.createElement('span');
+      timeEl.className = 'rift-time';
+      const totalSec = Math.round(entry.time_seconds || 0);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      timeEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+      const modsEl = document.createElement('span');
+      modsEl.className = 'rift-mods';
+      const mods = entry.modifiers || [];
+      if (mods.length > 0) {
+        modsEl.textContent = mods.slice(0, 3).map(m => m.substring(0, 4).toUpperCase()).join(' ');
+      } else {
+        modsEl.textContent = '—';
+      }
+
+      // Date tooltip
+      if (entry.date) {
+        row.title = new Date(entry.date).toLocaleDateString();
+      }
+
+      row.appendChild(rankEl);
+      row.appendChild(nameEl);
+      row.appendChild(timeEl);
+      row.appendChild(modsEl);
+      container.appendChild(row);
+    });
+  }
 
   function toggleLeaderboard(socket) {
     createLeaderboardScreen();
@@ -784,17 +890,11 @@ window.Screens = (() => {
       if (!_ldbTabsWired) {
         const topTab = document.getElementById('ldb-tab-top');
         const personalTab = document.getElementById('ldb-tab-personal');
+        const riftsTab = document.getElementById('ldb-tab-rifts');
 
-        topTab.onclick = () => {
-          topTab.classList.add('active');
-          personalTab.classList.remove('active');
-          if (_ldbSocket) _ldbSocket.emit('leaderboard:get');
-        };
-        personalTab.onclick = () => {
-          personalTab.classList.add('active');
-          topTab.classList.remove('active');
-          if (_ldbSocket) _ldbSocket.emit('leaderboard:personal');
-        };
+        topTab.onclick = () => _switchLdbTab('ldb-tab-top');
+        personalTab.onclick = () => _switchLdbTab('ldb-tab-personal');
+        if (riftsTab) riftsTab.onclick = () => _switchLdbTab('ldb-tab-rifts');
         _ldbTabsWired = true;
       }
 
@@ -926,6 +1026,7 @@ window.Screens = (() => {
     createLeaderboardScreen,
     toggleLeaderboard,
     renderLeaderboard,
+    renderRiftLeaderboard,
   };
 
 })();

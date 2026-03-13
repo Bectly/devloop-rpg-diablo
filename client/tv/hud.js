@@ -895,6 +895,60 @@ window.HUD = {
     if (this.waveText) this.waveText.setColor(color);
   },
 
+  // ── Paragon Level-Up notification ──
+  showParagonLevelNotification(scene, x, y, paragonLevel) {
+    const GAME_W = 1280;
+    // Anchor to screen center so it's always visible
+    const sx = GAME_W / 2;
+    const sy = 140;
+
+    const t = scene.add.text(sx, sy, `\u2B50 Paragon ${paragonLevel}!`, {
+      fontSize: '20px',
+      fontFamily: 'Courier New',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(1005).setAlpha(0).setScale(0.6);
+
+    scene.tweens.add({
+      targets: t,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 400,
+      ease: 'Back.easeOut',
+    });
+
+    // Gold sparkles
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const px = sx + Math.cos(angle) * 150;
+      const py = sy + Math.sin(angle) * 20;
+      const spark = scene.add.circle(sx, sy, 2, 0xffcc00, 0.9);
+      spark.setScrollFactor(0).setDepth(1006);
+      scene.tweens.add({
+        targets: spark,
+        x: px, y: py, alpha: 0,
+        duration: 600,
+        delay: 100 + i * 50,
+        ease: 'Cubic.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+
+    scene.time.delayedCall(3000, () => {
+      scene.tweens.add({
+        targets: t,
+        alpha: 0,
+        y: t.y - 12,
+        duration: 400,
+        ease: 'Cubic.easeIn',
+        onComplete: () => t.destroy(),
+      });
+    });
+  },
+
   // ── Talent Point Available notification (shown after level-up) ──
   showTalentPointNotification(scene, x, y) {
     const t = scene.add.text(x, y - 72, '\u2b50 Talent Point Available!', {
