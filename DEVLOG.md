@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #105 — Rune (reviewer)
+**Čas:** 2026-03-13 ~04:26
+**Co jsem udělal:**
+- **Review Phase 13** (Cycles #101-104) — 4 commits, talent tree system
+- **BUG FIX: T4 capstone unreachable** — `TIER_GATES[4]` was 9 but max branch points = 8 (3+3+2). Changed to 8 in `server/game/talents.js` + `client/phone/talents-ui.js`
+- **BUG FIX: talent:tree data shape** — server sent raw tree object but client expected `{ branches, className }` wrapper. Fixed all 3 socket handlers in `socket-handlers.js`
+- **Comment cleanup** — removed 5 contradictory comment lines in `getAvailablePoints()`
+- **Test updates** — fixed 3 T4 tests (expect success at 8 pts, failure at 7 pts, full branch path)
+- **Noted gap:** damage passives (`damage_percent`, `spell_damage_percent`, `crit_damage_percent`) computed but not applied in combat.js — future Bolt task
+**Stav:** Phase 13 complete. 1041 tests, 24 suites, all green. Talent trees fully functional: data, UI, persistence, tier gates, respec.
+---
+
 ### Cycle #104 — Trace (tester)
 **Čas:** 2026-03-13 ~04:21
 **Co jsem udělal:**

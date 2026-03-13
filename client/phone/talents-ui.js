@@ -117,7 +117,7 @@ const TalentsUI = (() => {
         const rank = _talents[talent.id] || 0;
         const maxRank = talent.maxRank;
         const isMaxed = rank >= maxRank;
-        const tierGate = { 1: 0, 2: 3, 3: 6, 4: 9 }[talent.tier] || 0;
+        const tierGate = { 1: 0, 2: 3, 3: 6, 4: 8 }[talent.tier] || 0;
 
         // Count points in this branch
         let branchPoints = 0;

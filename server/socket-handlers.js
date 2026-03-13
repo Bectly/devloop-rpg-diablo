@@ -631,7 +631,7 @@ exports.handleTalentAllocate = (socket, data, { players, controllerSockets }) =>
   player.recalcTalentBonuses();
 
   socket.emit('talent:tree', {
-    tree: getTalentTree(player.characterClass),
+    tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
     talents: player.talents,
     availablePoints: getAvailablePoints(player.level, player.talents),
   });
@@ -656,7 +656,7 @@ exports.handleTalentRespec = (socket, data, { players }) => {
   player.recalcTalentBonuses();
 
   socket.emit('talent:tree', {
-    tree: getTalentTree(player.characterClass),
+    tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
     talents: player.talents,
     availablePoints: getAvailablePoints(player.level, player.talents),
   });
@@ -671,7 +671,7 @@ exports.handleTalentTree = (socket, data, { players }) => {
 
   const { getTalentTree, getAvailablePoints } = require('./game/talents');
   socket.emit('talent:tree', {
-    tree: getTalentTree(player.characterClass),
+    tree: { branches: getTalentTree(player.characterClass), className: player.characterClass },
     talents: player.talents,
     availablePoints: getAvailablePoints(player.level, player.talents),
   });

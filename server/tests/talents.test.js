@@ -229,26 +229,19 @@ describe('canAllocate', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('rejects tier 4 capstone without 9 branch points', () => {
-    const talents = { warrior_berserker_t1: 3, warrior_berserker_t2: 3, warrior_berserker_t3: 2 };
-    // That's 8 points, need 9
+  it('rejects tier 4 capstone without 8 branch points', () => {
+    // Need 8 points in branch for T4 (gate lowered from 9 → 8 by Rune Cycle #105)
+    const talents = { warrior_berserker_t1: 3, warrior_berserker_t2: 3, warrior_berserker_t3: 1 };
+    // 7 points — not enough
     const result = canAllocate('warrior', talents, 'warrior_berserker_t4', 20);
     expect(result.ok).toBe(false);
   });
 
-  it('allows tier 4 capstone with 9 branch points', () => {
-    // maxRank t3 = 2, so need 3+3+2=8... wait, we need 9 for t4.
-    // Tier gates: t4 needs 9. t1(3) + t2(3) + t3(2) = 8. Can't reach 9!
-    // Actually this is impossible with max ranks 3+3+2=8 < 9.
-    // The capstone can never be reached? Let me check — t4 gate is 9,
-    // but the point spent on t4 itself doesn't count (we check BEFORE allocation).
-    // So we need 9 points ALREADY in branch before t4 can be unlocked.
-    // With maxRank of 3+3+2 = 8, we can never reach 9.
-    // This seems like a design issue — let's test what actually happens.
+  it('allows tier 4 capstone with exactly 8 branch points', () => {
+    // T1(3) + T2(3) + T3(2) = 8 — exactly meets T4 gate
     const talents = { warrior_berserker_t1: 3, warrior_berserker_t2: 3, warrior_berserker_t3: 2 };
     const result = canAllocate('warrior', talents, 'warrior_berserker_t4', 20);
-    // 8 < 9, so this should fail
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -590,11 +583,11 @@ describe('Tier gate — edge cases', () => {
       talents = r.talents;
     }
 
-    // T4: Bloodbath ×1 (need 9 in branch, have 8) — should fail
+    // T4: Bloodbath ×1 (need 8 in branch, have 8) — should succeed
     const r = allocateTalent('warrior', talents, 'warrior_berserker_t4', level);
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
 
-    // Total: 3+3+2 = 8 points in branch, need 9 for T4
-    expect(getPointsInBranch(talents, 'warrior', 'berserker')).toBe(8);
+    // Total: 3+3+2+1 = 9 points in branch (full path complete)
+    expect(getPointsInBranch(r.talents, 'warrior', 'berserker')).toBe(9);
   });
 });

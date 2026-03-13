@@ -3,7 +3,7 @@
 // Tier gates are based on points spent in THAT branch.
 // Players gain 1 talent point per level.
 
-const TIER_GATES = { 1: 0, 2: 3, 3: 6, 4: 9 };
+const TIER_GATES = { 1: 0, 2: 3, 3: 6, 4: 8 };
 const TIER_MAX_RANKS = { 1: 3, 2: 3, 3: 2, 4: 1 };
 
 // ─── Warrior Talents ────────────────────────────────────────────────
@@ -495,17 +495,11 @@ function _totalAllocated(playerTalents) {
 }
 
 /**
- * Get available (unspent) talent points. 1 point per level, minus allocated.
+ * Get available (unspent) talent points.
+ * Players earn 1 talent point per level (level 1 = 1 point, level 10 = 10 points).
  */
 function getAvailablePoints(level, playerTalents) {
-  // Level 1 = 0 talent points, level 2 = 1, etc.
-  // Actually: players get 1 talent point per level starting from level 1.
-  // Total points = level - 1 (no point at level 1) ... or level.
-  // Convention: total points = level - 1 (you earn your first at level 2).
-  // Keeping it simple: total points = level (1 at level 1 is fine for gameplay).
-  // Following the spec: "1 talent point per level"
-  const totalPoints = level;
-  return Math.max(0, totalPoints - _totalAllocated(playerTalents));
+  return Math.max(0, level - _totalAllocated(playerTalents));
 }
 
 /**
