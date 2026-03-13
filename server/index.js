@@ -12,6 +12,7 @@ const { generateConsumable, generateLoot, generateWeapon, generateArmor } = requ
 const { getSellPrice } = require('./game/shop');
 const { createMonster } = require('./game/monsters');
 const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
+const { getRiftRewards } = require('./game/rifts');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
 const craftHandlers = require('./socket-handlers-craft');
@@ -147,6 +148,12 @@ controllerNs.on('connection', (socket) => {
   socket.on('leaderboard:get', (data) => handlers.handleLeaderboardGet(socket, data, ctx));
   socket.on('leaderboard:personal', (data) => handlers.handleLeaderboardPersonal(socket, data, ctx));
 
+  // ── Rift System ──
+  socket.on('rift:open', (data) => handlers.handleRiftOpen(socket, data, ctx));
+  socket.on('rift:enter', () => handlers.handleRiftEnter(socket, null, ctx));
+  socket.on('rift:cancel', () => handlers.handleRiftCancel(socket, null, ctx));
+  socket.on('rift:leaderboard', (data) => handlers.handleRiftLeaderboard(socket, data, ctx));
+
   // ── New Game (restart after victory) ──
   socket.on('game:restart', (data) => {
     const requestedDiff = (data && data.difficulty) || 'normal';
@@ -176,6 +183,7 @@ controllerNs.on('connection', (socket) => {
       entry.player.disconnected = false;
     }
     disconnectedPlayers.clear();
+    handlers.clearPendingRift();
 
     // Reposition all players, keep levels (NG+ lite)
     let idx = 0;
@@ -190,6 +198,7 @@ controllerNs.on('connection', (socket) => {
       p.deathTimer = 0;
       p.hp = p.maxHp;
       p.mp = p.maxMp;
+      p.healReduction = 1.0;
       idx++;
     }
 
@@ -491,6 +500,98 @@ function gameLoop() {
     }
   }
 
+  // ── Rift timer + modifier ticks ──
+  if (world.riftActive) {
+    const timerOk = world.updateRiftTimer(dt);
+
+    // Emit rift:timer every ~1 second
+    if (tickCount % TICK_RATE === 0) {
+      const remaining = world.getRiftTimeRemaining();
+      const timerPayload = { remaining, timeLimit: world.riftTimeLimit };
+      gameNs.emit('rift:timer', timerPayload);
+      controllerNs.emit('rift:timer', timerPayload);
+    }
+
+    // Burning modifier: every 5s, all players take 5% maxHp fire damage
+    if (world.riftConfig) {
+      const hasBurning = world.riftConfig.modifiers.some(m => m.effect === 'env_fire');
+      if (hasBurning && tickCount % (TICK_RATE * 5) === 0) {
+        for (const player of allPlayers) {
+          if (!player.alive || player.isDying) continue;
+          const fireDmg = Math.max(1, Math.floor(player.maxHp * 0.05));
+          player.hp -= fireDmg;
+          combat.events.push({
+            type: 'combat:hit', targetId: player.id, damage: fireDmg,
+            damageType: 'fire', attackType: 'rift_burning',
+          });
+          if (player.hp <= 0) {
+            player.hp = 0;
+            player.die();
+            combat.events.push({
+              type: 'combat:player_death', targetId: player.id,
+              playerId: player.id, playerName: player.name, killedBy: 'rift_burning',
+            });
+          }
+        }
+      }
+
+      // Vampiric modifier: all monsters heal 10% of damage dealt this tick
+      const hasVampiric = world.riftConfig.modifiers.some(m => m.effect === 'monster_leech');
+      if (hasVampiric) {
+        for (const evt of combat.events) {
+          if (evt.type === 'combat:hit' && evt.attackerId && evt.damage > 0 && !evt.dodged) {
+            const monster = world.monsters.find(m => m.id === evt.attackerId && m.alive);
+            if (monster) {
+              const heal = Math.floor(evt.damage * 0.10);
+              monster.hp = Math.min(monster.maxHp, monster.hp + heal);
+            }
+          }
+        }
+      }
+    }
+
+    // Timer expired: rift failed
+    if (!timerOk) {
+      const riftTier = world.riftConfig ? world.riftConfig.tier : 0;
+      world.endRift();
+
+      // Reset heal reduction
+      for (const p of allPlayers) p.healReduction = 1.0;
+
+      gameNs.emit('rift:failed', { tier: riftTier, reason: 'timeout' });
+      controllerNs.emit('rift:failed', { tier: riftTier, reason: 'timeout' });
+      controllerNs.emit('notification', { text: 'Rift Failed! Time expired.', type: 'error' });
+
+      // Return to normal floor
+      world.generateFloor(0, gameDifficulty);
+      story.placeNpcs(world.storyNpcs || []);
+      let ridx = 0;
+      for (const [sid, p] of players) {
+        const spawn = world.getSpawnPosition(ridx);
+        p.x = spawn.x; p.y = spawn.y;
+        p.setRespawnPoint(spawn.x, spawn.y);
+        if (!p.alive) { p.alive = true; p.isDying = false; p.deathTimer = 0; p.hp = Math.floor(p.maxHp * 0.5); p.mp = Math.floor(p.maxMp * 0.5); }
+        ridx++;
+      }
+      gameNs.emit('dungeon:enter', {
+        room: world.serialize(), story: story.serialize(),
+        floor: world.currentFloor, floorName: world.floorName,
+        zoneId: world.zone ? world.zone.id : 'catacombs',
+        zoneName: world.zone ? world.zone.name : 'The Catacombs',
+      });
+      controllerNs.emit('floor:change', {
+        floor: world.currentFloor, floorName: world.floorName,
+        zoneId: world.zone ? world.zone.id : 'catacombs',
+        zoneName: world.zone ? world.zone.name : 'The Catacombs',
+        difficulty: gameDifficulty,
+      });
+      for (const [sid, p] of players) {
+        const sock = controllerNs.sockets.get(sid);
+        if (sock) sock.emit('stats:update', p.serializeForPhone());
+      }
+    }
+  }
+
   // Collect combat events
   const combatEvents = combat.clearEvents();
 
@@ -571,6 +672,82 @@ function gameLoop() {
           });
         }
 
+        // ── Rift Guardian kill: complete the rift ──
+        if (deadMonster.isRiftGuardian && world.riftActive && world.riftConfig) {
+          const riftConfig = world.riftConfig;
+          const remaining = world.getRiftTimeRemaining();
+          const elapsed = riftConfig.timeLimit - remaining;
+          const rewards = getRiftRewards(riftConfig.tier, remaining, riftConfig.timeLimit);
+
+          // Distribute rewards to all players
+          const playerNames = [];
+          for (const [sid, p] of players) {
+            playerNames.push(p.name);
+            p.gold += Math.floor(rewards.gold / Math.max(1, players.size));
+            if (rewards.keystones > 0) p.addKeystones(rewards.keystones);
+            const xpResult = p.gainXp(rewards.xp);
+            const sock = controllerNs.sockets.get(sid);
+            if (sock) {
+              sock.emit('stats:update', p.serializeForPhone());
+              if (xpResult && xpResult.isParagon) {
+                sock.emit('notification', { text: `Paragon Level ${xpResult.paragonLevel}!`, type: 'levelup' });
+              } else if (xpResult) {
+                sock.emit('notification', { text: `Level up! Now level ${xpResult.level}`, type: 'levelup' });
+              }
+            }
+          }
+
+          // Record in rift leaderboard
+          gameDb.recordRiftClear(riftConfig.tier, playerNames, elapsed, riftConfig.modifiers, gameDifficulty);
+
+          // Emit completion
+          const completePayload = {
+            tier: riftConfig.tier, timeElapsed: elapsed, timeRemaining: remaining,
+            rewards, modifiers: riftConfig.modifiers,
+          };
+          gameNs.emit('rift:complete', completePayload);
+          controllerNs.emit('rift:complete', completePayload);
+          controllerNs.emit('notification', {
+            text: `Rift Tier ${riftConfig.tier} cleared! +${rewards.gold}g, +${rewards.xp}xp${rewards.keystones > 0 ? `, +${rewards.keystones} keystone` : ''}`,
+            type: 'quest',
+          });
+
+          // End rift, reset heal reduction
+          world.endRift();
+          for (const p of allPlayers) p.healReduction = 1.0;
+          saveAllPlayers();
+
+          // Return to normal floor after 2s delay
+          setTimeout(() => {
+            world.generateFloor(0, gameDifficulty);
+            story.placeNpcs(world.storyNpcs || []);
+            let ridx = 0;
+            for (const [sid, p] of players) {
+              const spawn = world.getSpawnPosition(ridx);
+              p.x = spawn.x; p.y = spawn.y;
+              p.setRespawnPoint(spawn.x, spawn.y);
+              if (!p.alive) { p.alive = true; p.isDying = false; p.deathTimer = 0; p.hp = p.maxHp; p.mp = p.maxMp; }
+              ridx++;
+            }
+            gameNs.emit('dungeon:enter', {
+              room: world.serialize(), story: story.serialize(),
+              floor: world.currentFloor, floorName: world.floorName,
+              zoneId: world.zone ? world.zone.id : 'catacombs',
+              zoneName: world.zone ? world.zone.name : 'The Catacombs',
+            });
+            controllerNs.emit('floor:change', {
+              floor: world.currentFloor, floorName: world.floorName,
+              zoneId: world.zone ? world.zone.id : 'catacombs',
+              zoneName: world.zone ? world.zone.name : 'The Catacombs',
+              difficulty: gameDifficulty,
+            });
+            for (const [sid, p] of players) {
+              const sock = controllerNs.sockets.get(sid);
+              if (sock) sock.emit('stats:update', p.serializeForPhone());
+            }
+          }, 2000);
+        }
+
         // Slime split mechanic
         const splits = deadMonster.getSplitMonsters();
         if (splits.length > 0) {
@@ -632,7 +809,11 @@ function gameLoop() {
           const socket = controllerNs.sockets.get(sid);
           if (socket) {
             socket.emit('stats:update', player.serializeForPhone());
-            socket.emit('notification', { text: `Level up! Now level ${event.level}`, type: 'levelup' });
+            if (event.isParagon) {
+              socket.emit('notification', { text: `Paragon Level ${event.paragonLevel}!`, type: 'levelup' });
+            } else {
+              socket.emit('notification', { text: `Level up! Now level ${event.level}`, type: 'levelup' });
+            }
           }
         }
       }
@@ -647,8 +828,8 @@ function gameLoop() {
     // (Already handled by individual respawn timers)
   }
 
-  // Check if player is on exit (floor progression)
-  if (!world.exitLocked && !world._advancing && !gameWon) {
+  // Check if player is on exit (floor progression) — disabled during rifts
+  if (!world.exitLocked && !world._advancing && !gameWon && !world.riftActive) {
     for (const player of allPlayers) {
       if (!player.alive || player.isDying || player.disconnected) continue;
       if (world.isPlayerOnExit(player)) {

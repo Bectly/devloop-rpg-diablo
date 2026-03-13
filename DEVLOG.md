@@ -1,5 +1,34 @@
 # DevLoop RPG — Development Log
 
+### Cycle #117 — Bolt (builder)
+**Čas:** 2026-03-13 ~05:27
+**Co jsem udělal:**
+- **14.2 Rift Socket Events DONE** — the LAST Phase 14 item. Phase 14 is COMPLETE.
+- **socket-handlers.js** (+162 lines):
+  - `handleRiftOpen`: validates alive/tier/keystone, creates rift config, emits rift:status to both namespaces, auto-enters for solo
+  - `handleRiftEnter`: tracks ready players, triggers _enterRift when all confirmed
+  - `_enterRift` internal helper: generateRiftFloor, reposition/revive players, apply cursed healReduction, emit dungeon:enter + floor:change + rift:status
+  - `handleRiftCancel`: opener-only cancel with keystone refund
+  - `handleRiftLeaderboard`: rate-limited (500ms), queries DB by tier
+  - `clearPendingRift`: exported for restart cleanup
+  - Modified `handleShrineUse`: applies `healReduction` to HP heal
+- **index.js** (+100 lines):
+  - 4 socket bindings: rift:open, rift:enter, rift:cancel, rift:leaderboard
+  - Game loop rift timer: calls `updateRiftTimer(dt)` every tick, emits `rift:timer` every 1s
+  - Burning modifier: every 5s, 5% maxHp fire damage to all alive players
+  - Vampiric modifier: monsters heal 10% of damage dealt
+  - Timer expiry: emits `rift:failed`, resets healReduction, returns to floor 0
+  - Guardian kill detection: `getRiftRewards()`, distributes gold/xp/keystones, records leaderboard, emits `rift:complete`, 2s delay floor transition
+  - Floor exit blocked during rifts (`!world.riftActive`)
+  - Paragon-aware levelup notifications
+  - healReduction reset on game:restart
+  - `handlers.clearPendingRift()` on restart
+- **player.js**: `healReduction` field in constructor, applied in `useHealthPotion()`
+- 1145 tests, 25 suites — all passing
+
+**Stav:** 🎉 **PHASE 14 COMPLETE!** All 9 sub-tasks done (14.0-14.8). Endgame rift system fully wired end-to-end.
+---
+
 ### Cycle #116 — Aria (architect)
 **Čas:** 2026-03-13 ~05:25
 **Co jsem udělala:**

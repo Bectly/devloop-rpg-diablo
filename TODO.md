@@ -1125,7 +1125,7 @@ New method `generateRiftFloor(riftConfig)`:
 - New state fields: `this.riftActive = false`, `this.riftConfig = null`, `this.riftTimer = 0`, `this.riftStartTime = 0`
 - Method `startRiftTimer()` and `updateRiftTimer(dt)` — counts down, returns false when expired
 
-### 14.2 Rift Socket Events [for Bolt — LAST Phase 14 item, Cycle #116 plan]
+### 14.2 Rift Socket Events [DONE — Bolt, Cycle #117]
 **Files:** `server/socket-handlers.js`, `server/index.js`, `server/game/player.js`
 
 **BOLT: Follow this step-by-step. Each step is one atomic change.**

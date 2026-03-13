@@ -144,6 +144,7 @@ class Player {
 
     // Keystones (endgame rift currency)
     this.keystones = 0;
+    this.healReduction = 1.0; // 1.0 = normal, 0.5 = cursed rift modifier
 
     // Paragon (post-max-level progression)
     this.paragonLevel = 0;
@@ -376,7 +377,8 @@ class Player {
     if (this.healthPotions <= 0) return false;
     if (this.hp >= this.maxHp) return false;
     this.healthPotions -= 1;
-    this.hp = Math.min(this.maxHp, this.hp + Math.floor(this.maxHp * 0.35));
+    const healAmount = Math.floor(Math.floor(this.maxHp * 0.35) * (this.healReduction || 1.0));
+    this.hp = Math.min(this.maxHp, this.hp + healAmount);
     return true;
   }
 

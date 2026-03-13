@@ -8,6 +8,7 @@ const { generateConsumable, generateWeapon, generateArmor } = require('./game/it
 const { getSellPrice } = require('./game/shop');
 const { TILE_SIZE } = require('./game/world');
 const { pendingReforges } = require('./socket-handlers-craft');
+const { createRift, getRiftRewards } = require('./game/rifts');
 const uuid = require('uuid');
 
 // Two-player dialogue vote state: npcId → { votes: Map(socketId → choiceIdx), timeout: null }
@@ -16,6 +17,9 @@ const dialogueVotes = new Map();
 // Grace period map for disconnected players: name → { player, inventory, socketId, timer }
 const disconnectedPlayers = new Map();
 const GRACE_PERIOD_MS = 30000; // 30 seconds
+
+// Rift open/enter state
+let pendingRift = null;
 
 function _resolveDialogue(socket, data, { players, world, story, gameNs, io }) {
   const player = players.get(socket.id);
@@ -802,7 +806,9 @@ exports.handleShrineUse = (socket, data, { players, world, gameNs }) => {
   const room = world.getRoomAtPosition(player.x, player.y);
   if (!room || !room.hasShrine || room.shrineUsed) return;
   room.shrineUsed = true;
-  player.hp = player.maxHp;
+  const healReduction = player.healReduction || 1.0;
+  const hpHeal = Math.floor((player.maxHp - player.hp) * healReduction);
+  player.hp = Math.min(player.maxHp, player.hp + hpHeal);
   player.mp = player.maxMp;
   const shrineChanged = player.questManager.check('use_shrine', {});
   if (shrineChanged.length > 0) {
@@ -990,6 +996,163 @@ exports.handleLeaderboardPersonal = function(socket, data, ctx) {
   const entries = ctx.gameDb.getPersonalRuns(player.name);
   socket.emit('leaderboard:data', { entries, type: 'personal' });
 };
+
+// ── Rift System ──
+
+// Internal helper: enter rift (called when all players ready)
+function _enterRift(ctx) {
+  const riftConfig = pendingRift.riftConfig;
+  pendingRift = null;
+
+  ctx.world.generateRiftFloor(riftConfig);
+
+  // Apply cursed modifier heal reduction
+  const hasCursed = riftConfig.modifiers.some(m => m.effect === 'heal_reduce');
+
+  // Reposition all players, revive dead
+  let idx = 0;
+  for (const [sid, p] of ctx.players) {
+    const spawn = ctx.world.getSpawnPosition(idx);
+    p.x = spawn.x;
+    p.y = spawn.y;
+    p.setRespawnPoint(spawn.x, spawn.y);
+    p.healReduction = hasCursed ? 0.5 : 1.0;
+    if (!p.alive) {
+      p.alive = true;
+      p.isDying = false;
+      p.deathTimer = 0;
+      p.hp = p.maxHp;
+      p.mp = p.maxMp;
+    }
+    idx++;
+  }
+
+  // Emit floor transition
+  ctx.gameNs.emit('dungeon:enter', {
+    room: ctx.world.serialize(),
+    story: ctx.story ? ctx.story.serialize() : {},
+    floor: ctx.world.currentFloor,
+    floorName: ctx.world.floorName,
+    zoneId: ctx.world.zone ? ctx.world.zone.id : 'catacombs',
+    zoneName: ctx.world.zone ? ctx.world.zone.name : 'The Catacombs',
+  });
+  ctx.controllerNs.emit('floor:change', {
+    floor: ctx.world.currentFloor,
+    floorName: ctx.world.floorName,
+    zoneId: ctx.world.zone ? ctx.world.zone.id : 'catacombs',
+    zoneName: ctx.world.zone ? ctx.world.zone.name : 'The Catacombs',
+    difficulty: ctx.gameDifficulty || 'normal',
+    rift: true,
+    riftTier: riftConfig.tier,
+  });
+  ctx.controllerNs.emit('rift:status', {
+    state: 'active',
+    tier: riftConfig.tier,
+    modifiers: riftConfig.modifiers,
+    zone: riftConfig.zone,
+    timeLimit: riftConfig.timeLimit,
+  });
+  ctx.controllerNs.emit('notification', { text: `Rift Tier ${riftConfig.tier} — ${riftConfig.zone}! GO!`, type: 'quest' });
+
+  // Update all phone stats
+  for (const [sid, p] of ctx.players) {
+    const sock = ctx.controllerNs.sockets.get(sid);
+    if (sock) sock.emit('stats:update', p.serializeForPhone());
+  }
+}
+
+exports.handleRiftOpen = (socket, data, ctx) => {
+  const player = ctx.players.get(socket.id);
+  if (!player || !player.alive) return;
+
+  const tier = Math.max(1, Math.min(10, parseInt(data && data.tier, 10) || 1));
+
+  if (ctx.world.riftActive) {
+    socket.emit('notification', { text: 'Already in a rift!', type: 'error' });
+    return;
+  }
+  if (pendingRift) {
+    socket.emit('notification', { text: 'A rift is already being opened!', type: 'error' });
+    return;
+  }
+  if (!player.spendKeystone()) {
+    socket.emit('notification', { text: 'No keystones!', type: 'error' });
+    return;
+  }
+
+  const riftConfig = createRift(tier, player.level);
+  pendingRift = { riftConfig, openerSocketId: socket.id, readySet: new Set([socket.id]) };
+
+  const statusPayload = {
+    state: 'pending',
+    tier,
+    modifiers: riftConfig.modifiers,
+    zone: riftConfig.zone,
+    timeLimit: riftConfig.timeLimit,
+    readyCount: 1,
+    totalPlayers: ctx.players.size,
+  };
+  ctx.gameNs.emit('rift:status', statusPayload);
+  ctx.controllerNs.emit('rift:status', statusPayload);
+  socket.emit('notification', { text: `Rift Tier ${tier} opened! Waiting for all players...`, type: 'quest' });
+  socket.emit('stats:update', player.serializeForPhone());
+
+  // Solo: auto-enter
+  if (ctx.players.size <= 1) {
+    _enterRift(ctx);
+  }
+};
+
+exports.handleRiftEnter = (socket, data, ctx) => {
+  if (!pendingRift) return;
+  if (!ctx.players.has(socket.id)) return;
+
+  pendingRift.readySet.add(socket.id);
+
+  const statusPayload = {
+    state: 'pending',
+    tier: pendingRift.riftConfig.tier,
+    modifiers: pendingRift.riftConfig.modifiers,
+    zone: pendingRift.riftConfig.zone,
+    timeLimit: pendingRift.riftConfig.timeLimit,
+    readyCount: pendingRift.readySet.size,
+    totalPlayers: ctx.players.size,
+  };
+  ctx.gameNs.emit('rift:status', statusPayload);
+  ctx.controllerNs.emit('rift:status', statusPayload);
+
+  if (pendingRift.readySet.size >= ctx.players.size) {
+    _enterRift(ctx);
+  }
+};
+
+exports.handleRiftCancel = (socket, data, ctx) => {
+  if (!pendingRift) return;
+  if (socket.id !== pendingRift.openerSocketId) {
+    socket.emit('notification', { text: 'Only the opener can cancel!', type: 'error' });
+    return;
+  }
+  // Refund keystone
+  const player = ctx.players.get(socket.id);
+  if (player) player.addKeystones(1);
+  pendingRift = null;
+  ctx.gameNs.emit('rift:status', { state: 'cancelled' });
+  ctx.controllerNs.emit('rift:status', { state: 'cancelled' });
+  socket.emit('notification', { text: 'Rift cancelled. Keystone refunded.', type: 'quest' });
+  if (player) socket.emit('stats:update', player.serializeForPhone());
+};
+
+exports.handleRiftLeaderboard = (socket, data, ctx) => {
+  const now = Date.now();
+  if (socket._lastRiftLdbTime && now - socket._lastRiftLdbTime < 500) return;
+  socket._lastRiftLdbTime = now;
+
+  const tier = parseInt(data && data.tier, 10) || 1;
+  const entries = ctx.gameDb.getRiftLeaderboard(tier);
+  socket.emit('rift:leaderboard', { tier, entries });
+};
+
+exports.clearPendingRift = () => { pendingRift = null; };
 
 // ── Exports for external access ──
 exports.disconnectedPlayers = disconnectedPlayers;
