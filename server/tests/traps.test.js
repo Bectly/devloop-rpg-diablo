@@ -597,7 +597,7 @@ describe('Integration: trap triggers on player', () => {
 
   it('trap can kill a player', () => {
     const trap = makeTrap('void', 100, 100); // 25 cold damage
-    const player = makePlayer({ x: 100, y: 100, hp: 1, maxHp: 200 });
+    const player = makePlayer({ x: 100, y: 100, hp: 1, maxHp: 200, dodgeChance: 0 });
 
     trap.trigger(player);
 
