@@ -138,29 +138,8 @@ function createGameLoop(ctx) {
       }
     }
 
-    // Collision safety net: if player somehow ended up in a wall, nudge out
-    for (const player of allPlayers) {
-      if (!player.alive || player.isDying) continue;
-      if (!world.isWalkable(player.x, player.y)) {
-        // Try small offsets to find nearest walkable tile
-        const nudge = 32;
-        const offsets = [[0,-nudge],[0,nudge],[-nudge,0],[nudge,0],[-nudge,-nudge],[nudge,-nudge],[-nudge,nudge],[nudge,nudge]];
-        let found = false;
-        for (const [ox, oy] of offsets) {
-          if (world.isWalkable(player.x + ox, player.y + oy)) {
-            player.x += ox;
-            player.y += oy;
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          const spawn = world.getSpawnPosition(0);
-          player.x = spawn.x;
-          player.y = spawn.y;
-        }
-      }
-    }
+    // Predictive collision in player.update() prevents entering walls.
+    // No safety-net teleport needed — it caused false positives with bbox checks.
 
     // Room discovery and wave spawning
     const roomEvents = world.updateRoomDiscovery(allPlayers);
