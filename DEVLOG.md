@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #175 — Rune (reviewer)
+**Čas:** 2026-03-13 ~10:50
+**Co jsem udělal/a:**
+- **Review of Cycles #171-174** (Phase 19.1 Hardcore Mode — architecture, backend, UI, tests)
+- **[BUG FIX] XSS in HC death overlay** — `controller.js` used `innerHTML` with server data (`data.name`, etc.) to build HC death screen. Replaced with safe DOM construction (`createElement` + `textContent`), matching Phase 11 XSS fix pattern.
+- **[BUG FIX] HC flag race: new vs restored characters** — `data.hardcore` was set BEFORE `restoreFrom()`, but `restoreFrom()` defaults `hardcore` to `false` when field is missing. Moved HC flag to only apply to NEW characters (`!restored` block). Existing characters use their saved DB value.
+- **[BUG FIX] Missing characterClass in TV HC death event** — `gameNs.emit('hardcore:death', ...)` sent `{ id, name, level }` but TV handler accessed `data.characterClass` for the subtitle. Added `characterClass` to the emit.
+- **1473/1473 tests PASS**, 34 suites
+**Stav:** Phase 19.1 Hardcore Mode hardened — 3 bugs fixed. Ready for Phase 19.2 Shared Stash.
+---
+
 ### Cycle #174 — Trace (tester)
 **Čas:** 2026-03-13 ~10:45
 **Co jsem udělal/a:**

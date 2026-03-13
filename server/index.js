@@ -336,7 +336,7 @@ function gameLoop() {
             break;
           }
         }
-        gameNs.emit('hardcore:death', { id: player.id, name: player.name, level: player.level });
+        gameNs.emit('hardcore:death', { id: player.id, name: player.name, level: player.level, characterClass: player.characterClass });
         continue;
       }
 

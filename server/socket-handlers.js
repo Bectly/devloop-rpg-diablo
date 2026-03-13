@@ -153,11 +153,6 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
 
   const player = new Player(name, characterClass);
 
-  // Hardcore mode: permanent death, +25% magic find
-  if (data.hardcore === true) {
-    player.hardcore = true;
-  }
-
   // Spawn at dungeon start room
   const spawnPos = world.getSpawnPosition(players.size);
   player.x = spawnPos.x;
@@ -194,6 +189,11 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
   if (!restored) {
     const startPotion = generateConsumable('health_potion', 3);
     if (startPotion) inv.addItem(startPotion);
+
+    // Hardcore mode: only set on NEW characters (restored chars use DB value)
+    if (data.hardcore === true) {
+      player.hardcore = true;
+    }
   }
 
   players.set(socket.id, player);

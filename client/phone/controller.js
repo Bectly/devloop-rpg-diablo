@@ -134,17 +134,35 @@ socket.on('joined', (data) => {
 });
 
 socket.on('hardcore:death', (data) => {
-  // Show dramatic HC death overlay
+  // Show dramatic HC death overlay (DOM construction, no innerHTML — XSS safe)
   const overlay = document.createElement('div');
   overlay.className = 'hc-death-overlay';
-  overlay.innerHTML = `
-    <div class="hc-death-skull">&#9760;</div>
-    <div class="hc-death-title">HARDCORE DEATH</div>
-    <div class="hc-death-stats">
-      <div>Your hero <span>${data.name}</span> has fallen forever.</div>
-      <div>Level <span>${data.level}</span> &bull; <span>${data.kills}</span> kills &bull; <span>${data.gold}</span> gold</div>
-    </div>
-  `;
+
+  const skull = document.createElement('div');
+  skull.className = 'hc-death-skull';
+  skull.textContent = '\u2620';
+
+  const title = document.createElement('div');
+  title.className = 'hc-death-title';
+  title.textContent = 'HARDCORE DEATH';
+
+  const statsDiv = document.createElement('div');
+  statsDiv.className = 'hc-death-stats';
+  const line1 = document.createElement('div');
+  const heroSpan = document.createElement('span');
+  heroSpan.textContent = data.name || 'Hero';
+  line1.append('Your hero ', heroSpan, ' has fallen forever.');
+  const line2 = document.createElement('div');
+  const lvSpan = document.createElement('span');
+  lvSpan.textContent = data.level || '?';
+  const killSpan = document.createElement('span');
+  killSpan.textContent = data.kills || 0;
+  const goldSpan = document.createElement('span');
+  goldSpan.textContent = data.gold || 0;
+  line2.append('Level ', lvSpan, ' \u2022 ', killSpan, ' kills \u2022 ', goldSpan, ' gold');
+  statsDiv.append(line1, line2);
+
+  overlay.append(skull, title, statsDiv);
   document.body.appendChild(overlay);
   // Return to join screen after 5 seconds
   setTimeout(() => {
