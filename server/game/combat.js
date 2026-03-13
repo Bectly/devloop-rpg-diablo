@@ -194,7 +194,9 @@ class CombatSystem {
 
     // Check for kill
     if (!nearest.alive) {
-      const loot = generateLoot(nearest.lootTier, nearest.type, nearest.floor || 0, nearest.goldMult || 1.0);
+      // Hardcore bonus: +1 loot tier for better drops
+      const hcBonus = player.hardcore ? 1 : 0;
+      const loot = generateLoot(nearest.lootTier + hcBonus, nearest.type, nearest.floor || 0, nearest.goldMult || 1.0);
 
       // Set item drop chance
       const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);

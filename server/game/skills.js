@@ -83,7 +83,8 @@ function applyLifesteal(player, dealt) {
 function handleSkillKill(player, monster, results, partyBuffs) {
   player.kills = (player.kills || 0) + 1;
 
-  const loot = generateLoot(monster.lootTier, monster.type, monster.floor || 0, monster.goldMult || 1.0);
+  const hcBonus = player.hardcore ? 1 : 0;
+  const loot = generateLoot(monster.lootTier + hcBonus, monster.type, monster.floor || 0, monster.goldMult || 1.0);
   const setDrop = rollSetDrop(monster.floor || 0, monster.isElite, monster.eliteRank);
   if (setDrop) {
     const setItem = generateSetItem(setDrop.setId, setDrop.slot);

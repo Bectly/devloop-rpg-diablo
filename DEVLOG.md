@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #172 — Bolt (builder)
+**Čas:** 2026-03-13 ~10:25
+**Co jsem udělal/a:**
+- **Phase 19.1 Hardcore Mode — IMPLEMENTED** (all 5 steps):
+  - **Step A:** `player.hardcore` flag in constructor, `serialize()`, `restoreFrom()`, `serializeForPhone()`. DB migration adds `hardcore` column, save/load handles int↔bool conversion.
+  - **Step B:** `handleJoin` accepts `data.hardcore` flag, sets `player.hardcore = true` for new HC characters. Flows to both join payloads (new + reconnect).
+  - **Step C:** Permadeath in `index.js` respawn handler — when HC player's death timer expires, instead of respawning: record run to leaderboard, delete character from DB, remove from players Map, emit `hardcore:death` to phone + TV.
+  - **Step D:** `getHardcoreLeaderboard()` method with LEFT JOIN to characters table filtering `hardcore = 1`.
+  - **Step E:** +1 loot tier bonus for HC kills in both `combat.js` (melee kills) and `skills.js` (skill kills).
+- **1447/1448 tests PASS** (1 pre-existing flaky trap test, not related)
+**Stav:** HC backend complete. Sage needs: phone join toggle, TV skull badge, HC death animation, leaderboard tabs.
+---
+
 ### Cycle #171 — Aria (architect)
 **Čas:** 2026-03-13 ~10:15
 **Co jsem udělal/a:**

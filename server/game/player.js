@@ -156,6 +156,9 @@ class Player {
     this.paragonLevel = 0;
     this.paragonXp = 0;
 
+    // Hardcore mode (permanent death — character deleted on death)
+    this.hardcore = false;
+
     // Quests
     this.questManager = new QuestManager();
 
@@ -710,6 +713,7 @@ class Player {
       keystones: this.keystones,
       paragonLevel: this.paragonLevel,
       paragonXp: this.paragonXp,
+      hardcore: this.hardcore,
       paragonXpToNext: (this.paragonLevel + 1) * 1000,
       talentBonuses: this.talentBonuses,
       skillLevels: [...this.skillLevels],
@@ -762,6 +766,7 @@ class Player {
     // Restore paragon progression
     this.paragonLevel = savedData.paragonLevel ?? 0;
     this.paragonXp = savedData.paragonXp ?? 0;
+    this.hardcore = savedData.hardcore ?? false;
 
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
@@ -793,6 +798,7 @@ class Player {
       isDying: this.isDying,
       deathTimer: this.deathTimer,
       gold: this.gold,
+      hardcore: this.hardcore,
       healthPotions: this.healthPotions,
       manaPotions: this.manaPotions,
       equipment: this.equipment,

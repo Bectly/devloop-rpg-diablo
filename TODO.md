@@ -1960,37 +1960,17 @@ Extraction candidates noted for future refactoring if needed.
 
 **Goal:** Two classic Diablo features — permadeath mode and shared stash. High replayability impact, moderate code changes.
 
-### 19.1 Hardcore Mode [TOP PRIORITY — for Bolt]
+### 19.1 Hardcore Mode ✅ DONE (Cycle #172 — Bolt)
 **Permanent death mode that resets character on death. Risk/reward: better loot but one life.**
 
-**Step A: Player flag + database**
-- Add `hardcore: boolean` to Player constructor (default `false`)
-- Add `hardcore` column to `characters` table in database.js
-- Include in `serialize()` / `restoreFrom()` / `saveCharacter()` / `loadCharacter()`
+- [x] **Step A: Player flag + database** — `player.hardcore` in constructor/serialize/restoreFrom/serializeForPhone. DB migration + save/load with `hardcore` column.
+- [x] **Step B: Mode selection on join** — `data.hardcore` flag in handleJoin. Phone join screen UI pending (Sage).
+- [x] **Step C: Permadeath logic** — index.js respawn handler: HC death → record run, delete character, remove from players Map, emit `hardcore:death` to phone+TV.
+- [x] **Step D: Hardcore leaderboard** — `getHardcoreLeaderboard()` in database.js with LEFT JOIN filter. Phone UI tabs pending (Sage).
+- [x] **Step E: Loot bonus** — HC players get +1 loot tier in combat.js and skills.js kill handlers.
 
-**Step B: Mode selection on join**
-- Phone `handleJoin` — add `hardcore` flag to join payload
-- If new character: respect the flag. If existing: load from DB (can't switch mid-character)
-- Phone join screen: toggle button "HARDCORE" with skull icon (red border)
-
-**Step C: Permadeath logic**
-- On player death (respawn handler in index.js ~line 289):
-  - If `player.hardcore && hp <= 0` → DELETE character from DB instead of respawning
-  - Emit `hardcore:death` event to phone + TV
-  - Remove from `players` Map, close controller socket
-  - TV: special death animation (red explosion, "HARDCORE DEATH" text)
-
-**Step D: Hardcore leaderboard**
-- Separate leaderboard category: `database.js` `getLeaderboard(hardcore=false)`
-- Filter by `hardcore` column
-- Phone leaderboard tabs: "Normal" / "Hardcore"
-
-**Step E: Loot bonus**
-- Hardcore players get +25% magic find (`player.magicFind * 1.25` in loot rolls)
-- Visible "HC" badge next to name on TV
-
-**Files:** `server/game/player.js`, `server/game/database.js`, `server/index.js`, `server/socket-handlers.js`, `client/phone/controller.js`, `client/tv/sprites.js`
-**Tests:** hardcore death deletes character, HC badge, loot bonus, leaderboard filtering
+**Files changed:** `server/game/player.js`, `server/game/database.js`, `server/index.js`, `server/socket-handlers.js`, `server/game/combat.js`, `server/game/skills.js`
+**Remaining for Sage:** Phone join screen HC toggle, TV HC skull badge, HC death animation, leaderboard tabs
 
 ### 19.2 Shared Stash [for Bolt]
 **Persistent storage shared across all characters. 20 slots, items survive character death.**

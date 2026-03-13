@@ -99,6 +99,7 @@ class GameDatabase {
     if (!cols.includes('keystones'))     this.db.exec("ALTER TABLE characters ADD COLUMN keystones INTEGER NOT NULL DEFAULT 0");
     if (!cols.includes('paragon_level')) this.db.exec("ALTER TABLE characters ADD COLUMN paragon_level INTEGER NOT NULL DEFAULT 0");
     if (!cols.includes('paragon_xp'))    this.db.exec("ALTER TABLE characters ADD COLUMN paragon_xp INTEGER NOT NULL DEFAULT 0");
+    if (!cols.includes('hardcore'))      this.db.exec("ALTER TABLE characters ADD COLUMN hardcore INTEGER NOT NULL DEFAULT 0");
   }
 
   _prepareStatements() {
@@ -106,11 +107,11 @@ class GameDatabase {
       INSERT OR REPLACE INTO characters
         (name, class, level, xp, stats, equipment, inventory, gold, floor, kills,
          health_potions, mana_potions, free_stat_points, talents, keystones,
-         paragon_level, paragon_xp, updated_at)
+         paragon_level, paragon_xp, hardcore, updated_at)
       VALUES
         (@name, @class, @level, @xp, @stats, @equipment, @inventory, @gold, @floor, @kills,
          @health_potions, @mana_potions, @free_stat_points, @talents, @keystones,
-         @paragonLevel, @paragonXp, datetime('now'))
+         @paragonLevel, @paragonXp, @hardcore, datetime('now'))
     `);
 
     this._stmtLoad = this.db.prepare(`
@@ -145,6 +146,15 @@ class GameDatabase {
       ORDER BY CASE difficulty WHEN 'hell' THEN 0 WHEN 'nightmare' THEN 1 ELSE 2 END,
         victory DESC, floor_reached DESC, time_seconds ASC
       LIMIT 5
+    `);
+
+    this._stmtLeaderboardTopHC = this.db.prepare(`
+      SELECT l.*, c.hardcore FROM leaderboard l
+      LEFT JOIN characters c ON l.player_name = c.name
+      WHERE c.hardcore = 1 OR c.hardcore IS NULL
+      ORDER BY CASE difficulty WHEN 'hell' THEN 0 WHEN 'nightmare' THEN 1 ELSE 2 END,
+        victory DESC, floor_reached DESC, time_seconds ASC
+      LIMIT 10
     `);
 
     this._stmtRiftInsert = this.db.prepare(`
@@ -190,6 +200,7 @@ class GameDatabase {
       keystones: player.keystones || 0,
       paragonLevel: player.paragonLevel || 0,
       paragonXp: player.paragonXp || 0,
+      hardcore: player.hardcore ? 1 : 0,
     });
   }
 
@@ -243,6 +254,7 @@ class GameDatabase {
       keystones: row.keystones || 0,
       paragonLevel: row.paragon_level || 0,
       paragonXp: row.paragon_xp || 0,
+      hardcore: row.hardcore === 1,
     };
   }
 
@@ -292,6 +304,10 @@ class GameDatabase {
    */
   getPersonalRuns(playerName) {
     return this._stmtLeaderboardPersonal.all(playerName);
+  }
+
+  getHardcoreLeaderboard() {
+    return this._stmtLeaderboardTopHC.all();
   }
 
   /**

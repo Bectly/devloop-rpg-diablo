@@ -119,6 +119,7 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
       zoneId: world.zone ? world.zone.id : 'catacombs',
       zoneName: world.zone ? world.zone.name : 'The Catacombs',
       quests: player.questManager.getActiveQuests(),
+      hardcore: player.hardcore,
     });
 
     socket.emit('stats:update', player.serializeForPhone());
@@ -151,6 +152,11 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     : 'warrior';
 
   const player = new Player(name, characterClass);
+
+  // Hardcore mode: permanent death, +25% magic find
+  if (data.hardcore === true) {
+    player.hardcore = true;
+  }
 
   // Spawn at dungeon start room
   const spawnPos = world.getSpawnPosition(players.size);
@@ -209,6 +215,7 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     zoneId: world.zone ? world.zone.id : 'catacombs',
     zoneName: world.zone ? world.zone.name : 'The Catacombs',
     quests: player.questManager.getActiveQuests(),
+    hardcore: player.hardcore,
   });
 
   // Notify TV

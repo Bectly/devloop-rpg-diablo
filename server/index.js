@@ -308,7 +308,39 @@ function gameLoop() {
     }
 
     if (result && result.type === 'player:respawn') {
-      // Player respawned, notify
+      // ── Hardcore permadeath: delete character instead of respawning ──
+      if (player.hardcore) {
+        for (const [sid, p] of players) {
+          if (p.id === player.id) {
+            const socket = controllerNs.sockets.get(sid);
+            if (socket) {
+              socket.emit('hardcore:death', {
+                name: player.name,
+                level: player.level,
+                kills: player.kills,
+                gold: player.gold,
+              });
+              socket.emit('notification', { text: 'HARDCORE DEATH — Your hero has fallen forever.', type: 'error' });
+            }
+            // Record the run before deletion
+            if (gameDb) {
+              try {
+                gameDb.recordRun(player.name, player.characterClass, player.level, world.currentFloor, player.kills, player.gold, Math.floor((Date.now() - gameStartTime) / 1000), 0, gameDifficulty);
+                gameDb.deleteCharacter(player.name);
+              } catch (err) { console.error('[HC] Delete failed:', err.message); }
+            }
+            inventories.delete(p.id);
+            controllerSockets.delete(sid);
+            players.delete(sid);
+            console.log(`[HC] ${player.name} PERMADEATH — character deleted. Level ${player.level}, ${player.kills} kills.`);
+            break;
+          }
+        }
+        gameNs.emit('hardcore:death', { id: player.id, name: player.name, level: player.level });
+        continue;
+      }
+
+      // Normal respawn, notify
       for (const [sid, p] of players) {
         if (p.id === result.playerId) {
           const socket = controllerNs.sockets.get(sid);
