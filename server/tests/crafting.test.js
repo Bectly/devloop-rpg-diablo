@@ -249,6 +249,15 @@ describe('Crafting System (Phase 10)', () => {
       expect(reforged.rarity).toBe(original.rarity);
     });
 
+    it('preserves bonus count even when new stat collides with existing', () => {
+      // With only 1 bonus, reforge always keeps exactly 1 bonus
+      const w = makeWeapon({ bonuses: { str: 5 } });
+      for (let i = 0; i < 20; i++) {
+        const reforged = reforgeItem(w);
+        expect(Object.keys(reforged.bonuses).length).toBe(1);
+      }
+    });
+
     it('applies rarity multiplier to reforged bonus values', () => {
       // legendary multiplier = 2.2, so even min value (1) → ceil(1 * 2.2) = 3
       const original = makeWeapon({ rarity: 'legendary', bonuses: { str: 10 } });
@@ -531,11 +540,8 @@ describe('Crafting System (Phase 10)', () => {
         const origCount = Object.keys(w.bonuses).length;
         const reforged = reforgeItem(w);
         expect(reforged).not.toBeNull();
-        // Reforge removes 1 key and adds 1 — count stays same OR the new key
-        // overwrites an existing different key (net count = origCount - 1 + 1 = origCount,
-        // but if deleted key != new key and new key already existed, count decreases by 1)
-        expect(Object.keys(reforged.bonuses).length).toBeGreaterThanOrEqual(origCount - 1);
-        expect(Object.keys(reforged.bonuses).length).toBeLessThanOrEqual(origCount);
+        // After Rune's fix: collision guard ensures bonus count never decreases
+        expect(Object.keys(reforged.bonuses).length).toBe(origCount);
       }
     });
   });

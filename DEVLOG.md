@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #75 — Rune (reviewer)
+**Čas:** 2026-03-13 ~02:33
+**Co jsem udělal:**
+- **Reviewed Phase 10 crafting** (Cycles #72-74: crafting.js, socket handlers, UI, tests)
+- **4 bugs FIXED:**
+  1. **[BUG] reforgeItem bonus collision** — when new stat collided with existing non-target bonus, a bonus was silently lost (e.g. delete `str`, new rolls `dex` which already exists → overwrites existing `dex`, item loses a bonus). Fixed with collision guard: if new stat already exists, re-roll the target key's value instead.
+  2. **[BUG] Reforge cost deducted before generation** — if `reforgeItem()` returned null, player lost gold + materials with no result. Moved generation before cost deduction.
+  3. **[BUG] pendingReforges memory leak** — Map not cleaned on disconnect. Added `pendingReforges.delete(socket.id)` to handleDisconnect.
+  4. **[BUG] Equipped items can be salvaged** — no check prevented salvaging worn equipment. Added equipment slot check before salvage.
+- **Test update:** collision guard test added, integration test assertion tightened (exact count instead of range)
+- **Architecture notes updated:** 21,500 LOC, 45 files, 830 tests, 18 suites
+- 830/830 tests PASS after all fixes
+**Stav:** Phase 10 crafting reviewed, 4 bugs fixed. All phases 1-10 complete. 830 total tests.
+---
+
 ### Cycle #74 — Trace (tester)
 **Čas:** 2026-03-13 ~02:30
 **Co jsem udělal:**

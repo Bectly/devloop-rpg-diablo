@@ -830,6 +830,9 @@ exports.handleChestOpen = (socket, data, { players, world, gameNs, io }) => {
 
 // ── Disconnect ──
 exports.handleDisconnect = (socket, data, { players, inventories, controllerSockets, gameNs, gameDb, world }) => {
+  // Clean up pending crafting reforges
+  pendingReforges.delete(socket.id);
+
   const player = players.get(socket.id);
   if (player) {
     // Save character to DB immediately (include current floor)
@@ -915,6 +918,13 @@ exports.handleCraftSalvage = (socket, data, { players, inventories }) => {
     socket.emit('notification', { text: 'Cannot salvage this item!', type: 'error' });
     return;
   }
+  // Prevent salvaging equipped items
+  for (const slot of Object.keys(player.equipment)) {
+    if (player.equipment[slot] && player.equipment[slot].id === item.id) {
+      socket.emit('notification', { text: 'Unequip item first!', type: 'error' });
+      return;
+    }
+  }
 
   const result = getSalvageResult(item);
   if (!result) return;
@@ -973,16 +983,16 @@ exports.handleCraftReforge = (socket, data, { players, inventories }) => {
     return;
   }
 
-  // Deduct cost
-  player.gold -= cost.gold;
-  removeMaterials(inv, cost);
-
-  // Generate reforged version
+  // Generate reforged version BEFORE deducting cost (avoid losing resources on failure)
   const reforged = reforgeItem(item);
   if (!reforged) {
     socket.emit('notification', { text: 'Reforge failed!', type: 'error' });
     return;
   }
+
+  // Deduct cost
+  player.gold -= cost.gold;
+  removeMaterials(inv, cost);
 
   // Store pending — player must accept or reject
   pendingReforges.set(socket.id, {

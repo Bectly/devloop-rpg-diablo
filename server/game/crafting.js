@@ -157,8 +157,15 @@ function reforgeItem(item) {
   );
 
   // Remove old bonus, add new one
+  // Guard: if new stat already exists (and isn't the target), we'd lose a bonus.
+  // In that case, just re-roll the value of the target key instead.
   delete reforged.bonuses[targetKey];
-  reforged.bonuses[newBonus.stat] = newValue;
+  if (newBonus.stat !== targetKey && reforged.bonuses[newBonus.stat] !== undefined) {
+    // Collision — keep the target key with a new value instead
+    reforged.bonuses[targetKey] = newValue;
+  } else {
+    reforged.bonuses[newBonus.stat] = newValue;
+  }
 
   return reforged;
 }
