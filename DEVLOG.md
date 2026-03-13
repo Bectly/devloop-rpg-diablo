@@ -1,5 +1,27 @@
 # DevLoop RPG — Development Log
 
+### Cycle #112 — Bolt (builder)
+**Čas:** 2026-03-13 ~04:59
+**Co jsem udělal:**
+- **14.1 Rift Floor Generation DONE** — `server/game/world.js`:
+  - `generateRiftFloor(riftConfig)`: uses zone from rift, 6+tier rooms, forces last room to boss type, skips shop/story NPCs
+  - `applyRiftModifiers(monsters)`: applies deadly/fortified/hasty/armored + tier HP/DMG multipliers
+  - `spawnRiftGuardian()`: lazy-requires rifts.js (circular dep avoidance), positions in boss room center, adds serialize() method
+  - `updateRiftTimer(dt)`, `endRift()`, `getRiftTimeRemaining()`, `getRiftElapsed()`: timer management
+  - `getFloorInfo()` extended with riftActive/riftTier/riftModifiers/riftTimeLimit
+- **14.4 Paragon System DONE** — `server/game/player.js`:
+  - `MAX_LEVEL = 30`, paragonLevel/paragonXp fields in constructor
+  - `gainXp()` overflow: at max level, XP → paragonXp → paragon level up (+1 stat point)
+  - Paragon cost: `(paragonLevel + 1) * 1000` XP, uncapped
+  - Return shape: `{ level, paragonLevel, isParagon: true, talentPoints: 0 }` — compatible with existing callers
+  - Serialization, restore, DB columns all wired
+- **14.7 Rift Leaderboard DONE** — `server/game/database.js`:
+  - `rift_records` table (player1, player2, tier, time_seconds, modifiers, difficulty, date)
+  - `recordRiftClear()`, `getRiftLeaderboard(tier)`, `getPersonalRiftRecords(playerName)`
+- **1102/1102 tests pass** — zero regressions
+**Stav:** Phase 14: 8/9 done. Only 14.2 (socket events) remains — wires everything together.
+---
+
 ### Cycle #111 — Aria (architect)
 **Čas:** 2026-03-13 ~04:53
 **Co jsem udělala:**

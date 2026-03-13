@@ -59,6 +59,8 @@ class GameDatabase {
         free_stat_points INTEGER NOT NULL DEFAULT 0,
         talents TEXT NOT NULL DEFAULT '{}',
         keystones INTEGER NOT NULL DEFAULT 0,
+        paragon_level INTEGER NOT NULL DEFAULT 0,
+        paragon_xp INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
@@ -75,6 +77,17 @@ class GameDatabase {
         difficulty TEXT DEFAULT 'normal',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS rift_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        player1 TEXT NOT NULL,
+        player2 TEXT,
+        tier INTEGER NOT NULL,
+        time_seconds REAL NOT NULL,
+        modifiers TEXT NOT NULL DEFAULT '[]',
+        difficulty TEXT NOT NULL DEFAULT 'normal',
+        date TEXT NOT NULL DEFAULT (datetime('now'))
+      );
     `);
   }
 
@@ -82,10 +95,12 @@ class GameDatabase {
     this._stmtSave = this.db.prepare(`
       INSERT OR REPLACE INTO characters
         (name, class, level, xp, stats, equipment, inventory, gold, floor, kills,
-         health_potions, mana_potions, free_stat_points, talents, keystones, updated_at)
+         health_potions, mana_potions, free_stat_points, talents, keystones,
+         paragon_level, paragon_xp, updated_at)
       VALUES
         (@name, @class, @level, @xp, @stats, @equipment, @inventory, @gold, @floor, @kills,
-         @health_potions, @mana_potions, @free_stat_points, @talents, @keystones, datetime('now'))
+         @health_potions, @mana_potions, @free_stat_points, @talents, @keystones,
+         @paragonLevel, @paragonXp, datetime('now'))
     `);
 
     this._stmtLoad = this.db.prepare(`
@@ -148,6 +163,8 @@ class GameDatabase {
       free_stat_points: player.freeStatPoints,
       talents: JSON.stringify(player.talents || {}),
       keystones: player.keystones || 0,
+      paragonLevel: player.paragonLevel || 0,
+      paragonXp: player.paragonXp || 0,
     });
   }
 
@@ -199,6 +216,8 @@ class GameDatabase {
       freeStatPoints: row.free_stat_points,
       talents,
       keystones: row.keystones || 0,
+      paragonLevel: row.paragon_level || 0,
+      paragonXp: row.paragon_xp || 0,
     };
   }
 
@@ -265,6 +284,64 @@ class GameDatabase {
     if (won.includes('normal')) unlocked.push('nightmare');
     if (won.includes('nightmare')) unlocked.push('hell');
     return unlocked;
+  }
+
+  /**
+   * Record a completed rift clear to the rift leaderboard.
+   * @param {number} tier  Rift tier (1–10)
+   * @param {string[]} playerNames  [player1, player2] (player2 may be undefined for solo)
+   * @param {number} timeSeconds  Clear time in seconds (float)
+   * @param {object[]} modifiers  Array of modifier objects from the rift
+   * @param {string} difficulty  'normal' | 'nightmare' | 'hell'
+   */
+  recordRiftClear(tier, playerNames, timeSeconds, modifiers, difficulty) {
+    const stmt = this.db.prepare(`
+      INSERT INTO rift_records (player1, player2, tier, time_seconds, modifiers, difficulty)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      playerNames[0] || 'Unknown',
+      playerNames[1] || null,
+      tier,
+      timeSeconds,
+      JSON.stringify(modifiers || []),
+      difficulty || 'normal'
+    );
+  }
+
+  /**
+   * Get the top 20 fastest clears for a specific rift tier.
+   * @param {number} tier  Rift tier (1–10)
+   * @returns {object[]}
+   */
+  getRiftLeaderboard(tier) {
+    const stmt = this.db.prepare(`
+      SELECT player1, player2, tier, time_seconds, modifiers, difficulty, date
+      FROM rift_records
+      WHERE tier = ?
+      ORDER BY time_seconds ASC
+      LIMIT 20
+    `);
+    return stmt.all(tier).map(row => ({
+      ...row,
+      modifiers: JSON.parse(row.modifiers || '[]'),
+    }));
+  }
+
+  /**
+   * Get a player's personal best rift times grouped by tier.
+   * @param {string} playerName
+   * @returns {object[]}  Each row: { tier, best_time, clears }
+   */
+  getPersonalRiftRecords(playerName) {
+    const stmt = this.db.prepare(`
+      SELECT tier, MIN(time_seconds) as best_time, COUNT(*) as clears
+      FROM rift_records
+      WHERE player1 = ? OR player2 = ?
+      GROUP BY tier
+      ORDER BY tier ASC
+    `);
+    return stmt.all(playerName, playerName);
   }
 
   close() {

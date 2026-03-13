@@ -1106,7 +1106,7 @@ Engine functions:
 - `getRiftRewards(tier, timeRemaining)` — bonus loot for fast clear
 - `RIFT_TIERS` — tier definitions with scaling
 
-### 14.1 Rift Floor Generation [TOP PRIORITY for Bolt]
+### 14.1 Rift Floor Generation [DONE — Bolt, Cycle #112]
 **File:** `server/game/world.js` (MODIFY)
 
 New method `generateRiftFloor(riftConfig)`:
@@ -1159,7 +1159,7 @@ socket.on('rift:cancel', () => handlers.handleRiftCancel(socket, null, ctx));
 - `cursed`: multiply heal amounts by 0.5 (check potion use + shrine healing)
 - `vampiric`: on monster hit, heal monster 10% of damage dealt
 
-### 14.4 Paragon System [for Bolt, can be parallel with 14.1]
+### 14.4 Paragon System [DONE — Bolt, Cycle #112]
 **File:** `server/game/player.js` (MODIFY)
 
 Add constants:
@@ -1194,7 +1194,7 @@ Add to `serializeForPhone()`: `paragonLevel, paragonXp, paragonXpToNext`
 Add to `restoreFrom()`: load paragonLevel and paragonXp
 Add to `database.js`: `paragon_level INTEGER DEFAULT 0, paragon_xp INTEGER DEFAULT 0`
 
-### 14.7 Leaderboard — Rift Tier Tracking [for Bolt, after 14.2]
+### 14.7 Leaderboard — Rift Tier Tracking [DONE — Bolt, Cycle #112]
 **File:** `server/game/database.js` (MODIFY)
 
 New table in constructor:

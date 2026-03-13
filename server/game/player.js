@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const { QuestManager } = require('./quests');
 const { applyResistance, applyArmor, DAMAGE_TYPES } = require('./damage-types');
 
+const MAX_LEVEL = 30;
+
 const CLASS_BONUSES = {
   warrior: { str: 3, dex: 0, int: 0, vit: 2 },
   ranger:  { str: 2, dex: 3, int: 0, vit: 0 },
@@ -142,6 +144,10 @@ class Player {
 
     // Keystones (endgame rift currency)
     this.keystones = 0;
+
+    // Paragon (post-max-level progression)
+    this.paragonLevel = 0;
+    this.paragonXp = 0;
 
     // Quests
     this.questManager = new QuestManager();
@@ -303,6 +309,21 @@ class Player {
 
   gainXp(amount) {
     if (!this.alive) return null;
+
+    // At max level, overflow XP goes to paragon
+    if (this.level >= MAX_LEVEL) {
+      this.paragonXp += amount;
+      const paragonCost = (this.paragonLevel + 1) * 1000;
+      if (this.paragonXp >= paragonCost) {
+        this.paragonXp -= paragonCost;
+        this.paragonLevel += 1;
+        this.freeStatPoints += 1;
+        return { level: this.level, paragonLevel: this.paragonLevel, isParagon: true, talentPoints: 0 };
+      }
+      return null;
+    }
+
+    // Normal leveling
     this.xp += amount;
     if (this.xp >= this.xpToNext) {
       return this.levelUp();
@@ -673,6 +694,10 @@ class Player {
       this.talents = savedData.talents;
     }
 
+    // Restore paragon progression
+    this.paragonLevel = savedData.paragonLevel || 0;
+    this.paragonXp = savedData.paragonXp || 0;
+
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
     this.recalcTalentBonuses();
@@ -725,6 +750,9 @@ class Player {
       talents: this.talents,
       talentBonuses: this.talentBonuses,
       keystones: this.keystones,
+      paragonLevel: this.paragonLevel,
+      paragonXp: this.paragonXp,
+      paragonXpToNext: (this.paragonLevel + 1) * 1000,
     };
   }
 
@@ -749,4 +777,4 @@ class Player {
   }
 }
 
-module.exports = { Player, CLASS_SKILLS, DEATH_DURATION, RESPAWN_HP_PERCENT, DEATH_GOLD_DROP_PERCENT };
+module.exports = { Player, CLASS_SKILLS, DEATH_DURATION, RESPAWN_HP_PERCENT, DEATH_GOLD_DROP_PERCENT, MAX_LEVEL };

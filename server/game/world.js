@@ -4,6 +4,8 @@ const { generateConsumable } = require('./items');
 const { generateShopInventory } = require('./shop');
 const { rollAffixes, applyAffixes } = require('./affixes');
 const { generateTrapsForRoom } = require('./traps');
+// Note: rifts.js is required lazily in generateRiftFloor/spawnRiftGuardian to avoid
+// the circular dependency (rifts.js already requires world.js for ZONE_DEFS).
 
 const TILE_SIZE = 32;
 const GRID_W = 60;
@@ -470,6 +472,13 @@ class World {
 
     // Difficulty
     this.difficulty = 'normal';
+
+    // Rift state
+    this.riftActive = false;
+    this.riftConfig = null;
+    this.riftTimer = 0;
+    this.riftTimeLimit = 0;
+    this.riftStartTime = 0;
   }
 
   generateFloor(floorNum, difficulty) {
@@ -511,6 +520,179 @@ class World {
     return this.getFloorInfo();
   }
 
+  generateRiftFloor(riftConfig) {
+    this.riftActive = true;
+    this.riftConfig = riftConfig;
+    this.riftTimeLimit = riftConfig.timeLimit;
+    this.riftTimer = riftConfig.timeLimit;
+    this.riftStartTime = Date.now();
+
+    // Resolve full zone data from ZONE_DEFS so the tile/monster pool is available
+    this.zone = ZONE_DEFS[riftConfig.zone.id] || ZONE_DEFS.catacombs;
+
+    this.currentFloor = riftConfig.tier + 10; // synthetic high floor for loot/difficulty scaling
+    this.floorName = `Rift Tier ${riftConfig.tier}`;
+    this.roomName = `${this.zone.name} Rift — Tier ${riftConfig.tier}`;
+
+    // More rooms than a normal floor — scales with tier
+    const roomCount = 6 + riftConfig.tier;
+    const result = generateBSPDungeon(this.currentFloor, roomCount);
+
+    this.tiles = result.tiles;
+    this.rooms = result.rooms;
+
+    // Rifts always end with a boss room for the guardian — force the last room
+    if (this.rooms.length > 0) {
+      const lastRoom = this.rooms[this.rooms.length - 1];
+      if (lastRoom.type !== 'boss') {
+        lastRoom.type = 'boss';
+        lastRoom.name = ROOM_TYPES.boss.name;
+        lastRoom.hasChest = ROOM_TYPES.boss.hasChest;
+        lastRoom.waveCount = ROOM_TYPES.boss.monsterWaves;
+      }
+    }
+    this.monsters = [];
+    this.groundItems = [];
+    this.lootChests = [];
+    this.exitLocked = true;
+    this.waveActive = false;
+    this.currentWave = 0;
+    this.activeRoom = null;
+    this._advancing = false;
+
+    // No shop NPC or story NPCs in rifts
+    this.shopNpc = null;
+    this.storyNpcs = [];
+
+    // Generate environmental traps in monster/treasure rooms (not start/boss)
+    this.traps = [];
+    for (const rd of this.rooms) {
+      if (rd.type === 'start' || rd.type === 'boss') continue;
+      const roomTraps = generateTrapsForRoom(rd.room, this.zone.id, TILE_SIZE);
+      this.traps.push(...roomTraps);
+    }
+
+    console.log(`[World] Generated Rift Tier ${riftConfig.tier}: ${this.zone.name} with ${this.rooms.length} rooms`);
+    return this.getFloorInfo();
+  }
+
+  applyRiftModifiers(monsters) {
+    if (!this.riftActive || !this.riftConfig) return;
+
+    for (const mod of this.riftConfig.modifiers) {
+      for (const m of monsters) {
+        switch (mod.effect) {
+          case 'monster_damage':
+            m.damage = Math.floor(m.damage * mod.value);
+            break;
+          case 'monster_hp':
+            m.maxHp = Math.floor(m.maxHp * mod.value);
+            m.hp = m.maxHp;
+            break;
+          case 'monster_speed':
+            m.speed = Math.floor((m.speed || 60) * mod.value);
+            break;
+          case 'monster_dr':
+            m.armor = (m.armor || 0) + Math.floor(m.maxHp * mod.value);
+            break;
+          // 'env_fire', 'heal_reduce', 'monster_leech', 'elite_shield', 'spawn_mult',
+          // 'extra_affix' — handled at game loop level, not here
+        }
+      }
+    }
+
+    // Apply tier multipliers on top of modifier scaling
+    const hpMult = this.riftConfig.monsterHpMult || 1;
+    const dmgMult = this.riftConfig.monsterDmgMult || 1;
+    for (const m of monsters) {
+      m.maxHp = Math.floor(m.maxHp * hpMult);
+      m.hp = m.maxHp;
+      m.damage = Math.floor(m.damage * dmgMult);
+    }
+  }
+
+  updateRiftTimer(dt) {
+    if (!this.riftActive) return true; // not in a rift — report "still ok"
+    this.riftTimer -= dt / 1000; // dt is ms, timer is seconds
+    return this.riftTimer > 0; // false = time's up
+  }
+
+  endRift() {
+    this.riftActive = false;
+    this.riftConfig = null;
+    this.riftTimer = 0;
+    this.riftTimeLimit = 0;
+    this.riftStartTime = 0;
+  }
+
+  getRiftTimeRemaining() {
+    return Math.max(0, this.riftTimer);
+  }
+
+  getRiftElapsed() {
+    return this.riftTimeLimit - this.getRiftTimeRemaining();
+  }
+
+  spawnRiftGuardian() {
+    if (!this.riftConfig) return null;
+    const bossRoom = this.rooms.find(r => r.type === 'boss');
+    if (!bossRoom) return null;
+
+    // Lazy require to avoid circular dependency (rifts.js requires world.js for ZONE_DEFS)
+    const { createRiftGuardian } = require('./rifts');
+    const guardian = createRiftGuardian(this.riftConfig.tier, this.riftConfig.zone);
+
+    // Position in center of boss room (same formula as generateWaveMonsters)
+    const r = bossRoom.room;
+    const gx = (r.x + 1 + Math.floor((r.w - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+    const gy = (r.y + 1 + Math.floor((r.h - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+
+    guardian.x = gx;
+    guardian.y = gy;
+    guardian.spawnX = gx;
+    guardian.spawnY = gy;
+
+    // Add a serialize() method so world.serialize() doesn't crash —
+    // mirrors the shape produced by Monster.serialize()
+    guardian.serialize = function () {
+      return {
+        id: this.id,
+        type: this.type,
+        name: this.name,
+        x: Math.round(this.x),
+        y: Math.round(this.y),
+        facing: this.facing,
+        hp: this.hp,
+        maxHp: this.maxHp,
+        alive: this.alive,
+        aiState: this.aiState,
+        isBoss: this.isBoss,
+        color: this.color,
+        size: this.size,
+        stunned: this.stunned > 0,
+        slowed: this.slowed > 0,
+        behavior: this.behavior,
+        damageType: this.damageType,
+        stealthed: false,
+        charging: false,
+        physicalResist: 0,
+        affixes: this.affixes || null,
+        isElite: this.isElite || false,
+        eliteRank: this.eliteRank || null,
+        shieldActive: this.shieldActive || false,
+        fireEnchanted: this.fireEnchanted || false,
+        coldEnchanted: this.coldEnchanted || false,
+        isRiftGuardian: true,
+        riftTier: this.riftTier,
+        phases: this.phases,
+        currentPhase: this.currentPhase,
+      };
+    };
+
+    this.monsters.push(guardian);
+    return guardian;
+  }
+
   getFloorInfo() {
     return {
       name: this.roomName,
@@ -529,6 +711,10 @@ class World {
       roomCount: this.rooms.length,
       exitLocked: this.exitLocked,
       difficulty: this.difficulty,
+      riftActive: this.riftActive,
+      riftTier: this.riftConfig ? this.riftConfig.tier : 0,
+      riftModifiers: this.riftConfig ? this.riftConfig.modifiers : [],
+      riftTimeLimit: this.riftTimeLimit,
     };
   }
 
