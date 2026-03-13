@@ -820,6 +820,42 @@ socket.on('game:restarted', (data) => {
   if (data && data.difficulty) updateDifficultyBadge(data.difficulty);
 });
 
+// ─── Treasure Goblin Notifications ───────────────────────────
+socket.on('goblin:spawn', () => {
+  showNotification('Treasure Goblin spotted!', 'quest');
+});
+socket.on('goblin:escaped', () => {
+  showNotification('The Goblin escaped...', 'error');
+});
+socket.on('goblin:killed', () => {
+  showNotification('Treasure Goblin slain! Massive loot!', 'quest');
+  Sound.gold();
+});
+
+// ─── Cursed Event Notifications ──────────────────────────────
+socket.on('event:spawn', (data) => {
+  showNotification(data && data.name ? data.name : 'Cursed Event nearby!', 'quest');
+});
+socket.on('event:start', () => {
+  showNotification('Event started!', 'info');
+});
+socket.on('event:wave', (data) => {
+  if (data) showNotification(`Wave ${data.wave}/${data.totalWaves} incoming!`, 'info');
+});
+socket.on('event:complete', (data) => {
+  const reward = data && data.reward ? ` — ${data.reward}` : '';
+  showNotification(`Event complete!${reward}`, 'quest');
+  Sound.questComplete();
+});
+socket.on('event:failed', () => {
+  showNotification('Event failed...', 'error');
+});
+socket.on('event:buff', (data) => {
+  if (data && data.stat) {
+    showNotification(`Buff: ${data.stat} +${data.value || ''}`, 'quest');
+  }
+});
+
 // ─── Reconnect Overlay — delegated to reconnect.js (window.Reconnect) ──
 socket.on('disconnect', () => {
   console.log('[Phone] Disconnected');

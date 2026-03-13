@@ -195,6 +195,110 @@ const Effects = (() => {
     }
   }
 
+  // ── Cursed Event ──
+  function updateCursedEvent(scene, state) {
+    const evt = state.world.cursedEvent;
+    if (evt && evt.x !== undefined && evt.y !== undefined) {
+      // Create sprite if it doesn't exist
+      if (!scene.cursedEventSprite) {
+        scene.cursedEventSprite = scene.add.sprite(evt.x, evt.y, 'cursed_event').setDepth(5).setScale(1.1);
+        scene.cursedEventGlow = scene.add.graphics().setDepth(4);
+        scene.cursedEventLabel = scene.add.text(evt.x, evt.y - 26, evt.name || 'CURSED EVENT', {
+          fontSize: '10px',
+          fill: '#cc44ff',
+          fontFamily: 'Courier New',
+          fontStyle: 'bold',
+          backgroundColor: '#00000088',
+          padding: { x: 3, y: 1 },
+        }).setOrigin(0.5).setDepth(6);
+      }
+
+      // Position
+      scene.cursedEventSprite.setPosition(evt.x, evt.y);
+      scene.cursedEventLabel.setPosition(evt.x, evt.y - 26);
+
+      // Pulsing glow
+      const t = Date.now();
+      const glowAlpha = 0.2 + Math.sin(t / 400) * 0.15;
+      scene.cursedEventGlow.clear();
+      scene.cursedEventGlow.fillStyle(0xcc44ff, glowAlpha * 0.4);
+      scene.cursedEventGlow.fillCircle(evt.x, evt.y, 24);
+      scene.cursedEventGlow.lineStyle(1, 0xcc44ff, glowAlpha);
+      scene.cursedEventGlow.strokeCircle(evt.x, evt.y, 24);
+
+      // Bob effect when inactive
+      if (!evt.active) {
+        const bob = Math.sin(t / 600) * 2;
+        scene.cursedEventSprite.y += bob;
+        scene.cursedEventLabel.y += bob;
+      }
+
+      // Timer bar when active
+      if (evt.active && evt.timer !== undefined && evt.totalDuration !== undefined) {
+        if (!scene.cursedEventTimerBg) {
+          scene.cursedEventTimerBg = scene.add.rectangle(640, 22, 300, 14, 0x331133, 0.8)
+            .setScrollFactor(0).setDepth(100);
+          scene.cursedEventTimerBar = scene.add.rectangle(640, 22, 298, 12, 0xcc2222, 1)
+            .setScrollFactor(0).setDepth(101);
+          scene.cursedEventWaveText = scene.add.text(640, 40, '', {
+            fontSize: '12px', fontFamily: 'Courier New', color: '#cc44ff', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 3,
+          }).setScrollFactor(0).setDepth(101).setOrigin(0.5);
+        }
+        // Update bar width
+        const ratio = Math.max(0, evt.timer / evt.totalDuration);
+        scene.cursedEventTimerBar.displayWidth = 298 * ratio;
+        // Bar color: green > yellow > red
+        const barColor = ratio > 0.5 ? 0xcc2222 : ratio > 0.25 ? 0xcc8822 : 0xff2222;
+        scene.cursedEventTimerBar.setFillStyle(barColor, 1);
+
+        // Wave text
+        if (evt.wave !== undefined && evt.totalWaves !== undefined) {
+          scene.cursedEventWaveText.setText(`Wave ${evt.wave}/${evt.totalWaves}`);
+        }
+      }
+    } else {
+      // No cursed event — clean up sprites
+      _cleanupCursedEvent(scene);
+    }
+
+    // Hide timer when event becomes inactive
+    if (evt && !evt.active) {
+      _cleanupCursedEventTimer(scene);
+    }
+  }
+
+  function _cleanupCursedEventTimer(scene) {
+    if (scene.cursedEventTimerBg) {
+      scene.cursedEventTimerBg.destroy();
+      scene.cursedEventTimerBg = null;
+    }
+    if (scene.cursedEventTimerBar) {
+      scene.cursedEventTimerBar.destroy();
+      scene.cursedEventTimerBar = null;
+    }
+    if (scene.cursedEventWaveText) {
+      scene.cursedEventWaveText.destroy();
+      scene.cursedEventWaveText = null;
+    }
+  }
+
+  function _cleanupCursedEvent(scene) {
+    if (scene.cursedEventSprite) {
+      scene.cursedEventSprite.destroy();
+      scene.cursedEventSprite = null;
+    }
+    if (scene.cursedEventGlow) {
+      scene.cursedEventGlow.destroy();
+      scene.cursedEventGlow = null;
+    }
+    if (scene.cursedEventLabel) {
+      scene.cursedEventLabel.destroy();
+      scene.cursedEventLabel = null;
+    }
+    _cleanupCursedEventTimer(scene);
+  }
+
   // ── Floor transition cleanup ──
   function cleanupAll(scene) {
     // Shop NPC
@@ -234,7 +338,9 @@ const Effects = (() => {
       for (const [, s] of scene.trapSprites) s.destroy();
       scene.trapSprites.clear();
     }
+    // Cursed event
+    _cleanupCursedEvent(scene);
   }
 
-  return { updateShopNpc, updateEnchantNpc, updateShrines, updateTraps, cleanupAll };
+  return { updateShopNpc, updateEnchantNpc, updateShrines, updateTraps, updateCursedEvent, cleanupAll };
 })();

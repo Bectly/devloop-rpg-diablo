@@ -289,6 +289,54 @@ class BootScene extends Phaser.Scene {
     g.fillCircle(16, 16, 3);
     g.generateTexture('trap_void', 32, 32);
 
+    // ── Treasure Goblin — small green humanoid with brown sack ──
+    g.clear();
+    // Body (green)
+    g.fillStyle(0x33aa33, 1);
+    g.fillCircle(16, 18, 8);
+    // Head (lighter green)
+    g.fillStyle(0x44cc44, 1);
+    g.fillCircle(16, 10, 6);
+    // Pointy ears
+    g.fillStyle(0x33aa33, 1);
+    g.fillTriangle(10, 8, 8, 4, 12, 9);
+    g.fillTriangle(22, 8, 24, 4, 20, 9);
+    // Eyes (beady yellow)
+    g.fillStyle(0xffcc00, 1);
+    g.fillCircle(14, 9, 1.5);
+    g.fillCircle(18, 9, 1.5);
+    // Sack on back (brown)
+    g.fillStyle(0x886633, 1);
+    g.fillCircle(21, 16, 6);
+    g.fillStyle(0x664422, 0.8);
+    g.fillCircle(21, 14, 4);
+    // Gold sparkle accents
+    g.fillStyle(0xffcc00, 0.9);
+    g.fillRect(22, 12, 2, 2);
+    g.fillRect(19, 18, 2, 2);
+    g.fillRect(24, 16, 2, 2);
+    // Legs
+    g.fillStyle(0x33aa33, 1);
+    g.fillRect(13, 24, 3, 5);
+    g.fillRect(18, 24, 3, 5);
+    g.generateTexture('treasure_goblin', 32, 32);
+
+    // ── Cursed Event Shrine — purple glowing chest/shrine ──
+    g.clear();
+    g.fillStyle(0x662266, 0.8);
+    g.fillRect(6, 10, 20, 14);
+    g.fillStyle(0x993399, 0.6);
+    g.fillRect(8, 12, 16, 10);
+    // Purple glow
+    g.fillStyle(0xcc44ff, 0.3);
+    g.fillCircle(16, 16, 14);
+    // Rune symbol
+    g.lineStyle(2, 0xff66ff, 0.8);
+    g.strokeCircle(16, 16, 5);
+    g.lineBetween(16, 11, 16, 21);
+    g.lineBetween(11, 16, 21, 16);
+    g.generateTexture('cursed_event', 32, 32);
+
     g.destroy();
   }
 
@@ -330,6 +378,17 @@ class GameScene extends Phaser.Scene {
 
     // Story NPC sprites
     this.storyNpcSprites = {};
+
+    // Cursed event sprites
+    this.cursedEventSprite = null;
+    this.cursedEventGlow = null;
+    this.cursedEventLabel = null;
+    this.cursedEventTimerBar = null;
+    this.cursedEventTimerBg = null;
+    this.cursedEventWaveText = null;
+
+    // Goblin trail particles
+    this._goblinTrailFrame = 0;
 
     this.discoveredRooms = new Set();
 
@@ -448,6 +507,9 @@ class GameScene extends Phaser.Scene {
     // ── Render Healing Shrines + Environmental Traps (effects.js) ──
     Effects.updateShrines(this, state);
     Effects.updateTraps(this, state);
+
+    // ── Render Cursed Event (effects.js) ──
+    Effects.updateCursedEvent(this, state);
 
     // ── Combat events + skill effects (combat-fx.js) ──
     CombatFX.processCombatEvents(this, state);
@@ -666,7 +728,7 @@ socket.on('dungeon:enter', (data) => {
       Sprites.cleanupStoryNpcSprites(scene, null);
       Sprites.cleanupChestSprites();
 
-      // Clean up environment sprites (shop NPC, shrines, traps)
+      // Clean up environment sprites (shop NPC, shrines, traps, cursed events)
       Effects.cleanupAll(scene);
 
       HUD._forceDestroyDialogue();
@@ -766,6 +828,172 @@ socket.on('quest:complete', (data) => {
     if (scene && scene.scene.isActive()) {
       HUD.showQuestComplete(scene, data.title);
       Sound.questComplete();
+    }
+  }
+});
+
+// ─── Treasure Goblin Events ──────────────────────────────────
+socket.on('goblin:spawn', (data) => {
+  console.log('[TV] Treasure Goblin spawned!');
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      // Gold announcement text
+      const txt = scene.add.text(GAME_W / 2, GAME_H / 2 - 60, 'TREASURE GOBLIN!', {
+        fontSize: '36px', fontFamily: 'Courier New', color: '#ffcc00', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5,
+      }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+      scene.tweens.add({
+        targets: txt, alpha: 1, scale: 1,
+        duration: 400, ease: 'Back.easeOut',
+      });
+      scene.time.delayedCall(3000, () => {
+        scene.tweens.add({
+          targets: txt, alpha: 0, duration: 500,
+          onComplete: () => txt.destroy(),
+        });
+      });
+    }
+  }
+});
+
+socket.on('goblin:escaped', () => {
+  console.log('[TV] Treasure Goblin escaped!');
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      const txt = scene.add.text(GAME_W / 2, GAME_H / 2 - 60, 'The Goblin escaped...', {
+        fontSize: '24px', fontFamily: 'Courier New', color: '#888888', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 4,
+      }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+      scene.tweens.add({ targets: txt, alpha: 1, duration: 300 });
+      scene.time.delayedCall(3000, () => {
+        scene.tweens.add({
+          targets: txt, alpha: 0, duration: 500,
+          onComplete: () => txt.destroy(),
+        });
+      });
+    }
+  }
+});
+
+socket.on('goblin:killed', (data) => {
+  console.log('[TV] Treasure Goblin slain!');
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      // Gold announcement
+      const txt = scene.add.text(GAME_W / 2, GAME_H / 2 - 60, 'Treasure Goblin slain!', {
+        fontSize: '28px', fontFamily: 'Courier New', color: '#ffcc00', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5,
+      }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+      scene.tweens.add({
+        targets: txt, alpha: 1, scale: 1,
+        duration: 400, ease: 'Back.easeOut',
+      });
+      scene.time.delayedCall(3000, () => {
+        scene.tweens.add({
+          targets: txt, alpha: 0, duration: 500,
+          onComplete: () => txt.destroy(),
+        });
+      });
+
+      // Gold particle burst at goblin position
+      if (data && data.x !== undefined && data.y !== undefined) {
+        const gfx = scene.add.graphics().setDepth(20);
+        const particles = [];
+        for (let i = 0; i < 20; i++) {
+          const angle = (Math.PI * 2 / 20) * i;
+          const speed = 50 + Math.random() * 80;
+          particles.push({
+            x: data.x, y: data.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+          });
+        }
+        const startTime = Date.now();
+        const updateEvent = scene.time.addEvent({
+          delay: 16, loop: true,
+          callback: () => {
+            const elapsed = Date.now() - startTime;
+            const t = elapsed / 800;
+            if (t >= 1) { gfx.destroy(); updateEvent.destroy(); return; }
+            gfx.clear();
+            for (const pt of particles) {
+              pt.x += pt.vx * 0.016;
+              pt.y += pt.vy * 0.016;
+              pt.life = 1 - t;
+              gfx.fillStyle(0xffcc00, pt.life);
+              gfx.fillCircle(pt.x, pt.y, 3 * pt.life);
+            }
+          },
+        });
+      }
+    }
+  }
+});
+
+// ─── Cursed Event Events ─────────────────────────────────────
+socket.on('event:start', (data) => {
+  console.log('[TV] Cursed event started!', data);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      // Dark energy flash at event position
+      if (data && data.x !== undefined && data.y !== undefined) {
+        const flash = scene.add.circle(data.x, data.y, 60, 0x6622aa, 0.6).setDepth(15);
+        scene.tweens.add({
+          targets: flash,
+          alpha: 0, scale: 2,
+          duration: 600,
+          onComplete: () => flash.destroy(),
+        });
+      }
+    }
+  }
+});
+
+socket.on('event:complete', (data) => {
+  console.log('[TV] Cursed event complete!', data);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      const txt = scene.add.text(GAME_W / 2, GAME_H / 2 - 60, 'EVENT COMPLETE!', {
+        fontSize: '32px', fontFamily: 'Courier New', color: '#ffcc00', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5,
+      }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0).setScale(0.5);
+      scene.tweens.add({
+        targets: txt, alpha: 1, scale: 1,
+        duration: 400, ease: 'Back.easeOut',
+      });
+      HUD.spawnCelebrationParticles(scene);
+      scene.time.delayedCall(3000, () => {
+        scene.tweens.add({
+          targets: txt, alpha: 0, duration: 500,
+          onComplete: () => txt.destroy(),
+        });
+      });
+    }
+  }
+});
+
+socket.on('event:failed', (data) => {
+  console.log('[TV] Cursed event failed!', data);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      const txt = scene.add.text(GAME_W / 2, GAME_H / 2 - 60, 'EVENT FAILED', {
+        fontSize: '32px', fontFamily: 'Courier New', color: '#ff2222', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5,
+      }).setScrollFactor(0).setDepth(2001).setOrigin(0.5).setAlpha(0);
+      scene.tweens.add({ targets: txt, alpha: 1, duration: 300 });
+      scene.time.delayedCall(3000, () => {
+        scene.tweens.add({
+          targets: txt, alpha: 0, duration: 500,
+          onComplete: () => txt.destroy(),
+        });
+      });
     }
   }
 });

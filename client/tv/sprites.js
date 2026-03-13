@@ -204,6 +204,30 @@ window.Sprites = {
 
   /** Generate a per-monster texture and create its sprite + nameText + hpBar. */
   createMonsterSprite(scene, m) {
+    // Treasure Goblins use the pre-generated texture
+    if (m.isTreasureGoblin) {
+      const sprite = scene.add.sprite(m.x, m.y, 'treasure_goblin').setDepth(8);
+
+      sprite.nameText = scene.add.text(m.x, m.y - 28, 'GOBLIN', {
+        fontSize: '12px',
+        fill: '#ffcc00',
+        fontFamily: 'Courier New',
+        fontStyle: 'bold',
+        backgroundColor: '#00000088',
+        padding: { x: 3, y: 1 },
+      }).setOrigin(0.5).setDepth(9);
+
+      sprite.hpBar = scene.add.graphics().setDepth(9);
+      sprite.monsterSize = m.size || 16;
+      sprite._isTreasureGoblin = true;
+      sprite._goblinTrailGfx = scene.add.graphics().setDepth(7);
+      sprite._goblinTrailParticles = [];
+      sprite._goblinFrame = 0;
+
+      scene.monsterSprites.set(m.id, sprite);
+      return sprite;
+    }
+
     const g = scene.make.graphics({ add: false });
     const s = m.size;
     const d = s * 2; // texture diameter
@@ -501,6 +525,45 @@ window.Sprites = {
     if (sprite.nameText) sprite.nameText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 16);
     if (sprite.affixText) sprite.affixText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 6);
 
+    // ── Treasure Goblin: gold trail particles + return early ──
+    if (sprite._isTreasureGoblin) {
+      sprite._goblinFrame = (sprite._goblinFrame || 0) + 1;
+      // Spawn trail particle every 5 frames
+      if (sprite._goblinFrame % 5 === 0) {
+        sprite._goblinTrailParticles.push({
+          x: sprite.x, y: sprite.y + 4,
+          life: 1.0,
+        });
+      }
+      // Draw trail
+      if (sprite._goblinTrailGfx) {
+        sprite._goblinTrailGfx.clear();
+        for (let i = sprite._goblinTrailParticles.length - 1; i >= 0; i--) {
+          const p = sprite._goblinTrailParticles[i];
+          p.life -= 0.03;
+          if (p.life <= 0) {
+            sprite._goblinTrailParticles.splice(i, 1);
+            continue;
+          }
+          sprite._goblinTrailGfx.fillStyle(0xffcc00, p.life * 0.6);
+          sprite._goblinTrailGfx.fillCircle(p.x, p.y, 2 * p.life);
+        }
+      }
+      // HP bar
+      if (sprite.hpBar) {
+        sprite.hpBar.clear();
+        const barW = 30, barH = 3;
+        const barX = sprite.x - barW / 2;
+        const barY = sprite.y - sprite.monsterSize - 8;
+        sprite.hpBar.fillStyle(0x333333, 0.8);
+        sprite.hpBar.fillRect(barX, barY, barW, barH);
+        const hpRatio = m.hp / m.maxHp;
+        sprite.hpBar.fillStyle(0xffcc00, 1);
+        sprite.hpBar.fillRect(barX, barY, barW * hpRatio, barH);
+      }
+      return; // Skip normal monster update logic
+    }
+
     // Stealth: near-invisible until revealed
     if (m.stealthed) {
       sprite.setAlpha(0.08 + Math.sin(Date.now() / 800) * 0.04);
@@ -630,6 +693,7 @@ window.Sprites = {
     if (sprite.shieldGfx) sprite.shieldGfx.destroy();
     if (sprite.fireGfx) sprite.fireGfx.destroy();
     if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
+    if (sprite._goblinTrailGfx) sprite._goblinTrailGfx.destroy();
     sprite.destroy();
     scene.monsterSprites.delete(id);
     const texKey = 'monster_' + id;
@@ -647,6 +711,7 @@ window.Sprites = {
         if (sprite.shieldGfx) sprite.shieldGfx.destroy();
         if (sprite.fireGfx) sprite.fireGfx.destroy();
         if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
+        if (sprite._goblinTrailGfx) sprite._goblinTrailGfx.destroy();
         sprite.destroy();
       }
       scene.monsterSprites.clear();
@@ -660,6 +725,7 @@ window.Sprites = {
         if (sprite.shieldGfx) sprite.shieldGfx.destroy();
         if (sprite.fireGfx) sprite.fireGfx.destroy();
         if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
+        if (sprite._goblinTrailGfx) sprite._goblinTrailGfx.destroy();
         sprite.destroy();
         scene.monsterSprites.delete(id);
         const texKey = 'monster_' + id;
