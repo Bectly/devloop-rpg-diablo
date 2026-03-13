@@ -605,10 +605,16 @@ class Player {
         } else if (this._world.isWalkable(this.x, newY)) {
           // Slide along Y only
           this.y = newY;
+        } else {
+          // Blocked on both axes — log for debug
+          if (!this._lastBlockLog || Date.now() - this._lastBlockLog > 2000) {
+            console.log(`[WALL] ${this.name} blocked at (${Math.round(this.x)},${Math.round(this.y)}) step=(${stepX.toFixed(1)},${stepY.toFixed(1)})`);
+            this._lastBlockLog = Date.now();
+          }
         }
-        // else: blocked on both axes, don't move
       } else {
-        // No world reference (fallback)
+        // No world reference — LOG THIS, it means collision is disabled!
+        console.warn(`[COLLISION] ${this.name} has NO _world reference! Moving without collision check.`);
         this.x += stepX;
         this.y += stepY;
       }
