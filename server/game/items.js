@@ -204,6 +204,30 @@ function buildItemName(prefix, baseName, rarity, bonuses, category, subType) {
   return `${prefix} ${baseName}`;
 }
 
+// Socket ranges: [min, max] by item category and rarity
+const SOCKET_RANGES = {
+  weapon: {
+    common: [0, 0], uncommon: [0, 1], rare: [0, 1],
+    epic: [0, 2], legendary: [1, 2], set: [0, 2],
+  },
+  armor: {
+    common: [0, 0], uncommon: [0, 0], rare: [0, 1],
+    epic: [0, 1], legendary: [1, 1], set: [0, 1],
+  },
+  accessory: {
+    common: [0, 0], uncommon: [0, 0], rare: [0, 0],
+    epic: [0, 0], legendary: [0, 0], set: [0, 0],
+  },
+};
+
+function rollSockets(category, rarity) {
+  const ranges = SOCKET_RANGES[category];
+  if (!ranges || !ranges[rarity]) return [];
+  const [min, max] = ranges[rarity];
+  const count = randomInt(min, max);
+  return new Array(count).fill(null);
+}
+
 function generateWeapon(tierBoost = 0) {
   const keys = Object.keys(WEAPONS);
   const base = WEAPONS[keys[randomInt(0, keys.length - 1)]];
@@ -225,6 +249,7 @@ function generateWeapon(tierBoost = 0) {
     damage,
     attackSpeed: base.attackSpeed,
     bonuses,
+    sockets: rollSockets('weapon', rarity),
     gridW: base.gridW,
     gridH: base.gridH,
     description: base.description,
@@ -254,6 +279,7 @@ function generateArmor(tierBoost = 0) {
     rarityColor: r.color,
     armor,
     bonuses,
+    sockets: rollSockets('armor', rarity),
     gridW: base.gridW,
     gridH: base.gridH,
     stackable: false,
@@ -278,6 +304,7 @@ function generateAccessory(tierBoost = 0) {
     rarity,
     rarityColor: r.color,
     bonuses,
+    sockets: rollSockets('accessory', rarity),
     gridW: base.gridW,
     gridH: base.gridH,
     stackable: false,
@@ -380,6 +407,8 @@ module.exports = {
   PREFIXES,
   SUFFIXES,
   LEGENDARY_NAMES,
+  SOCKET_RANGES,
+  rollSockets,
   generateWeapon,
   generateArmor,
   generateAccessory,

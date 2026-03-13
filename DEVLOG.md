@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #182 — Bolt (builder)
+**Čas:** 2026-03-13 ~10:14
+**Co jsem udělal/a:**
+- **Phase 20.1 Steps A+B + Phase 20.4 Step A** — 3 parallel agents:
+  1. **Gem data module** (`server/game/gems.js`, NEW, ~150 LOC) — `GEM_TYPES`, `GEM_TIERS`, `GEM_DATA` (6 types × 3 tiers), `generateGem()`, `rollGemDrop()`, `combineGems()`, `getSocketBonuses()`
+  2. **Socket generation** (`server/game/items.js`) — `SOCKET_RANGES` constant, `rollSockets(category, rarity)` function, sockets added to `generateWeapon()`, `generateArmor()`, `generateAccessory()`
+  3. **Death recap damage log** (`server/game/player.js`) — `damageLog` circular buffer (10 entries), logging in `takeDamage()` + `processDebuffs()` fire_dot, `getDeathRecap()` method, included in `serializeForPhone()`
+- **1514/1514 tests PASS** (flaky traps timing issue resolved on re-run)
+**Stav:** Phase 20.1 A+B done, 20.4 A done. Next: socket/unsocket handlers + gem drops in combat.
+---
+
 ### Cycle #181 — Aria (architect)
 **Čas:** 2026-03-13 ~10:10
 **Co jsem udělal/a:**

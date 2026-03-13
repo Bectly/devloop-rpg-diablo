@@ -167,6 +167,9 @@ class Player {
 
     // Affix debuffs (fire DoT, cold slow, etc.)
     this.debuffs = [];
+
+    // Death recap — circular buffer of last 10 damage entries (ephemeral, not persisted)
+    this.damageLog = [];
   }
 
   recalcTalentBonuses() {
@@ -402,7 +405,7 @@ class Player {
     return true;
   }
 
-  takeDamage(amount, damageType = 'physical') {
+  takeDamage(amount, damageType = 'physical', source = 'unknown') {
     if (!this.alive || this.isDying) return 0;
 
     // Dodge check — dodge_up buff (Shadow Step) guarantees dodge
@@ -425,6 +428,15 @@ class Player {
 
     this.hp -= reduced;
     this.lastDamageTaken = Date.now();
+
+    // Death recap damage log
+    this.damageLog.push({
+      source,
+      amount: reduced,
+      type: damageType,
+      timestamp: Date.now(),
+    });
+    if (this.damageLog.length > 10) this.damageLog.shift();
 
     if (this.hp <= 0) {
       this.hp = 0;
@@ -662,6 +674,14 @@ class Player {
       if (d.effect === 'fire_dot' && d.ticksRemaining > 0) {
         totalDamage += d.damage;
         d.ticksRemaining--;
+        // Death recap: log each DoT tick
+        this.damageLog.push({
+          source: d.source || 'dot',
+          amount: d.damage,
+          type: 'fire',
+          timestamp: Date.now(),
+        });
+        if (this.damageLog.length > 10) this.damageLog.shift();
       }
       if (d.effect === 'slow' && d.ticksRemaining > 0) {
         d.ticksRemaining--;
@@ -670,6 +690,19 @@ class Player {
     // Remove expired debuffs
     this.debuffs = this.debuffs.filter(d => d.ticksRemaining > 0);
     return totalDamage;
+  }
+
+  /**
+   * Death recap: returns the last 5 damage entries (most recent first)
+   * plus a `killer` field identifying the highest single-hit source.
+   */
+  getDeathRecap() {
+    const sorted = [...this.damageLog].sort((a, b) => b.timestamp - a.timestamp);
+    const recent = sorted.slice(0, 5);
+    const killer = this.damageLog.length > 0
+      ? this.damageLog.reduce((max, entry) => entry.amount > max.amount ? entry : max)
+      : null;
+    return { entries: recent, killer };
   }
 
   get speedMultiplier() {
@@ -834,6 +867,7 @@ class Player {
       paragonLevel: this.paragonLevel,
       paragonXp: this.paragonXp,
       paragonXpToNext: (this.paragonLevel + 1) * 1000,
+      damageLog: this.damageLog.slice(),
     };
   }
 

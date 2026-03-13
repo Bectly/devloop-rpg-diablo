@@ -2045,13 +2045,13 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### 20.1 Gems & Socketing [for Bolt]
 **Classic Diablo gem system — items have sockets, gems provide stat bonuses.**
 
-**Step A: Gem data model** (`server/game/items.js` or new `server/game/gems.js`)
+**Step A: Gem data model** ✅ DONE (Cycle #182) (`server/game/gems.js`)
 - `GEM_TYPES` constant: ruby/sapphire/emerald/topaz/diamond/amethyst
 - `GEM_TIERS`: chipped (tier 1), flawed (tier 2), perfect (tier 3)
 - Each gem has: `{ type, tier, bonuses }` — e.g. ruby tier 1 = `{ str: 3 }`
 - Gems are inventory items with `stackable: true`
 
-**Step B: Socket generation** (`server/game/items.js`)
+**Step B: Socket generation** ✅ DONE (Cycle #182) (`server/game/items.js`)
 - When generating loot, roll sockets: weapon 0-2, armor 0-1
 - Legendary: +1 max socket, set items: +1 max socket
 - Add `sockets: []` array to item schema (empty = available socket)
