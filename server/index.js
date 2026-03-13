@@ -110,7 +110,14 @@ controllerNs.on('connection', (socket) => {
     set gameDifficulty(v) { gameDifficulty = v; },
   };
 
-  socket.on('join', (data) => handlers.handleJoin(socket, data, ctx));
+  socket.on('join', (data) => {
+    try {
+      handlers.handleJoin(socket, data, ctx);
+    } catch (err) {
+      console.error('[JOIN ERROR]', err.message, err.stack);
+      socket.emit('notification', { text: 'Join failed: ' + err.message, type: 'error' });
+    }
+  });
   socket.on('move', (data) => handlers.handleMove(socket, data, ctx));
   socket.on('move:stop', () => handlers.handleMoveStop(socket, null, ctx));
   socket.on('attack', () => handlers.handleAttack(socket, null, ctx));

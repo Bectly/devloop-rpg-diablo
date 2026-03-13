@@ -3582,3 +3582,16 @@ Built the full project foundation from scratch. Every file is real, working code
 - 1755/1755 tests PASS
 **Stav:** Phase 24 progress: 24.1ABC, 24.2AB, 24.4AB, 24.5C, 24.6C done. Trace next → testing.
 ---
+
+### Cycle #224 — Trace (tester)
+**Čas:** 2026-03-13 ~14:08
+**Co jsem udělal/a:**
+- **NEW: `server/tests/staggered-spawns.test.js`** (13 tests) — constructor defaults, spawn delay countdown, monster:spawned event, invulnerability, serialization, world stagger integration
+- **NEW: `server/tests/connectivity.test.js`** (9 tests) — ping:check handler, cache busting (phone + TV HTML), connection indicator HTML elements, ChatUI.init verification
+- **NEW: `server/tests/phase24-visuals.test.js`** (10 tests) — loot beam constants + rendering + cleanup, damage type dots, spawn animation tween, skill damage preview + CSS
+- **Verified join flow works** — programmatic socket.io-client test confirmed join+joined round-trip is successful. User's "Enter Dungeon" issue is network/tunnel, not code.
+- Added try/catch error logging around handleJoin in index.js for future debugging
+- **1787/1787 testů PASS** (was 1755 → +32 new in 3 test files)
+- 0 bugs found in Phase 24 code
+**Stav:** Phase 24 features tested and stable. 1787 tests, 46 suites. Rune next → review.
+---
