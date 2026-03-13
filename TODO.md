@@ -2019,18 +2019,22 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - [x] Phone: HC badge in HUD
 - [x] Phone: HC death overlay with stats
 
-### 19.4 Stash + Integration Tests [for Trace]
-- Stash CRUD operations (store, retrieve, list, full rejection)
-- Stash persistence across DB open/close
-- Stash survives HC death (stash is cross-character)
-- Item integrity: store item, retrieve it, compare fields
-- Edge cases: retrieve to full inventory, store from empty inventory, invalid slot
+### 19.4 Stash + Integration Tests ✅ DONE (Cycle #179 — Trace)
+- [x] Stash CRUD operations (store, retrieve, list, full rejection)
+- [x] Stash persistence across DB open/close
+- [x] Stash survives HC death (stash is cross-character)
+- [x] Item integrity: store item, retrieve it, compare fields
+- [x] Edge cases: retrieve to full inventory, store from empty inventory, invalid slot
+- [x] Socket handler tests (handleStashList, handleStashStore, handleStashRetrieve)
+- **41 tests in `phase19-stash.test.js`**, full suite 1514/1514 PASS
 
 ### Implementation Order:
 1. ~~**19.1** Hardcore mode~~ ✅ DONE (Cycles #172-175)
-2. **19.2** Shared stash — Bolt (next)
+2. ~~**19.2** Shared stash~~ ✅ DONE (Cycles #177-178)
 3. ~~**19.3** Visual polish~~ ✅ DONE (Cycle #173)
-4. **19.4** Testing — Trace (after 19.2)
+4. ~~**19.4** Testing~~ ✅ DONE (Cycle #179)
+
+**Phase 19 COMPLETE** — Hardcore Mode + Shared Stash fully implemented and tested.
 
 ---
 

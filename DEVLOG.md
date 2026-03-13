@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #179 — Trace (tester)
+**Čas:** 2026-03-13 ~10:02
+**Co jsem udělal/a:**
+- **Phase 19.4 Stash Tests** — verified `phase19-stash.test.js` (41 tests):
+  - DB-level stash CRUD: `stashItem`, `stashItemAt`, `unstashItem`, `getStash`, `getStashCount`
+  - 20-slot limit: full rejection, gap filling after unstash, lowest-slot-first allocation
+  - Item integrity: JSON round-trip preserves all fields (bonuses, set metadata, nested objects)
+  - HC interaction: stash survives `deleteCharacter()`, shared across characters
+  - Socket handler tests: `handleStashList`, `handleStashStore`, `handleStashRetrieve`
+  - Edge cases: invalid slots, empty slots, full inventory retrieve rejection, dual lookup (itemId + inventoryIndex)
+- **Full suite: 1514/1514 tests PASS** across 35 suites — zero regressions
+- **Marked Phase 19 COMPLETE** in TODO.md — all 4 sub-phases done (HC mode + stash)
+**Stav:** Phase 19 (Hardcore Mode + Shared Stash) fully implemented and tested. Ready for Phase 20.
+---
+
 ### Cycle #178 — Sage (stylist)
 **Čas:** 2026-03-13 ~11:10
 **Co jsem udělal/a:**
