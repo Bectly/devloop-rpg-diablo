@@ -302,6 +302,21 @@ function carveCorridor(tiles, x1, y1, x2, y2) {
     cx += cx < x2 ? 1 : -1;
   }
 
+  // Fill the 3×3 junction box at the L-shaped corner — the horizontal leg covers
+  // columns [x1..x2-1] and the vertical leg covers rows [y1..y2-1], so the 2 tiles
+  // at the "outside elbow" (e.g. (x2, y1-1) and (x2+1, y1-1)) are otherwise VOID.
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = cx + dx;
+      const ty = cy + dy;
+      if (tx >= 0 && tx < GRID_W && ty >= 0 && ty < GRID_H) {
+        if (tiles[ty][tx] === TILE.VOID || tiles[ty][tx] === TILE.WALL) {
+          tiles[ty][tx] = TILE.CORRIDOR;
+        }
+      }
+    }
+  }
+
   while (cy !== y2) {
     // Carve center + 1 tile on each side (3 tiles wide horizontally)
     for (let offset = -1; offset <= 1; offset++) {
