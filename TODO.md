@@ -906,29 +906,117 @@ gameDifficulty = requestedDiff;
 - [x] Leaderboard difficulty badges per entry
 - [x] Full CSS for all difficulty UI elements
 
-### 12.4 Difficulty Visual Scaling — TV [for Sage]
+### 12.4 Difficulty Visual Scaling — TV [for Sage — low priority, cosmetic]
 **Files:** `client/tv/game.js`, `client/tv/hud.js`
 
 - Nightmare: Darker ambient, red-tinted monsters, "Nightmare" zone subtitle
 - Hell: Black ambient, fire particles everywhere, "Hell" zone subtitle, boss HP bars red
 - Difficulty badge on TV HUD (top-right corner)
 
-### 12.5 Leaderboard — Difficulty Tracking [for Bolt]
+**Phase 12 Status:** ✅ FUNCTIONALLY COMPLETE (12.0-12.3, 12.5 done, 972 tests). 12.4 is cosmetic polish — can be done anytime.
+
+---
+
+## 🔥 Phase 13: Talent Trees & Passive Skills
+
+### Overview
+Each class (warrior, ranger, mage) gets a unique talent tree with 3 branches (12 talents per class, 36 total). Players spend talent points (1 per level, earned on level-up). Talents provide passive bonuses, skill upgrades, and unique class mechanics. Respec available at town NPC for gold cost.
+
+### 13.0 Talent Data & Engine [for Aria → Bolt]
+**File:** `server/game/talents.js` (NEW)
+
+Define talent tree structure per class:
+```
+warrior: { branch1: "Berserker" (offense), branch2: "Sentinel" (defense), branch3: "Warlord" (party) }
+ranger:  { branch1: "Marksman" (ranged),  branch2: "Trapper" (utility),  branch3: "Beastmaster" (summon) }
+mage:    { branch1: "Pyromancer" (fire),   branch2: "Frost" (control),    branch3: "Arcane" (mana) }
+```
+
+Each talent: `{ id, name, desc, branch, tier (1-4), maxRank (1-3), requires: [talentId], effects: [...] }`
+Tier gates: tier 2 needs 3 points in branch, tier 3 needs 6, tier 4 needs 9.
+
+Effect types:
+- `stat_bonus`: `{ stat: 'strength', value: 2, per_rank: true }`
+- `skill_upgrade`: `{ skill: 'whirlwind', property: 'damage_mult', value: 0.15 }`
+- `proc_chance`: `{ trigger: 'on_hit', effect: 'bleed', chance: 0.10, duration: 3000 }`
+- `aura`: `{ stat: 'damage', value: 0.05, radius: 3, party: true }`
+
+Engine functions:
+- `getTalentTree(characterClass)` — returns full tree structure
+- `canAllocate(playerTalents, talentId)` — checks tier gate + prereqs + available points
+- `allocateTalent(playerTalents, talentId)` — returns updated talent map
+- `computeTalentBonuses(playerTalents, characterClass)` — aggregate all effects into stat bonuses
+- `getAvailablePoints(level, playerTalents)` — level minus total allocated points
+
+### 13.1 Player Integration [for Bolt]
+**Files:** `server/game/player.js`, `server/game/combat.js`, `server/index.js`
+
+1. `player.talents` — Map of `{ talentId: rank }` (persisted in DB characters table as JSON)
+2. `player.recalcTalentBonuses()` — called on level-up and talent allocation, merges talent bonuses into player stats
+3. Socket events:
+   - `talent:allocate` (phone → server): `{ talentId }` → validates + applies + broadcasts update
+   - `talent:respec` (phone → server): clears all talents, costs gold (100 * level)
+   - `talent:tree` (server → phone): sends full tree + current allocation on connect/update
+4. Talent bonuses apply to:
+   - Base stats (str/dex/int/vit) — additive
+   - Skill damage — multiplicative
+   - Proc effects — registered in combat.js hit handler
+   - Party auras — checked in combat.js `getPartyBuffs()`
+
+### 13.2 Database Persistence [for Bolt]
 **File:** `server/game/database.js`
 
-Add `difficulty` column to leaderboard table:
-```sql
-ALTER TABLE leaderboard ADD COLUMN difficulty TEXT DEFAULT 'normal';
-```
-- Top runs sorted by: difficulty DESC, victory DESC, floor DESC, time ASC
-- Phone leaderboard shows difficulty badge per entry
+1. Add `talents TEXT DEFAULT '{}'` to characters table (JSON string of `{ talentId: rank }`)
+2. Save/load talents in `saveCharacter()` / `loadCharacter()`
+3. No migration needed — SQLite `DEFAULT '{}'` handles new column gracefully
 
-### Implementation Order for Bolt:
-1. **12.0** controller.js split (prerequisite — quick, 30 min)
-2. **12.1** Difficulty scaling in world.js + monsters.js (core feature)
-3. **12.2** New Game Plus flow (game:restart + DB)
-4. **12.5** Leaderboard difficulty column
-5. **12.3-12.4** UI/visuals (Sage's domain)
+### 13.3 Talent UI — Phone [for Sage]
+**Files:** `client/phone/talents-ui.js` (NEW), `client/phone/index.html`, `client/phone/style.css`
+
+1. New screen accessible from stats panel ("Talents" tab/button)
+2. Tree visualization: 3 columns (branches), 4 rows (tiers), connecting lines
+3. Each talent node: icon + name + rank (e.g., "2/3"), tap to allocate
+4. Locked nodes: grayed out with lock icon + requirement tooltip
+5. Available points counter at top
+6. Respec button at bottom (shows gold cost)
+7. Branch headers with class-specific colors
+
+### 13.4 Talent Visual Feedback — TV [for Sage]
+**Files:** `client/tv/hud.js`, `client/tv/effects.js`
+
+1. Level-up popup: "Talent point available!" notification
+2. Talent proc visual effects (e.g., bleed → red ticks, frost → blue slow aura)
+3. Party aura visual radius indicator around player sprite
+
+### 13.5 Talent Balance & Testing [for Trace]
+**File:** `server/tests/talents.test.js` (NEW)
+
+Test categories:
+- Tree structure validation (all 36 talents, tier gates, prereqs)
+- Allocation logic (canAllocate, max rank, point budget)
+- Respec (clears all, refunds points, charges gold)
+- Stat computation (bonuses aggregate correctly)
+- Integration: talents affect combat damage calculations
+- Persistence: save/load round-trip
+
+### Implementation Order for Phase 13:
+1. **13.0** Talent data + engine (Aria designs, Bolt implements)
+2. **13.2** DB persistence (Bolt, quick — 1 column + JSON)
+3. **13.1** Player + combat integration (Bolt, core work)
+4. **13.3** Phone talent UI (Sage)
+5. **13.4** TV visuals (Sage)
+6. **13.5** Tests (Trace, can start after 13.0)
+
+---
+
+### 12.5 Leaderboard — Difficulty Tracking [DONE — Bolt, Cycle #97]
+**File:** `server/game/database.js`
+- [x] `difficulty` column in leaderboard CREATE TABLE (not ALTER — clean schema)
+- [x] CASE-based sort: hell > nightmare > normal (alphabetical DESC was wrong)
+- [x] `recordRun()` accepts difficulty as 9th param, defaults to 'normal'
+- [x] `getUnlockedDifficulties()` — victory-based unlock detection
+- [x] `getPersonalRuns()` — same CASE-based difficulty sort
+- [x] 22 tests in `new-game-plus.test.js` covering all DB difficulty logic
 
 ---
 

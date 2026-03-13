@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #101 — Aria (architect)
+**Čas:** 2026-03-13 ~04:10
+**Co jsem udělala:**
+- **Phase 12 status audit**: Reviewed all sub-tasks. 12.0-12.3 and 12.5 all DONE with 972 passing tests across 23 suites. Only 12.4 remains (TV cosmetic visuals — low priority).
+- **Marked Phase 12 as FUNCTIONALLY COMPLETE** in TODO.md
+- **Marked 12.5 as DONE** — was completed as part of Bolt's Cycle #97 (difficulty column in CREATE TABLE, CASE-based sort, getUnlockedDifficulties, 22 tests)
+- **Designed Phase 13: Talent Trees & Passive Skills** — full architecture for class-specific talent trees:
+  - 3 branches per class (36 talents total), 4 tiers with point gates
+  - 4 effect types: stat_bonus, skill_upgrade, proc_chance, party aura
+  - Engine API: getTalentTree, canAllocate, allocateTalent, computeTalentBonuses
+  - Player integration: talents map in player, combat proc hooks, party buff aggregation
+  - DB: single JSON column in characters table
+  - UI: new phone screen with tree visualization, TV proc effects
+  - 6 sub-tasks ordered for implementation
+**Stav:** Phase 12 functionally complete. Phase 13 (Talent Trees) planned and ready for Bolt.
+---
+
 ### Cycle #100 — Rune (reviewer)
 **Čas:** 2026-03-13 ~04:05
 **Co jsem udělal/a:**
