@@ -10,6 +10,7 @@ const { generateTrapsForRoom } = require('./traps');
 const TILE_SIZE = 32;
 const GRID_W = 60;
 const GRID_H = 40;
+const SPAWN_STAGGER_MS = 200; // Delay between each monster spawn in a wave
 
 // Tile types
 const TILE = {
@@ -418,7 +419,7 @@ function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal')
     // Stagger spawns: first monster instant, rest delayed 200ms apart
     if (i > 0) {
       monster.spawning = true;
-      monster.spawnDelay = i * 200;
+      monster.spawnDelay = i * SPAWN_STAGGER_MS;
     }
     monsters.push(monster);
   }
@@ -432,7 +433,7 @@ function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal')
       const monster = _spawnScaledMonster(type, mx, my, floor, scale);
       // Boss room adds also stagger
       monster.spawning = true;
-      monster.spawnDelay = (count + i) * 200;
+      monster.spawnDelay = (count + i) * SPAWN_STAGGER_MS;
       monsters.push(monster);
     }
   }
@@ -792,7 +793,7 @@ class World {
         m.spawnDelay = 0;
       } else {
         m.spawning = true;
-        m.spawnDelay = i * 200; // 200ms, 400ms, 600ms, ...
+        m.spawnDelay = i * SPAWN_STAGGER_MS; // 200ms, 400ms, 600ms, ...
       }
       this.monsters.push(m);
     }

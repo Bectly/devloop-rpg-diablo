@@ -92,17 +92,36 @@ document.getElementById('hc-toggle').addEventListener('touchstart', (e) => {
   document.getElementById('hc-toggle').classList.toggle('active', hardcoreMode);
 });
 
+function doJoin() {
+  Sound.unlock();
+  const btn = document.getElementById('btn-join');
+  if (!socket.connected) {
+    btn.textContent = 'NOT CONNECTED!';
+    btn.style.background = '#cc2222';
+    setTimeout(() => { btn.textContent = 'ENTER DUNGEON'; btn.style.background = ''; }, 2500);
+    return;
+  }
+  joinedName = document.getElementById('name-input').value.trim() || 'Hero';
+  btn.textContent = 'JOINING...';
+  btn.style.pointerEvents = 'none';
+  socket.emit('join', { name: joinedName, characterClass: selectedClass, hardcore: hardcoreMode });
+  // Reset button after 3s if server never responds
+  setTimeout(() => {
+    if (joinScreen && !joinScreen.classList.contains('hidden')) {
+      btn.textContent = 'ENTER DUNGEON';
+      btn.style.pointerEvents = '';
+      btn.style.background = '';
+    }
+  }, 3000);
+}
+
 document.getElementById('btn-join').addEventListener('touchstart', (e) => {
   e.preventDefault();
-  Sound.unlock();
-  joinedName = document.getElementById('name-input').value.trim() || 'Hero';
-  socket.emit('join', { name: joinedName, characterClass: selectedClass, hardcore: hardcoreMode });
+  doJoin();
 });
 // Fallback for desktop testing
 document.getElementById('btn-join').addEventListener('click', () => {
-  Sound.unlock();
-  joinedName = document.getElementById('name-input').value.trim() || 'Hero';
-  socket.emit('join', { name: joinedName, characterClass: selectedClass, hardcore: hardcoreMode });
+  doJoin();
 });
 
 // ─── Ping / Connection Status ────────────────────────────────────
@@ -125,7 +144,11 @@ function measurePing() {
 socket.on('connect', () => {
   console.log('[Phone] Connected');
 
-  // Update connection dot
+  // Update join-screen status (visible BEFORE join)
+  const joinStatus = document.getElementById('join-status');
+  if (joinStatus) { joinStatus.textContent = 'Connected ✓'; joinStatus.className = 'join-status connected'; }
+
+  // Update connection dot (visible AFTER join, in HUD)
   const dot = document.getElementById('conn-dot');
   if (dot) dot.className = 'conn-dot connected';
   // Start ping interval
@@ -858,12 +881,23 @@ socket.on('disconnect', () => {
   if (_pingInterval) { clearInterval(_pingInterval); _pingInterval = null; }
   const pingEl = document.getElementById('hud-ping');
   if (pingEl) pingEl.textContent = '--';
+  // Update join-screen status (in case user returns to join screen)
+  const joinStatus = document.getElementById('join-status');
+  if (joinStatus) { joinStatus.textContent = 'Disconnected'; joinStatus.className = 'join-status disconnected'; }
   Reconnect.onDisconnect();
 });
 
 socket.on('reconnect_attempt', () => {
   const dot = document.getElementById('conn-dot');
   if (dot) dot.className = 'conn-dot reconnecting';
+  const joinStatus = document.getElementById('join-status');
+  if (joinStatus) { joinStatus.textContent = 'Reconnecting...'; joinStatus.className = 'join-status connecting'; }
+});
+
+socket.on('connect_error', (err) => {
+  console.error('[Phone] Connection error:', err.message);
+  const joinStatus = document.getElementById('join-status');
+  if (joinStatus) { joinStatus.textContent = 'Connection failed: ' + err.message; joinStatus.className = 'join-status disconnected'; }
 });
 
 // ─── Floor Display ──────────────────────────────────────────────

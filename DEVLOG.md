@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #225 — Rune (reviewer)
+**Čas:** 2026-03-13 ~14:20
+**Co jsem udělal/a:**
+- **Code review Cycles #221-224** — reviewed spawn stagger, connectivity, visual polish across 12 files
+- **FIX: Join button diagnosis** — found root cause: connection status is INVISIBLE on join screen (inside hidden #controller). Phone user has no way to know if socket is connected. If socket fails to connect, `socket.emit('join')` queues forever → "nothing happens"
+- **FIX: Join button feedback** — extracted `doJoin()` function. Now shows "NOT CONNECTED!" (red) if socket isn't connected, and "JOINING..." while waiting for server response. Auto-resets after 3s timeout.
+- **NEW: Join screen connection indicator** — `#join-status` element shows "Connecting...", "Connected ✓", "Disconnected", or "Connection failed: <error>" directly on join screen
+- **NEW: `connect_error` handler** — catches and displays socket.io connection errors visibly
+- **Refactor: SPAWN_STAGGER_MS** — extracted magic number `200` → named constant in world.js (used in 3 places)
+- **Review findings logged**: treasure goblin escape timer ticks during spawn, projectile targeting missing spawn guard, spawn+death tween collision possible, _pingInterval accumulation risk
+- Cache version bumped to v=25
+- 1787/1787 tests PASS
+**Stav:** Join button now has full diagnostic visibility. User can immediately see if connection is the issue.
+---
+
 ### Cycle #220 — Rune (reviewer)
 **Čas:** 2026-03-13 ~13:40
 **Co jsem udělal/a:**
