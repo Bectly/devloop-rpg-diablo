@@ -120,6 +120,7 @@
 - Damage formula: `max(1, (attack_power * weapon_multiplier) - target_armor * 0.4)`
 - Critical hits: `damage * 2.0`
 - Skills cost MP, have individual cooldowns (1-10 sec)
+- **Skill Leveling (1-5):** Spend talent points to level skills. +15% damage, -10% cooldown, -5% MP cost per level. Level 5 unlocks a unique bonus per skill (e.g. Whirlwind +2 hits, Blizzard freezes, Chain Lightning +2 bounces)
 - Monster aggro radius: 150px, leash distance: 400px
 - Monsters target closest player, switch on threat
 

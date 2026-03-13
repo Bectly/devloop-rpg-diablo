@@ -1940,7 +1940,8 @@ This lets TV client differentiate friendly wolves visually.
 
 ### Found in Cycle #159 (Trace — skill leveling QA)
 
-- [ ] [BUG/MEDIUM] `skills.js` — **Projectile skill damage not level-scaled.** `executeMeteor`, `executeVolley`, `executeSniper` compute `projDamage = floor(attackPower/spellPower * skill.damage)` without applying `getDamageMult(skillLevel)`. Only direct-hit skills (spin, blizzard, chain) get level scaling via `calcSkillDamage()`. **Fix:** Apply `getDamageMult(skillLevel)` to `projDamage` in all 3 projectile handlers, e.g. `projDamage = Math.floor(projDamage * getDamageMult(skillLevel))`.
+- [x] [BUG/MEDIUM] `skills.js` — **Projectile skill damage not level-scaled.** `executeMeteor`, `executeVolley`, `executeSniper` compute `projDamage = floor(attackPower/spellPower * skill.damage)` without applying `getDamageMult(skillLevel)`. **Fixed (Rune, Cycle #160):** Added `* getDamageMult(skillLevel)` to projDamage computation in all 3 handlers.
+- [ ] [BUG/LOW] `skills.js` — **Battle Shout L5 partyCrit bonus emitted but never consumed.** `executeBuffDebuff` emits `partyCritBonus: 5` in `buff:apply` event at Level 5, but nothing in `combat.js` reads or applies this value. Needs: store partyCrit in player buff, apply in crit roll.
 
 ### Found in Cycle #44, Fixed in Cycle #45 (Rune)
 

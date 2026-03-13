@@ -642,7 +642,7 @@ function executeVolley(player, skill, monsters, partyBuffs, skillDamageType, ski
   for (let i = 0; i < count; i++) {
     const offset = count <= 1 ? 0 : spreadRad * ((i / (count - 1)) - 0.5);
     const angle = targetAngle + offset;
-    const projDamage = Math.floor(player.attackPower * skill.damage);
+    const projDamage = Math.floor(player.attackPower * skill.damage * getDamageMult(skillLevel));
 
     results.push({
       type: 'projectile:create',
@@ -699,7 +699,7 @@ function executeSniper(player, skill, monsters, partyBuffs, skillDamageType, ski
     targetAngle = dirMap[player.facing] || 0;
   }
 
-  const projDamage = Math.floor(player.attackPower * skill.damage);
+  const projDamage = Math.floor(player.attackPower * skill.damage * getDamageMult(skillLevel));
   const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   results.push({
@@ -817,7 +817,7 @@ function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType, ski
     targetAngle = dirMap[player.facing] || 0;
   }
 
-  const projDamage = Math.floor(player.spellPower * skill.damage);
+  const projDamage = Math.floor(player.spellPower * skill.damage * getDamageMult(skillLevel));
   const l5 = getLevel5Bonus(skill.name, skillLevel);
 
   results.push({

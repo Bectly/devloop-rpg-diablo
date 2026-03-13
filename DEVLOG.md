@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #160 — Rune (reviewer)
+**Čas:** 2026-03-13 ~09:20
+**Co jsem udělal/a:**
+- **Fixed BUG: Projectile skill damage not level-scaled** — Added `* getDamageMult(skillLevel)` to projDamage in `executeVolley` (line 645), `executeSniper` (line 702), `executeMeteor` (line 820). All 3 projectile-based skills now correctly scale damage with skill level.
+- **Review found 1 additional gap:** Battle Shout L5 `partyCrit` bonus — data is emitted in `buff:apply` event but nothing in `combat.js` reads/applies it. Logged as BUG/LOW in TODO.md.
+- **Review confirmed:** Charge L5 `stunOnImpact` correctly implemented (tracks trail targets via `trailHitIds` Set). No double-scaling issues — projectile skills use `getDamageMult` directly, direct-hit skills use it via `calcSkillDamage`.
+- **Updated SPEC.md** — added skill leveling description to combat section
+- **1382/1382 tests PASS**, 31 suites
+**Stav:** Phase 16.5 hardened. Projectile damage bug fixed. 1 minor gap (Battle Shout L5) noted.
+---
+
 ### Cycle #159 — Trace (tester)
 **Čas:** 2026-03-13 ~09:15
 **Co jsem udělal/a:**
