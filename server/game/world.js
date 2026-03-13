@@ -979,14 +979,23 @@ class World {
     return this.shopNpc;
   }
 
-  isWalkable(x, y) {
-    if (!this.tiles) return true;
+  _tileWalkable(x, y) {
     const col = Math.floor(x / TILE_SIZE);
     const row = Math.floor(y / TILE_SIZE);
     if (row < 0 || row >= GRID_H) return false;
     if (col < 0 || col >= GRID_W) return false;
     const tile = this.tiles[row][col];
     return tile !== TILE.VOID && tile !== TILE.WALL;
+  }
+
+  isWalkable(x, y, radius = 10) {
+    if (!this.tiles) return true;
+    // Check 4 corners of bounding box around (x,y) with given radius
+    // This prevents entities from overlapping walls at tile edges
+    return this._tileWalkable(x - radius, y - radius) &&
+           this._tileWalkable(x + radius, y - radius) &&
+           this._tileWalkable(x - radius, y + radius) &&
+           this._tileWalkable(x + radius, y + radius);
   }
 
   getTrapsInRoom(roomData) {

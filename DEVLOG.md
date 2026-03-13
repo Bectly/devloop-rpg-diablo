@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #213.5 — BUG FIX (user-reported)
+**Čas:** 2026-03-13 ~13:02
+**Co jsem udělal/a:**
+- **ROOT CAUSE FOUND**: `isWalkable(x,y)` checked only 1 pixel (entity center). Players/monsters could overlap walls at tile edges because their "body" extends beyond the center point. Safety net in game-loop.js then teleported them to spawn.
+- **FIX**: `isWalkable()` now checks 4 corners of a bounding box (radius=10px) around the entity. New `_tileWalkable()` helper for single-point checks.
+- This fixes BOTH bugs: player teleport-to-spawn AND monsters walking through walls (same root cause).
+- Updated world.test.js to use tile centers (not edge pixels) for walkability tests.
+- 1682/1682 tests PASS.
+---
+
 ### Cycle #213 — Sage (stylist)
 **Čas:** 2026-03-13 ~12:55
 **Co jsem udělal/a:**

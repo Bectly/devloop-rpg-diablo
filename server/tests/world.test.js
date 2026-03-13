@@ -128,12 +128,16 @@ describe('World', () => {
 
   // ── Walkability ─────────────────────────────────────────────────
   describe('isWalkable', () => {
-    it('floor tiles are walkable', () => {
-      // Find a floor tile
-      for (let y = 0; y < GRID_H; y++) {
-        for (let x = 0; x < GRID_W; x++) {
-          if (world.tiles[y][x] === TILE.FLOOR) {
-            expect(world.isWalkable(x * TILE_SIZE + 1, y * TILE_SIZE + 1)).toBe(true);
+    it('floor tiles are walkable (center of tile)', () => {
+      // Find a floor tile surrounded by floor (so bbox radius doesn't hit walls)
+      for (let y = 2; y < GRID_H - 2; y++) {
+        for (let x = 2; x < GRID_W - 2; x++) {
+          if (world.tiles[y][x] === TILE.FLOOR &&
+              world.tiles[y-1][x] !== TILE.WALL && world.tiles[y+1][x] !== TILE.WALL &&
+              world.tiles[y][x-1] !== TILE.WALL && world.tiles[y][x+1] !== TILE.WALL) {
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world.isWalkable(cx, cy)).toBe(true);
             return;
           }
         }
@@ -144,7 +148,9 @@ describe('World', () => {
       for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
           if (world.tiles[y][x] === TILE.WALL) {
-            expect(world.isWalkable(x * TILE_SIZE + 1, y * TILE_SIZE + 1)).toBe(false);
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world.isWalkable(cx, cy)).toBe(false);
             return;
           }
         }
@@ -155,7 +161,9 @@ describe('World', () => {
       for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
           if (world.tiles[y][x] === TILE.VOID) {
-            expect(world.isWalkable(x * TILE_SIZE + 1, y * TILE_SIZE + 1)).toBe(false);
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world.isWalkable(cx, cy)).toBe(false);
             return;
           }
         }
