@@ -962,6 +962,112 @@ describe('World', () => {
     });
   });
 
+  // ── Bounding-box collision fix (Cycle #214) ───────────────────
+  describe('isWalkable bounding-box collision', () => {
+    it('entity at floor tile center surrounded by floor is walkable', () => {
+      // Find a floor tile with floor neighbours (no adjacent wall)
+      for (let y = 2; y < GRID_H - 2; y++) {
+        for (let x = 2; x < GRID_W - 2; x++) {
+          if (world.tiles[y][x] === TILE.FLOOR &&
+              world.tiles[y - 1][x] === TILE.FLOOR &&
+              world.tiles[y + 1][x] === TILE.FLOOR &&
+              world.tiles[y][x - 1] === TILE.FLOOR &&
+              world.tiles[y][x + 1] === TILE.FLOOR) {
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world.isWalkable(cx, cy, 10)).toBe(true);
+            return;
+          }
+        }
+      }
+    });
+
+    it('entity on floor tile but radius overlaps adjacent wall returns false', () => {
+      // Find a floor tile adjacent to a wall
+      for (let y = 2; y < GRID_H - 2; y++) {
+        for (let x = 2; x < GRID_W - 2; x++) {
+          if (world.tiles[y][x] === TILE.FLOOR && world.tiles[y - 1][x] === TILE.WALL) {
+            // Position near the top edge of this floor tile so bbox overlaps wall tile above
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + 2; // 2px into tile — radius=10 will reach into wall tile above
+            expect(world.isWalkable(cx, cy, 10)).toBe(false);
+            return;
+          }
+        }
+      }
+    });
+
+    it('entity in open room (surrounded by floor) is always walkable', () => {
+      // Find 3x3 block of floor tiles and test center
+      for (let y = 2; y < GRID_H - 2; y++) {
+        for (let x = 2; x < GRID_W - 2; x++) {
+          let allFloor = true;
+          for (let dy = -1; dy <= 1 && allFloor; dy++) {
+            for (let dx = -1; dx <= 1 && allFloor; dx++) {
+              if (world.tiles[y + dy][x + dx] !== TILE.FLOOR) allFloor = false;
+            }
+          }
+          if (allFloor) {
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world.isWalkable(cx, cy, 10)).toBe(true);
+            return;
+          }
+        }
+      }
+    });
+
+    it('radius=0 checks only center point (backward compat)', () => {
+      // Find a floor tile next to a wall
+      for (let y = 2; y < GRID_H - 2; y++) {
+        for (let x = 2; x < GRID_W - 2; x++) {
+          if (world.tiles[y][x] === TILE.FLOOR && world.tiles[y - 1][x] === TILE.WALL) {
+            // Position near the top edge — with radius=0 only center is checked
+            const cx = x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = y * TILE_SIZE + 2; // still within floor tile
+            expect(world.isWalkable(cx, cy, 0)).toBe(true);
+            return;
+          }
+        }
+      }
+    });
+
+    it('_tileWalkable exists and checks single-point walkability', () => {
+      expect(typeof world._tileWalkable).toBe('function');
+
+      // Floor tile center should be walkable
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+          if (world.tiles[y][x] === TILE.FLOOR) {
+            const px = x * TILE_SIZE + TILE_SIZE / 2;
+            const py = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world._tileWalkable(px, py)).toBe(true);
+            return;
+          }
+        }
+      }
+    });
+
+    it('_tileWalkable returns false for wall tile', () => {
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+          if (world.tiles[y][x] === TILE.WALL) {
+            const px = x * TILE_SIZE + TILE_SIZE / 2;
+            const py = y * TILE_SIZE + TILE_SIZE / 2;
+            expect(world._tileWalkable(px, py)).toBe(false);
+            return;
+          }
+        }
+      }
+    });
+
+    it('_tileWalkable returns false for out-of-bounds coordinates', () => {
+      expect(world._tileWalkable(-10, -10)).toBe(false);
+      expect(world._tileWalkable(GRID_W * TILE_SIZE + 50, 50)).toBe(false);
+      expect(world._tileWalkable(50, GRID_H * TILE_SIZE + 50)).toBe(false);
+    });
+  });
+
   describe('Zone boss floor assignments', () => {
     it('boss floors have boss room as last room', () => {
       const bossFloors = [1, 3, 6];

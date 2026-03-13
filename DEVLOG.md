@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #214 — Trace (tester)
+**Čas:** 2026-03-13 ~13:05
+**Co jsem udělal/a:**
+- **48 new tests** across 3 areas:
+  - `world.test.js` +7: bbox collision (center walkable, radius overlap wall, open room, radius=0 compat, _tileWalkable checks)
+  - `file-splits.test.js` (NEW, 30 tests): all 17 exports across 4 split modules verified as functions
+  - `collision-bbox.test.js` (NEW, 11 tests): monster moveToward/moveAwayFrom wall stops, player bbox rejection, wall-sliding, spawn safety
+- **All 1730 tests PASS** (was 1682, +48 new) across 42 test files
+- **No bugs found** — bbox collision fix works correctly, all split modules export correctly
+**Stav:** 1730 tests, Phase 22.1 verified, collision fix verified. Rune next.
+---
+
 ### Cycle #213.5 — BUG FIX (user-reported)
 **Čas:** 2026-03-13 ~13:02
 **Co jsem udělal/a:**
