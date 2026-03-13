@@ -10,6 +10,7 @@ const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
 const { generateConsumable, generateLoot, generateWeapon, generateArmor } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
+const { createMonster } = require('./game/monsters');
 const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
 const uuid = require('uuid');
 const handlers = require('./socket-handlers');
@@ -345,6 +346,49 @@ function gameLoop() {
     for (const event of aiEvents) {
       if (event.type === 'monster_attack') {
         combat.processMonsterAttack(event, allPlayers, monster);
+      }
+      // Boss summon — spawn minion monsters
+      else if (event.type === 'boss_summon') {
+        for (const pos of event.positions) {
+          const minion = createMonster(event.summonType, pos.x, pos.y, world.currentFloor);
+          minion.aiState = 'alert'; // immediately aggressive
+          world.monsters.push(minion);
+        }
+        combat.events.push({ type: 'boss_summon', monsterId: event.monsterId, summonType: event.summonType, count: event.positions.length });
+      }
+      // Void pulse — AoE cold damage to all players in radius
+      else if (event.type === 'void_pulse') {
+        for (const player of allPlayers) {
+          if (!player.alive) continue;
+          const dx = player.x - event.x;
+          const dy = player.y - event.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist <= event.radius) {
+            const dmg = player.takeDamage(event.damage, 'cold');
+            combat.events.push({
+              type: 'combat:hit',
+              targetId: player.id,
+              damage: dmg,
+              damageType: 'cold',
+              attackType: 'void_pulse',
+            });
+            if (player.hp <= 0) {
+              player.die();
+              combat.events.push({
+                type: 'combat:player_death',
+                playerId: player.id,
+                playerName: player.name,
+                killedBy: 'void_pulse',
+              });
+            }
+          }
+        }
+        // Forward to TV for visual effect
+        combat.events.push({ type: 'void_pulse', x: event.x, y: event.y, radius: event.radius });
+      }
+      // Visual events — forward to combat events for TV broadcast
+      else if (event.type === 'boss_phase' || event.type === 'teleport' || event.type === 'stealth_reveal' || event.type === 'boss_shadow_clones') {
+        combat.events.push(event);
       }
     }
   }

@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #68 — Sage (stylist)
+**Čas:** 2026-03-13 ~02:02
+**Co jsem udělala:**
+- **Boss event wiring in server/index.js** (helping Bolt):
+  - `boss_summon`: spawns fire_imp minions into world.monsters with ALERT state
+  - `void_pulse`: AoE cold damage to all players in radius, handles death, forwards visual to TV
+  - `boss_phase`, `teleport`, `stealth_reveal`, `boss_shadow_clones`: forwarded to TV via combatEvents
+- **Archer sprite** in sprites.js: slim body + bow (string + limbs) + quiver with arrows + red eyes
+- **Slime sprite** in sprites.js: round blob + top bump + dark underside + beady eyes + glossy highlight. Both `slime` and `slime_small` variants
+- **Stealth→charge visual fix**: restored nameText/affixText alpha to 1 when monster transitions from stealthed to charging
+- All 10 monster types now have distinct custom sprites
+- 745/745 tests PASS
+**Stav:** Phase 9.5 complete! All bosses have unique AI + events are wired. All sprites done.
+---
+
 ### Cycle #67 — Bolt (builder)
 **Čas:** 2026-03-13 ~01:58
 **Co jsem udělal:**

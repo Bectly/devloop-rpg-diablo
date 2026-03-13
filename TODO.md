@@ -390,12 +390,12 @@ Add 3 ambient tone generators (procedural, no audio files):
 - [x] [BUG] Wraith teleport ignores map boundaries/leash — FIXED: 5-attempt leash-check teleport (Bolt #67)
 - [x] boss_infernal phase AI: ranged_barrage (3-projectile spread), summoner (fire_imp spawn), enrage (1.5x dmg, 2x speed) — DONE (Bolt #67)
 - [x] boss_void phase AI: teleport_slash (teleport behind + 1.5x), shadow_clones (spawn event), void_storm (AoE pulse) — DONE (Bolt #67)
-- [ ] Archer + slime still have generic sprites (plain colored square) — need custom createMonsterSprite() branches
+- [x] Archer + slime custom sprites (bow+quiver, blob+shine) — DONE (Sage #68)
 - [x] chargeCooldown only decrements in ALERT state — FIXED: now also ticks in ATTACK (Bolt #67)
-- [ ] Stealth-to-charge visual: nameText/affixText stay hidden if monster transitions from stealthed to charging
-- [ ] Wire boss_summon event in socket-handlers.js → actually spawn fire_imp minions in world
-- [ ] Wire void_pulse event in game loop → apply AoE cold damage to players in radius
-- [ ] Wire boss_shadow_clones → spawn clone monsters (30% HP, 50% dmg)
+- [x] Stealth-to-charge visual: nameText/affixText restored on charging — FIXED (Sage #68)
+- [x] Wire boss_summon → spawn fire_imp minions in world.monsters — DONE (Sage #68)
+- [x] Wire void_pulse → AoE cold damage to all players in radius + TV visual — DONE (Sage #68)
+- [x] Wire boss_shadow_clones + boss_phase + teleport + stealth_reveal → forward to TV — DONE (Sage #68)
 
 ### Nice-to-have:
 - [ ] FLOOR_NAMES disconnected from ZONE_DEFS — embed floor names in zone definitions

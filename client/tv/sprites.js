@@ -269,6 +269,46 @@ window.Sprites = {
         g.fillStyle(0x88ccff, 1);
         g.fillCircle(s - 3, s - 3, 2); // cold blue eyes
         g.fillCircle(s + 3, s - 3, 2);
+      } else if (m.type === 'archer') {
+        // Bone Archer — slim body with bow and quiver
+        g.fillStyle(m.color, 1);
+        g.fillRect(s - s * 0.4, 2, s * 0.8, d - 4); // slim body
+        g.fillStyle(m.color + 0x111111, 0.9);
+        g.fillCircle(s, 4, s * 0.35); // head
+        // Bow (left side) — string + limbs
+        g.lineStyle(2, 0xaa8844, 0.9);
+        g.lineBetween(3, s - s * 0.5, 3, s + s * 0.5); // bow string
+        g.lineBetween(3, s - s * 0.5, s * 0.5, s - s * 0.4); // top limb
+        g.lineBetween(3, s + s * 0.5, s * 0.5, s + s * 0.4); // bottom limb
+        // Quiver (right side behind body)
+        g.fillStyle(0x886633, 1);
+        g.fillRect(d - 5, s - s * 0.4, 3, s * 0.7);
+        // Arrow tips poking out
+        g.fillStyle(0xcccccc, 0.8);
+        g.fillTriangle(d - 5, s - s * 0.4, d - 3, s - s * 0.4, d - 4, s - s * 0.55);
+        g.fillTriangle(d - 4, s - s * 0.4, d - 2, s - s * 0.4, d - 3, s - s * 0.5);
+        // Eyes (red glow)
+        g.fillStyle(0xff4444, 1);
+        g.fillCircle(s - 2, 3, 1.5);
+        g.fillCircle(s + 2, 3, 1.5);
+      } else if (m.type === 'slime' || m.type === 'slime_small') {
+        // Slime blob — round body with top bump
+        const isSmall = m.type === 'slime_small';
+        g.fillStyle(m.color, 0.85);
+        g.fillCircle(s, s + 2, s - 1); // main blob
+        g.fillStyle(m.color, 0.75);
+        g.fillCircle(s, s - s * 0.35, s * 0.45); // top bump
+        // Darker underside for depth
+        g.fillStyle(m.color - 0x113322, 0.4);
+        g.fillCircle(s, s + 4, s * 0.7);
+        // Eyes (dark, beady)
+        const eyeR = isSmall ? 1.5 : 2;
+        g.fillStyle(0x222222, 0.9);
+        g.fillCircle(s - 3, s - 1, eyeR);
+        g.fillCircle(s + 3, s - 1, eyeR);
+        // Shiny highlight
+        g.fillStyle(0xffffff, 0.3);
+        g.fillCircle(s - 2, s - s * 0.35, s * 0.15);
       } else {
         g.fillStyle(m.color, 1);
         g.fillRect(2, 2, d - 4, d - 4);
@@ -352,6 +392,8 @@ window.Sprites = {
       // Charge: bright flash during dash
       sprite.setAlpha(1);
       sprite.setTint(0xff8844);
+      if (sprite.nameText) sprite.nameText.setAlpha(1);
+      if (sprite.affixText) sprite.affixText.setAlpha(1);
     } else {
       sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : 1);
       sprite.clearTint();
