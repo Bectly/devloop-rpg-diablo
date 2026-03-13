@@ -57,6 +57,22 @@ class CombatSystem {
       baseDamage = Math.floor(baseDamage * (1 + player.setBonuses.damagePercent / 100));
     }
 
+    // Talent passive: damage percent (e.g., Rampage +10%/rank)
+    if (player.talentBonuses && player.talentBonuses.passives) {
+      const tp = player.talentBonuses.passives;
+      if (tp.damage_percent) {
+        baseDamage = Math.floor(baseDamage * (1 + tp.damage_percent / 100));
+      }
+    }
+
+    // Talent passive: crit damage percent (e.g., Piercing Shot +15%/rank)
+    if (isCrit && player.talentBonuses && player.talentBonuses.passives) {
+      const tp = player.talentBonuses.passives;
+      if (tp.crit_damage_percent) {
+        baseDamage = Math.floor(baseDamage * (1 + tp.crit_damage_percent / 100));
+      }
+    }
+
     // Determine damage type from weapon bonuses (elemental weapons deal that type)
     let damageType = 'physical';
     if (player.equipment.weapon && player.equipment.weapon.bonuses) {
@@ -70,7 +86,7 @@ class CombatSystem {
   }
 
   // Player attacks nearest monster
-  playerAttack(player, monsters) {
+  playerAttack(player, monsters, allPlayers) {
     if (!player.canAttack()) return null;
 
     // Find nearest monster in range
@@ -91,7 +107,16 @@ class CombatSystem {
     if (!nearest) return null;
 
     player.startAttackCooldown();
-    const { damage, isCrit, damageType } = this.calcPlayerDamage(player);
+    let { damage, isCrit, damageType } = this.calcPlayerDamage(player);
+
+    // Party aura: damage buff
+    if (allPlayers) {
+      const partyBuffs = this.getPartyBuffs(allPlayers);
+      if (partyBuffs.damage > 0) {
+        damage = Math.floor(damage * (1 + partyBuffs.damage));
+      }
+    }
+
     const modifiedDamage = nearest.affixes ? modifyDamageByAffixes(nearest, damage) : damage;
     const dealt = nearest.takeDamage(modifiedDamage);
 
@@ -114,6 +139,27 @@ class CombatSystem {
       targetMaxHp: nearest.maxHp,
     };
     this.events.push(event);
+
+    // Talent procs (e.g., bleed on_hit)
+    if (player.talentBonuses && player.talentBonuses.procs && nearest.alive) {
+      for (const proc of player.talentBonuses.procs) {
+        if (proc.trigger === 'on_hit' && Math.random() < proc.chance) {
+          if (proc.effect === 'bleed') {
+            // Apply bleed DoT using the same pattern as poison (poisonTick/poisonDamage)
+            const bleedDmg = Math.max(1, Math.floor(nearest.maxHp * 0.03));
+            nearest.poisonTick = Math.max(nearest.poisonTick || 0, proc.duration || 3000);
+            nearest.poisonDamage = Math.max(nearest.poisonDamage || 0, bleedDmg);
+            this.events.push({
+              type: 'combat:proc',
+              attackerId: player.id,
+              targetId: nearest.id,
+              effect: 'bleed',
+              damage: bleedDmg,
+            });
+          }
+        }
+      }
+    }
 
     // Check for kill
     if (!nearest.alive) {
@@ -149,6 +195,13 @@ class CombatSystem {
         if (affixDeathEvents.length > 0) {
           deathEvent.affixEvents = affixDeathEvents;
         }
+      }
+
+      // Award keystone for boss kill on floor 3+ (floor is 0-indexed, so >= 3 = physical floor 4+)
+      if (nearest.isBoss && (player.floor || 0) >= 3) {
+        const keystones = player.difficulty === 'hell' ? 2 : 1;
+        player.addKeystones(keystones);
+        deathEvent.keystoneReward = keystones;
       }
 
       this.events.push(deathEvent);
@@ -198,9 +251,23 @@ class CombatSystem {
             if (isSpell && player.setBonuses && player.setBonuses.spellDamagePercent) {
               baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.spellDamagePercent / 100));
             }
+            // Talent passive: spell damage percent (e.g., Combustion +12%/rank)
+            if (isSpell && player.talentBonuses && player.talentBonuses.passives) {
+              const tp = player.talentBonuses.passives;
+              if (tp.spell_damage_percent) {
+                baseDmg = Math.floor(baseDmg * (1 + tp.spell_damage_percent / 100));
+              }
+            }
             // Set bonus: flat damage percent
             if (player.setBonuses && player.setBonuses.damagePercent) {
               baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
+            }
+            // Talent passive: damage percent (e.g., Rampage +10%/rank)
+            if (player.talentBonuses && player.talentBonuses.passives) {
+              const tp = player.talentBonuses.passives;
+              if (tp.damage_percent) {
+                baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
+              }
             }
             baseDmg = monster.affixes ? modifyDamageByAffixes(monster, baseDmg) : baseDmg;
 
@@ -288,6 +355,13 @@ class CombatSystem {
           if (player.setBonuses && player.setBonuses.damagePercent) {
             baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
           }
+          // Talent passive: damage percent (e.g., Rampage +10%/rank)
+          if (player.talentBonuses && player.talentBonuses.passives) {
+            const tp = player.talentBonuses.passives;
+            if (tp.damage_percent) {
+              baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
+            }
+          }
           baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           if (skill.effect === 'stun') nearest.applyStun(skill.duration);
@@ -365,6 +439,13 @@ class CombatSystem {
           if (player.setBonuses && player.setBonuses.damagePercent) {
             baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
           }
+          // Talent passive: damage percent (e.g., Rampage +10%/rank)
+          if (player.talentBonuses && player.talentBonuses.passives) {
+            const tp = player.talentBonuses.passives;
+            if (tp.damage_percent) {
+              baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
+            }
+          }
           baseDmg = t.affixes ? modifyDamageByAffixes(t, baseDmg) : baseDmg;
           const dealt = t.takeDamage(baseDmg);
 
@@ -441,6 +522,13 @@ class CombatSystem {
           // Set bonus: flat damage percent
           if (player.setBonuses && player.setBonuses.damagePercent) {
             baseDmg = Math.floor(baseDmg * (1 + player.setBonuses.damagePercent / 100));
+          }
+          // Talent passive: damage percent (e.g., Rampage +10%/rank)
+          if (player.talentBonuses && player.talentBonuses.passives) {
+            const tp = player.talentBonuses.passives;
+            if (tp.damage_percent) {
+              baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
+            }
           }
           baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
@@ -616,6 +704,21 @@ class CombatSystem {
         });
       }
     }
+  }
+
+  // Aggregate party aura buffs from all players' talent bonuses
+  getPartyBuffs(players) {
+    const buffs = { damage: 0, defense: 0, speed: 0 };
+    for (const p of players) {
+      if (p.talentBonuses && p.talentBonuses.auras) {
+        for (const aura of p.talentBonuses.auras) {
+          if (aura.party && aura.stat in buffs) {
+            buffs[aura.stat] += aura.value;
+          }
+        }
+      }
+    }
+    return buffs;
   }
 }
 

@@ -1,5 +1,26 @@
 # DevLoop RPG — Development Log
 
+### Cycle #107 — Bolt (builder)
+**Čas:** 2026-03-13 ~04:36
+**Co jsem udělal:**
+- **13.6 Talent Combat Bonuses DONE** — `server/game/combat.js`:
+  - `damage_percent` passive applied in `calcPlayerDamage()` (basic attacks) + all 4 skill types (aoe, single, multi, dot)
+  - `spell_damage_percent` passive applied to all spell damage blocks (after set bonus)
+  - `crit_damage_percent` passive applied on critical hits (after set crit bonus)
+  - Talent procs: `on_hit` bleed proc wired in `playerAttack()`, reuses poison tick system for DoT
+  - Party auras: new `getPartyBuffs(players)` method aggregates damage/defense/speed auras across co-op players
+  - `playerAttack()` signature extended with `allPlayers` param (backward compatible)
+- **14.0 Rift Engine DONE** — `server/game/rifts.js` (NEW, 223 LOC):
+  - 10 rift modifiers (deadly, fortified, hasty, shielded, burning, vampiric, cursed, chaotic, armored, empowered)
+  - Tier 1-10 definitions with scaling (HP 1.0x-3.7x, DMG 1.0x-2.8x, time 180s-135s)
+  - `createRift()`, `getRiftModifiers()`, `createRiftGuardian()`, `getRiftRewards()`
+  - Rift Guardian: zone-themed boss with tier-scaled stats and 2+floor(tier/3) affixes
+  - Time bonus: +50% rewards if cleared in <50% time limit
+- **14.3 Keystones DONE** — `player.keystones` field, `addKeystones(n)`, `spendKeystone()`, DB column, boss kill drop (floor 3+, 2 on hell)
+- **1041/1041 tests pass** — zero regressions
+**Stav:** 13.6 gap filled, Phase 14 core engine ready. Bolt next: 14.1 rift floor gen + 14.2 socket events.
+---
+
 ### Cycle #106 — Aria (architect)
 **Čas:** 2026-03-13 ~04:28
 **Co jsem udělala:**

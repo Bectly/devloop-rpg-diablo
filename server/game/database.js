@@ -58,6 +58,7 @@ class GameDatabase {
         mana_potions INTEGER NOT NULL DEFAULT 2,
         free_stat_points INTEGER NOT NULL DEFAULT 0,
         talents TEXT NOT NULL DEFAULT '{}',
+        keystones INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
@@ -81,10 +82,10 @@ class GameDatabase {
     this._stmtSave = this.db.prepare(`
       INSERT OR REPLACE INTO characters
         (name, class, level, xp, stats, equipment, inventory, gold, floor, kills,
-         health_potions, mana_potions, free_stat_points, talents, updated_at)
+         health_potions, mana_potions, free_stat_points, talents, keystones, updated_at)
       VALUES
         (@name, @class, @level, @xp, @stats, @equipment, @inventory, @gold, @floor, @kills,
-         @health_potions, @mana_potions, @free_stat_points, @talents, datetime('now'))
+         @health_potions, @mana_potions, @free_stat_points, @talents, @keystones, datetime('now'))
     `);
 
     this._stmtLoad = this.db.prepare(`
@@ -146,6 +147,7 @@ class GameDatabase {
       mana_potions: player.manaPotions,
       free_stat_points: player.freeStatPoints,
       talents: JSON.stringify(player.talents || {}),
+      keystones: player.keystones || 0,
     });
   }
 
@@ -196,6 +198,7 @@ class GameDatabase {
       manaPotions: row.mana_potions,
       freeStatPoints: row.free_stat_points,
       talents,
+      keystones: row.keystones || 0,
     };
   }
 

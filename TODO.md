@@ -1011,7 +1011,7 @@ Test categories:
 5. **13.5** Tests (Trace, 69 tests) ✅
 6. **13.0b** Bug fixes (Rune — T4 gate, data shape) ✅
 
-### 13.6 Talent Combat Bonuses — MISSING [TOP PRIORITY for Bolt]
+### 13.6 Talent Combat Bonuses [DONE — Bolt, Cycle #107]
 **File:** `server/game/combat.js`
 
 Rune noted (Cycle #105): talent passives are computed by `computeTalentBonuses()` but **never applied in combat.js**. Three critical gaps:
@@ -1068,7 +1068,7 @@ The game has 13 phases of content. What keeps players playing after clearing Hel
 - Each Paragon level gives 1 stat point (any stat, no cap)
 - Paragon levels shown on leaderboard
 
-### 14.0 Rift Data & Engine [for Bolt]
+### 14.0 Rift Data & Engine [DONE — Bolt, Cycle #107]
 **File:** `server/game/rifts.js` (NEW)
 
 ```
@@ -1129,7 +1129,7 @@ Events:
 - `rift:failed` (server → both): `{ tier }` — timer ran out
 - `rift:guardian` (server → both): `{ guardian }` — boss spawn event
 
-### 14.3 Keystone System [for Bolt]
+### 14.3 Keystone System [DONE — Bolt, Cycle #107]
 **File:** `server/game/player.js` (MODIFY), `server/game/database.js` (MODIFY)
 
 - `player.keystones` — integer, stored in DB

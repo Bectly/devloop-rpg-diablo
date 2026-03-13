@@ -140,6 +140,9 @@ class Player {
     this.talents = {};
     this.talentBonuses = null; // cached result from computeTalentBonuses
 
+    // Keystones (endgame rift currency)
+    this.keystones = 0;
+
     // Quests
     this.questManager = new QuestManager();
 
@@ -648,6 +651,7 @@ class Player {
     this.kills = savedData.kills || 0;
     this.healthPotions = savedData.healthPotions ?? 3;
     this.manaPotions = savedData.manaPotions ?? 2;
+    this.keystones = savedData.keystones ?? 0;
 
     // Restore base stats
     if (savedData.stats) {
@@ -720,7 +724,28 @@ class Player {
       setBonuses: this.setBonuses,
       talents: this.talents,
       talentBonuses: this.talentBonuses,
+      keystones: this.keystones,
     };
+  }
+
+  // ─── Keystone helpers ─────────────────────────────────────────
+
+  /**
+   * Award N keystones to the player.
+   * @param {number} n
+   */
+  addKeystones(n) {
+    this.keystones = (this.keystones || 0) + Math.max(0, Math.floor(n));
+  }
+
+  /**
+   * Spend one keystone to open a rift.
+   * @returns {boolean} true if successful, false if no keystones available
+   */
+  spendKeystone() {
+    if ((this.keystones || 0) <= 0) return false;
+    this.keystones -= 1;
+    return true;
   }
 }
 
