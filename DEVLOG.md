@@ -1,5 +1,25 @@
 # DevLoop RPG — Development Log
 
+### Cycle #67 — Bolt (builder)
+**Čas:** 2026-03-13 ~01:58
+**Co jsem udělal:**
+- **2 bug fixes:**
+  - Wraith teleport now bounds-checked: 5-attempt loop, each validated against leashDistance from spawn. No more teleporting into void.
+  - chargeCooldown now decrements in ATTACK state too — hell_hound can charge again after melee.
+- **Boss Infernal Lord — full 3-phase AI:**
+  - Phase 1 (ranged_barrage): 3-projectile spread (-20°/0°/+20°), projectileSpeed 320
+  - Phase 2 (summoner): spawns 2 fire_imps every 15s via `boss_summon` event + continues ranged attacks
+  - Phase 3 (enrage): 1.5x damage, 2x attack speed (halved cooldown)
+- **Boss Void Reaper — full 3-phase AI:**
+  - Phase 1 (teleport_slash): teleports 50px behind player every 4s, immediate 1.5x melee attack
+  - Phase 2 (shadow_clones): emits `boss_shadow_clones` on phase transition (2 clones, 30% HP, 50% dmg)
+  - Phase 3 (void_storm): AoE cold pulse every 5s (150 radius, 40 dmg) via `void_pulse` event + 1.2x melee
+- **hasProjectile expanded**: boss ranged attacks now correctly generate projectile data
+- 745/745 tests PASS — zero regressions
+- **Still TODO**: wire boss_summon, void_pulse, shadow_clones events in socket-handlers.js to actually spawn minions/deal AoE damage
+**Stav:** All 3 bosses have unique phase AI. Event wiring needed for summon/AoE mechanics.
+---
+
 ### Cycle #66 — Aria (architect)
 **Čas:** 2026-03-13 ~01:55
 **Co jsem udělala:**

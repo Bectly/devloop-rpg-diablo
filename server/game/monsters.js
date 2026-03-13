@@ -473,6 +473,15 @@ class Monster {
           if (this.currentPhase !== i) {
             this.currentPhase = i;
             events.push({ type: 'boss_phase', monsterId: this.id, phase: i, mode: this.phases[i].mode });
+            if (this.phases[i].mode === 'shadow_clones') {
+              events.push({
+                type: 'boss_shadow_clones',
+                monsterId: this.id,
+                count: 2,
+                cloneHp: Math.floor(this.maxHp * 0.3),
+                cloneDamage: Math.floor(this.damage * 0.5),
+              });
+            }
           }
           break;
         }
@@ -622,6 +631,11 @@ class Monster {
           break;
         }
 
+        // Decrement charge cooldown in ATTACK state too
+        if (this.behavior === 'melee_charge' && this.chargeCooldown > 0) {
+          this.chargeCooldown -= dt;
+        }
+
         // Archer repositioning during attack
         if (this.behavior === 'ranged_kite' && closestDist < this.preferredRange * 0.5) {
           this.moveAwayFrom(closest.x, closest.y, dt);
@@ -630,13 +644,78 @@ class Monster {
         // Wraith teleport after N attacks
         if (this.behavior === 'ranged_teleport' && this.teleportAfterAttacks > 0) {
           if (this.attacksSinceLastTeleport >= this.teleportAfterAttacks) {
-            // Teleport to random position away
-            const angle = Math.random() * Math.PI * 2;
-            const dist = this.teleportRange[0] + Math.random() * (this.teleportRange[1] - this.teleportRange[0]);
-            this.x += Math.cos(angle) * dist;
-            this.y += Math.sin(angle) * dist;
+            let teleported = false;
+            for (let attempt = 0; attempt < 5; attempt++) {
+              const angle = Math.random() * Math.PI * 2;
+              const dist = this.teleportRange[0] + Math.random() * (this.teleportRange[1] - this.teleportRange[0]);
+              const newX = this.x + Math.cos(angle) * dist;
+              const newY = this.y + Math.sin(angle) * dist;
+              // Stay within leash distance of spawn
+              const distFromSpawn = Math.sqrt((newX - this.spawnX) ** 2 + (newY - this.spawnY) ** 2);
+              if (distFromSpawn < this.leashDistance) {
+                this.x = newX;
+                this.y = newY;
+                teleported = true;
+                break;
+              }
+            }
             this.attacksSinceLastTeleport = 0;
+            if (teleported) {
+              events.push({ type: 'teleport', monsterId: this.id, x: this.x, y: this.y });
+            }
+          }
+        }
+
+        // Boss infernal summoner phase
+        if (this.isBoss && this.summonType && this.phases && this.phases[this.currentPhase].mode === 'summoner') {
+          this.summonCooldown -= dt;
+          if (this.summonCooldown <= 0) {
+            this.summonCooldown = this.summonCooldownMax;
+            const summonPositions = [];
+            for (let i = 0; i < this.summonCount; i++) {
+              summonPositions.push({
+                x: this.x + (Math.random() - 0.5) * 100,
+                y: this.y + (Math.random() - 0.5) * 100,
+              });
+            }
+            events.push({
+              type: 'boss_summon',
+              monsterId: this.id,
+              summonType: this.summonType,
+              positions: summonPositions,
+            });
+          }
+        }
+
+        // Boss Void Reaper — teleport slash
+        if (this.isBoss && this.phases && this.phases[this.currentPhase].mode === 'teleport_slash') {
+          this.bossTeleportCooldown -= dt;
+          if (this.bossTeleportCooldown <= 0 && closest) {
+            this.bossTeleportCooldown = this.teleportCooldownMax;
+            // Teleport behind the player
+            const behindAngle = Math.atan2(this.y - closest.y, this.x - closest.x);
+            this.x = closest.x + Math.cos(behindAngle) * 50;
+            this.y = closest.y + Math.sin(behindAngle) * 50;
             events.push({ type: 'teleport', monsterId: this.id, x: this.x, y: this.y });
+            // Immediate attack after teleport
+            this.attackCooldown = 0;
+          }
+        }
+
+        // Boss Void Reaper — void storm pulse
+        if (this.isBoss && this.phases && this.phases[this.currentPhase].mode === 'void_storm') {
+          this.voidPulseCooldown -= dt;
+          if (this.voidPulseCooldown <= 0) {
+            this.voidPulseCooldown = this.voidPulseCooldownMax;
+            events.push({
+              type: 'void_pulse',
+              monsterId: this.id,
+              x: this.x,
+              y: this.y,
+              radius: this.voidPulseRadius,
+              damage: this.voidPulseDamage,
+              damageType: 'cold',
+            });
           }
         }
 
@@ -651,16 +730,57 @@ class Monster {
           // Boss phase modifiers
           if (this.isBoss && this.phases) {
             const phase = this.phases[this.currentPhase];
+            // Phase-specific damage type override (applied first so mode blocks use correct type)
+            if (phase.damageType) {
+              damageType = phase.damageType;
+            }
             if (phase.mode === 'charge') {
               dmg = Math.floor(this.damage * 1.5);
               attackType = 'charge';
             } else if (phase.mode === 'aoe_frenzy') {
               dmg = Math.floor(this.damage * 0.8);
               attackType = 'aoe';
-            }
-            // Phase-specific damage type override
-            if (phase.damageType) {
-              damageType = phase.damageType;
+            } else if (phase.mode === 'ranged_barrage') {
+              attackType = 'ranged';
+              // Fire 2 extra side projectiles at -20° and +20° from target direction
+              const baseAngle = Math.atan2(closest.y - this.y, closest.x - this.x);
+              const spread = Math.PI / 9; // 20 degrees
+              const dist = Math.sqrt((closest.x - this.x) ** 2 + (closest.y - this.y) ** 2);
+              for (const offset of [-spread, spread]) {
+                const a = baseAngle + offset;
+                events.push({
+                  type: 'monster_attack',
+                  monsterId: this.id,
+                  targetId: closest.id,
+                  damage: dmg,
+                  damageType,
+                  attackType: 'ranged',
+                  projectile: {
+                    fromX: this.x,
+                    fromY: this.y,
+                    toX: this.x + Math.cos(a) * dist,
+                    toY: this.y + Math.sin(a) * dist,
+                    speed: this.projectileSpeed,
+                  },
+                });
+              }
+              // The center projectile is handled by the default attack event below
+            } else if (phase.mode === 'summoner') {
+              attackType = 'ranged';
+            } else if (phase.mode === 'enrage') {
+              dmg = Math.floor(this.damage * 1.5);
+              attackType = 'ranged';
+              // Double attack speed by halving cooldown
+              this.attackCooldown = Math.floor(this.attackSpeed / 2);
+            } else if (phase.mode === 'teleport_slash') {
+              dmg = Math.floor(this.damage * 1.5);
+              attackType = 'melee';
+            } else if (phase.mode === 'shadow_clones') {
+              attackType = 'melee';
+              // Also tick void pulse cooldown for pre-phase 3
+            } else if (phase.mode === 'void_storm') {
+              dmg = Math.floor(this.damage * 1.2);
+              attackType = 'melee';
             }
           }
 
@@ -680,7 +800,8 @@ class Monster {
           }
 
           const hasProjectile = this.behavior === 'ranged_kite' || this.behavior === 'ranged_teleport' ||
-            (this.behavior === 'ranged' && this.projectileSpeed > 0);
+            (this.behavior === 'ranged' && this.projectileSpeed > 0) ||
+            (attackType === 'ranged' && this.projectileSpeed > 0);
 
           events.push({
             type: 'monster_attack',

@@ -387,11 +387,15 @@ Add 3 ambient tone generators (procedural, no audio files):
 - [x] [BUG] Charge hit detection used stale closestDist from before dash movement
 
 ### Open Items (for Bolt):
-- [ ] [BUG] Wraith teleport ignores map boundaries/leash — can teleport out of bounds or into walls
-- [ ] boss_infernal + boss_void phase modes not implemented (ranged_barrage, summoner, enrage, teleport_slash, shadow_clones, void_storm all no-op)
+- [x] [BUG] Wraith teleport ignores map boundaries/leash — FIXED: 5-attempt leash-check teleport (Bolt #67)
+- [x] boss_infernal phase AI: ranged_barrage (3-projectile spread), summoner (fire_imp spawn), enrage (1.5x dmg, 2x speed) — DONE (Bolt #67)
+- [x] boss_void phase AI: teleport_slash (teleport behind + 1.5x), shadow_clones (spawn event), void_storm (AoE pulse) — DONE (Bolt #67)
 - [ ] Archer + slime still have generic sprites (plain colored square) — need custom createMonsterSprite() branches
-- [ ] chargeCooldown only decrements in ALERT state — if hell_hound enters ATTACK (melee range), cooldown freezes
+- [x] chargeCooldown only decrements in ALERT state — FIXED: now also ticks in ATTACK (Bolt #67)
 - [ ] Stealth-to-charge visual: nameText/affixText stay hidden if monster transitions from stealthed to charging
+- [ ] Wire boss_summon event in socket-handlers.js → actually spawn fire_imp minions in world
+- [ ] Wire void_pulse event in game loop → apply AoE cold damage to players in radius
+- [ ] Wire boss_shadow_clones → spawn clone monsters (30% HP, 50% dmg)
 
 ### Nice-to-have:
 - [ ] FLOOR_NAMES disconnected from ZONE_DEFS — embed floor names in zone definitions
