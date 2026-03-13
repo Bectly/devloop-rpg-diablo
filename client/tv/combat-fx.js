@@ -47,6 +47,132 @@ const CombatFX = (() => {
     }
   }
 
+  // ── Mage Skill Effects (Phase 16.4) ──
+
+  function spawnMeteorCastEffect(scene, x, y, angle) {
+    // Fire charge-up at caster + fireball launch trail
+    const flash = scene.add.circle(x, y, 10, 0xff4400, 0.6);
+    flash.setDepth(8);
+    scene.tweens.add({
+      targets: flash,
+      scale: 2,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => flash.destroy(),
+    });
+    // 6 fire sparks spiraling outward
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const spark = scene.add.circle(x, y, 2, 0xff6611, 0.9);
+      spark.setDepth(9);
+      scene.tweens.add({
+        targets: spark,
+        x: x + Math.cos(a) * 25,
+        y: y + Math.sin(a) * 25,
+        alpha: 0,
+        duration: 300,
+        delay: i * 30,
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  function spawnBlizzardEffect(scene, x, y, radius, hits) {
+    // Expanding ice ring + falling ice particles
+    const ring = scene.add.circle(x, y, 10, 0x44ddff, 0.3);
+    ring.setStrokeStyle(2, 0x88eeff, 0.6);
+    ring.setDepth(7);
+    scene.tweens.add({
+      targets: ring,
+      scale: radius / 10,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => ring.destroy(),
+    });
+    // Ice shards falling within radius
+    const shardCount = 15;
+    for (let i = 0; i < shardCount; i++) {
+      const ox = (Math.random() - 0.5) * radius * 1.6;
+      const oy = (Math.random() - 0.5) * radius * 1.6;
+      const shard = scene.add.circle(x + ox, y + oy - 20, 2 + Math.random() * 2, 0x88ccff, 0.8);
+      shard.setDepth(9);
+      scene.tweens.add({
+        targets: shard,
+        y: shard.y + 25 + Math.random() * 15,
+        alpha: 0,
+        scale: 0.3,
+        duration: 400 + Math.random() * 300,
+        delay: i * 50,
+        onComplete: () => shard.destroy(),
+      });
+    }
+    // Ground frost patch
+    const frost = scene.add.circle(x, y, radius * 0.8, 0x44aadd, 0.12);
+    frost.setDepth(6);
+    scene.tweens.add({
+      targets: frost,
+      alpha: 0,
+      duration: 1500,
+      delay: 400,
+      onComplete: () => frost.destroy(),
+    });
+  }
+
+  function spawnChainLightningEffect(scene, fromX, fromY, toX, toY, bounceIndex) {
+    // Jagged lightning arc between two points
+    const segments = 6;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const perpX = -dy;
+    const perpY = dx;
+    const len = Math.sqrt(perpX * perpX + perpY * perpY) || 1;
+    const normPX = perpX / len;
+    const normPY = perpY / len;
+
+    // Intensity decreases with each bounce
+    const intensity = Math.max(0.3, 1 - bounceIndex * 0.2);
+    const color = bounceIndex === 0 ? 0xffff44 : bounceIndex === 1 ? 0xdddd33 : 0xaaaa22;
+
+    let prevX = fromX;
+    let prevY = fromY;
+    for (let i = 1; i <= segments; i++) {
+      const t = i / segments;
+      const baseX = fromX + dx * t;
+      const baseY = fromY + dy * t;
+      // Add random perpendicular offset (jagged look)
+      const jag = i < segments ? (Math.random() - 0.5) * 20 * intensity : 0;
+      const px = baseX + normPX * jag;
+      const py = baseY + normPY * jag;
+
+      // Draw segment as a small moving dot
+      const bolt = scene.add.circle(prevX, prevY, 2, color, intensity);
+      bolt.setDepth(10);
+      scene.tweens.add({
+        targets: bolt,
+        x: px,
+        y: py,
+        alpha: 0,
+        duration: 150,
+        delay: i * 15 + bounceIndex * 80,
+        onComplete: () => bolt.destroy(),
+      });
+      prevX = px;
+      prevY = py;
+    }
+
+    // Impact flash at target
+    const impact = scene.add.circle(toX, toY, 8, 0xffff66, 0.5 * intensity);
+    impact.setDepth(9);
+    scene.tweens.add({
+      targets: impact,
+      scale: 1.5,
+      alpha: 0,
+      duration: 200,
+      delay: bounceIndex * 80,
+      onComplete: () => impact.destroy(),
+    });
+  }
+
   // ── Ranger Skill Effects (Phase 16.3) ──
 
   function spawnArrowVolleyEffect(scene, x, y, angle, count) {
@@ -522,6 +648,18 @@ const CombatFX = (() => {
         const m = state.world.monsters?.find(m => m.id === ev.targetId);
         if (m) spawnFearEffect(scene, m.x, m.y);
       }
+      // Mage skill effects (Phase 16.4)
+      if (ev.type === 'effect:spawn' && ev.effectType === 'meteor_cast') {
+        const p = state.players?.find(p => p.id === ev.playerId);
+        if (p) spawnMeteorCastEffect(scene, p.x, p.y, ev.angle || 0);
+      }
+      if (ev.type === 'effect:spawn' && ev.effectType === 'blizzard') {
+        const p = state.players?.find(p => p.id === ev.playerId);
+        if (p) spawnBlizzardEffect(scene, p.x, p.y, ev.radius || 120, ev.hits || 3);
+      }
+      if (ev.type === 'effect:spawn' && ev.effectType === 'chain_lightning') {
+        spawnChainLightningEffect(scene, ev.fromX, ev.fromY, ev.toX, ev.toY, ev.bounceIndex || 0);
+      }
       // Ranger skill effects (Phase 16.3)
       if (ev.type === 'effect:spawn' && ev.effectType === 'arrow_volley') {
         const p = state.players?.find(p => p.id === ev.playerId);
@@ -563,5 +701,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect, spawnMeteorCastEffect, spawnBlizzardEffect, spawnChainLightningEffect };
 })();

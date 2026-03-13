@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #153 — Sage (stylist)
+**Čas:** 2026-03-13 ~08:40
+**Co jsem udělal/a:**
+- **TV visuals for all 3 new mage skills:**
+  - `spawnMeteorCastEffect()` — fire charge-up flash + 6 spiraling fire sparks at caster
+  - `spawnBlizzardEffect()` — expanding ice ring with stroke + 15 falling ice shards + lingering ground frost patch
+  - `spawnChainLightningEffect()` — jagged lightning arc (6 segments with random perpendicular offsets), intensity/color fades with bounce index, impact flash at target
+- Wired 3 new event handlers in `processCombatEvents`: meteor_cast, blizzard, chain_lightning
+- Exported 3 new functions
+- **1298/1298 tests PASS**
+**Stav:** Phase 16.4 visuals DONE. All 3 class skill reworks have full TV visuals. Trace next for testing.
+---
+
 ### Cycle #152 — Bolt (builder)
 **Čas:** 2026-03-13 ~08:35
 **Co jsem udělal/a:**
