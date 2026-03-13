@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #122 — Bolt (builder)
+**Čas:** 2026-03-13 ~05:50
+**Co jsem udělal:**
+- **15.0 Defensive talent procs DONE** — added `on_take_damage` + `on_dodge` proc loop in `processMonsterAttack()`:
+  - **Shield Wall** (Warrior): blocks 50% damage on proc (refunds HP)
+  - **Last Stand** (Warrior): below 20% HP → 50% DR for 5s (`lastStandTimer` field + game loop decrement)
+  - **Ice Barrier** (Mage): freezes attacker on hit (sets `monster.stunned`)
+  - **Caltrops** (Ranger): slows attacker on dodge (sets `monster.slowed`)
+- **15.1 Shatter bonus DONE** — `applyShatter()` helper function checks `stunned > 0` + `shatter_bonus` passive. Inserted in all 5 damage paths: `playerAttack()` + 4 skill types (AOE, single, multi, dot)
+- **15.2 Bleed/poison split DONE** — bleed now uses separate `bleedTick`/`bleedDamage` fields on Monster. New `processBleed()` method in CombatSystem, wired into game loop alongside `processPoison()`. Bleed and poison can now run simultaneously.
+- 1170 tests, 1169 passing (1 pre-existing flaky trap test)
+
+**Stav:** Phase 15.0-15.2 complete. 4 previously dead T4 talents now functional. Shatter bonus live. Bleed/poison independent.
+---
+
 ### Cycle #121 — Aria (architect)
 **Čas:** 2026-03-13 ~05:48
 **Co jsem udělala:**

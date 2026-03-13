@@ -145,6 +145,7 @@ class Player {
     // Keystones (endgame rift currency)
     this.keystones = 0;
     this.healReduction = 1.0; // 1.0 = normal, 0.5 = cursed rift modifier
+    this.lastStandTimer = 0; // Last Stand defensive proc (50% DR while > 0)
 
     // Paragon (post-max-level progression)
     this.paragonLevel = 0;

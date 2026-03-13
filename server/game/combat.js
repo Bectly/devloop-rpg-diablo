@@ -3,6 +3,14 @@ const { modifyDamageByAffixes, processAffixOnHitPlayer, processAffixOnDealDamage
 const { applyResistance, getSkillDamageType, DAMAGE_TYPES } = require('./damage-types');
 const { rollSetDrop, generateSetItem } = require('./sets');
 
+/** Apply shatter bonus if target is stunned/frozen and player has the passive. */
+function applyShatter(damage, player, target) {
+  if (target.stunned > 0 && player.talentBonuses?.passives?.shatter_bonus) {
+    return Math.floor(damage * (1 + player.talentBonuses.passives.shatter_bonus / 100));
+  }
+  return damage;
+}
+
 class CombatSystem {
   constructor() {
     this.events = []; // combat events to broadcast
@@ -117,6 +125,9 @@ class CombatSystem {
       }
     }
 
+    // Shatter bonus: extra damage to frozen/stunned targets (Phase 15.1)
+    damage = applyShatter(damage, player, nearest);
+
     const modifiedDamage = nearest.affixes ? modifyDamageByAffixes(nearest, damage) : damage;
     const dealt = nearest.takeDamage(modifiedDamage);
 
@@ -145,10 +156,10 @@ class CombatSystem {
       for (const proc of player.talentBonuses.procs) {
         if (proc.trigger === 'on_hit' && Math.random() < proc.chance) {
           if (proc.effect === 'bleed') {
-            // Apply bleed DoT using the same pattern as poison (poisonTick/poisonDamage)
+            // Apply bleed DoT with separate bleed fields (Phase 15.2)
             const bleedDmg = Math.max(1, Math.floor(nearest.maxHp * 0.03));
-            nearest.poisonTick = Math.max(nearest.poisonTick || 0, proc.duration || 3000);
-            nearest.poisonDamage = Math.max(nearest.poisonDamage || 0, bleedDmg);
+            nearest.bleedTick = Math.max(nearest.bleedTick || 0, proc.duration || 3000);
+            nearest.bleedDamage = Math.max(nearest.bleedDamage || 0, bleedDmg);
             this.events.push({
               type: 'combat:proc',
               attackerId: player.id,
@@ -307,6 +318,7 @@ class CombatSystem {
                 baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
               }
             }
+            baseDmg = applyShatter(baseDmg, player, monster);
             baseDmg = monster.affixes ? modifyDamageByAffixes(monster, baseDmg) : baseDmg;
 
             const dealt = monster.takeDamage(baseDmg);
@@ -400,6 +412,7 @@ class CombatSystem {
               baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
             }
           }
+          baseDmg = applyShatter(baseDmg, player, nearest);
           baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           if (skill.effect === 'stun') nearest.applyStun(skill.duration);
@@ -484,6 +497,7 @@ class CombatSystem {
               baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
             }
           }
+          baseDmg = applyShatter(baseDmg, player, t);
           baseDmg = t.affixes ? modifyDamageByAffixes(t, baseDmg) : baseDmg;
           const dealt = t.takeDamage(baseDmg);
 
@@ -568,6 +582,7 @@ class CombatSystem {
               baseDmg = Math.floor(baseDmg * (1 + tp.damage_percent / 100));
             }
           }
+          baseDmg = applyShatter(baseDmg, player, nearest);
           baseDmg = nearest.affixes ? modifyDamageByAffixes(nearest, baseDmg) : baseDmg;
           const dealt = nearest.takeDamage(baseDmg);
           // Set poison timer on monster
@@ -690,19 +705,58 @@ class CombatSystem {
 
     const dealt = target.takeDamage(event.damage, damageType);
 
+    const dodged = dealt === -1;
+
+    // ── Defensive talent procs (Phase 15.0) ──
+    if (target.talentBonuses && target.talentBonuses.procs) {
+      for (const proc of target.talentBonuses.procs) {
+        if (proc.trigger === 'on_take_damage' && !dodged && dealt > 0 && Math.random() < (proc.chance || 1)) {
+          if (proc.effect === 'block') {
+            // Shield Wall: block 50% of damage (refund to HP)
+            const blocked = Math.floor(dealt * 0.5);
+            target.hp = Math.min(target.maxHp, target.hp + blocked);
+            this.events.push({ type: 'combat:proc', targetId: target.id, effect: 'block', value: blocked });
+          }
+          if (proc.effect === 'last_stand' && target.hp > 0 && target.hp / target.maxHp <= 0.2) {
+            // Last Stand: below 20% HP → damage reduction for 5s
+            target.lastStandTimer = Math.max(target.lastStandTimer || 0, proc.duration || 5000);
+            this.events.push({ type: 'combat:proc', targetId: target.id, effect: 'last_stand' });
+          }
+          if (proc.effect === 'freeze' && monster) {
+            // Ice Barrier: freeze attacker
+            monster.stunned = Math.max(monster.stunned || 0, proc.duration || 2000);
+            this.events.push({ type: 'combat:proc', targetId: target.id, attackerId: monster.id, effect: 'freeze' });
+          }
+        }
+        if (proc.trigger === 'on_dodge' && dodged && Math.random() < (proc.chance || 1)) {
+          if (proc.effect === 'slow' && monster) {
+            // Caltrops: slow attacker on dodge
+            monster.slowed = Math.max(monster.slowed || 0, proc.duration || 3000);
+            this.events.push({ type: 'combat:proc', targetId: target.id, attackerId: monster.id, effect: 'caltrops' });
+          }
+        }
+      }
+    }
+
+    // Last Stand DR: if active, refund 50% of damage taken
+    if (!dodged && dealt > 0 && (target.lastStandTimer || 0) > 0) {
+      const dr = Math.floor(dealt * 0.5);
+      target.hp = Math.min(target.maxHp, target.hp + dr);
+    }
+
     const hitEvent = {
       type: 'combat:hit',
       attackerId: event.monsterId,
       targetId: target.id,
-      damage: dealt === -1 ? 0 : dealt,
+      damage: dodged ? 0 : dealt,
       damageType,
-      dodged: dealt === -1,
+      dodged,
       attackType: event.attackType,
     };
     this.events.push(hitEvent);
 
     // Affix on-hit effects (fire DoT, cold slow)
-    if (monster && monster.affixes && dealt > 0 && dealt !== -1) {
+    if (monster && monster.affixes && dealt > 0 && !dodged) {
       processAffixOnHitPlayer(monster, target);
 
       // Vampiric healing (affix handles hp update internally)
@@ -739,6 +793,25 @@ class CombatSystem {
           targetId: monster.id,
           damage: dealt,
           attackType: 'poison_tick',
+        });
+      }
+    }
+  }
+
+  // Process bleed ticks on monsters (separate from poison — Phase 15.2)
+  processBleed(monster, dt) {
+    if (monster.bleedTick > 0 && monster.alive) {
+      monster.bleedTick -= dt;
+      // Apply damage every 1 second (same pattern as processPoison)
+      if (Math.floor((monster.bleedTick + dt) / 1000) > Math.floor(monster.bleedTick / 1000)) {
+        const dealt = monster.takeDamage(monster.bleedDamage || 5);
+        this.events.push({
+          type: 'combat:hit',
+          attackerId: 'bleed',
+          targetId: monster.id,
+          damage: dealt,
+          damageType: 'physical',
+          attackType: 'bleed_tick',
         });
       }
     }

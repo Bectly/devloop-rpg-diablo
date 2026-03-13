@@ -280,6 +280,9 @@ function gameLoop() {
 
     const result = player.update(dt);
 
+    // Decrement Last Stand timer (defensive proc — Phase 15.0)
+    if (player.lastStandTimer > 0) player.lastStandTimer -= dt;
+
     if (player.disconnected) {
       player.inputDx = savedDx;
       player.inputDy = savedDy;
@@ -369,6 +372,7 @@ function gameLoop() {
     if (!monster.alive) continue;
 
     combat.processPoison(monster, dt);
+    combat.processBleed(monster, dt);
 
     // Process affix updates (teleporter blink, shielding cycle)
     if (monster.affixes) {

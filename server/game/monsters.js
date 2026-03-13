@@ -383,6 +383,8 @@ class Monster {
     this.slowed = 0;
     this.poisonTick = 0;
     this.poisonDamage = 0;
+    this.bleedTick = 0;
+    this.bleedDamage = 0;
 
     // Store floor for reference
     this.floor = floor;
