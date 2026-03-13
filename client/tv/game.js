@@ -893,11 +893,12 @@ socket.on('dungeon:enter', (data) => {
       // Room discovery flash
       HUD.showRoomDiscovery(scene);
 
-      // Floor transition effect
+      // Floor transition effect with zone color
       Sound.floorTransition();
       const floorIdx = data.floor || 0;
       const floorName = data.floorName || FLOOR_NAMES[floorIdx % FLOOR_NAMES.length] || `Floor ${floorIdx + 1}`;
-      HUD.playFloorTransition(scene, floorIdx, floorName);
+      const zoneId = data.zoneId || 'catacombs';
+      HUD.playFloorTransition(scene, floorIdx, floorName, zoneId);
     }
   }
 });

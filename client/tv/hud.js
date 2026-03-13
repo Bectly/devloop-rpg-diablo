@@ -19,15 +19,26 @@ const DAMAGE_TYPE_CRIT_STROKES = {
   cold: '#224488',
   poison: '#227722',
 };
+// Zone-themed floor palettes (3 zones × 2-3 floors each)
 const FLOOR_THEMES = [
+  // Zone 1: Catacombs (floors 1-2) — gray/bone tones
   { floor: 0x2a2a3a, wall: 0x444466, wallLight: 0x555577, corridor: 0x222233 },   // Dusty Catacombs
   { floor: 0x1a2a2a, wall: 0x335555, wallLight: 0x446666, corridor: 0x152525 },   // Sunken Crypts
-  { floor: 0x2a2a2a, wall: 0x554433, wallLight: 0x665544, corridor: 0x222222 },   // Bone Gallery
-  { floor: 0x3a2020, wall: 0x664422, wallLight: 0x885533, corridor: 0x2a1515 },   // Burning Depths
-  { floor: 0x1a1a2e, wall: 0x333355, wallLight: 0x444466, corridor: 0x111128 },   // Shadow Halls
-  { floor: 0x150a20, wall: 0x442255, wallLight: 0x553366, corridor: 0x100818 },   // Abyssal Core
-  { floor: 0x2a1a1a, wall: 0x553333, wallLight: 0x664444, corridor: 0x201010 },   // Throne of Ruin
+  // Zone 2: Inferno (floors 3-4) — red/orange tones
+  { floor: 0x3a1a10, wall: 0x664422, wallLight: 0x885533, corridor: 0x2a1208 },   // Burning Depths
+  { floor: 0x401510, wall: 0x773318, wallLight: 0x994425, corridor: 0x300e08 },   // Infernal Halls
+  // Zone 3: Abyss (floors 5-7) — purple/dark tones
+  { floor: 0x1a1028, wall: 0x332255, wallLight: 0x443366, corridor: 0x120a20 },   // Shadow Abyss
+  { floor: 0x150a22, wall: 0x441855, wallLight: 0x552866, corridor: 0x100618 },   // Abyssal Core
+  { floor: 0x200a1a, wall: 0x551833, wallLight: 0x662844, corridor: 0x180610 },   // Throne of Ruin
 ];
+
+// Zone color accents for transition effects
+const ZONE_ACCENT_COLORS = {
+  catacombs: { text: '#aaaacc', glow: 0x8888aa },
+  inferno:   { text: '#ff6622', glow: 0xff4400 },
+  abyss:     { text: '#8844dd', glow: 0x6622bb },
+};
 
 window.HUD = {
   // ── Internal state ──
@@ -377,7 +388,7 @@ window.HUD = {
   },
 
   // ── Floor Transition Effect ──
-  playFloorTransition(scene, floorIndex, floorName) {
+  playFloorTransition(scene, floorIndex, floorName, zoneId) {
     const GAME_W = 1280;
     const GAME_H = 720;
 
@@ -386,6 +397,9 @@ window.HUD = {
     this.transitionOverlay.fillRect(0, 0, GAME_W, GAME_H);
     this.transitionOverlay.setAlpha(0);
 
+    // Zone-colored text
+    const accent = ZONE_ACCENT_COLORS[zoneId] || ZONE_ACCENT_COLORS.catacombs;
+    this.transitionText.setColor(accent.text);
     this.transitionText.setText(floorName || `Floor ${floorIndex + 1}`);
     this.transitionText.setAlpha(0);
 
