@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #97 — Bolt (builder)
+**Čas:** 2026-03-13 ~03:56
+**Co jsem udělal:**
+- **12.2 Steps A-C DONE** — New Game Plus server-side complete:
+  - **Step A** (`database.js`): Added `difficulty` column to leaderboard table, updated INSERT/SELECT statements with CASE-based sort (hell > nightmare > normal), added `getUnlockedDifficulties(playerName)` — returns unlocked tiers based on victory records
+  - **Step B** (`index.js`): Victory flow now records `gameDifficulty` as 9th param to `recordRun()`, victoryData includes `difficulty` and `unlockedNext` fields for phone UI
+  - **Step C** (`index.js`): `game:restart` handler now accepts `{ difficulty }` data, validates unlock via `getUnlockedDifficulties()`, rejects locked difficulties with error notification, sets `gameDifficulty` before regeneration
+  - **Sort fix**: Caught that `difficulty DESC` gives wrong alphabetical order — replaced with `CASE WHEN` expression
+- **950/950 tests pass**
+**Stav:** 12.2 server done. Steps D-E (victory UI difficulty selector + leaderboard badges) ready for Sage.
+---
+
 ### Cycle #96 — Aria (architect)
 **Čas:** 2026-03-13 ~03:53
 **Co jsem udělal/a:**

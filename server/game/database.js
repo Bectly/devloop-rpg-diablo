@@ -11,7 +11,7 @@
  *
  *   leaderboard(id INT PK AUTO, player_name TEXT, character_class TEXT,
  *               level INT, floor_reached INT, kills INT, gold_earned INT,
- *               time_seconds INT, victory INT, created_at TEXT)
+ *               time_seconds INT, victory INT, difficulty TEXT, created_at TEXT)
  *
  * Usage:
  *   const db = new GameDatabase('./data/game.db');
@@ -70,6 +70,7 @@ class GameDatabase {
         gold_earned INTEGER NOT NULL,
         time_seconds INTEGER NOT NULL,
         victory INTEGER DEFAULT 0,
+        difficulty TEXT DEFAULT 'normal',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -99,21 +100,23 @@ class GameDatabase {
 
     this._stmtLeaderboardInsert = this.db.prepare(`
       INSERT INTO leaderboard
-        (player_name, character_class, level, floor_reached, kills, gold_earned, time_seconds, victory)
+        (player_name, character_class, level, floor_reached, kills, gold_earned, time_seconds, victory, difficulty)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     this._stmtLeaderboardTop = this.db.prepare(`
       SELECT * FROM leaderboard
-      ORDER BY victory DESC, floor_reached DESC, time_seconds ASC
+      ORDER BY CASE difficulty WHEN 'hell' THEN 0 WHEN 'nightmare' THEN 1 ELSE 2 END,
+        victory DESC, floor_reached DESC, time_seconds ASC
       LIMIT 10
     `);
 
     this._stmtLeaderboardPersonal = this.db.prepare(`
       SELECT * FROM leaderboard
       WHERE player_name = ?
-      ORDER BY victory DESC, floor_reached DESC, time_seconds ASC
+      ORDER BY CASE difficulty WHEN 'hell' THEN 0 WHEN 'nightmare' THEN 1 ELSE 2 END,
+        victory DESC, floor_reached DESC, time_seconds ASC
       LIMIT 5
     `);
   }
@@ -212,9 +215,9 @@ class GameDatabase {
    * @param {number} timeSeconds
    * @param {number} victory 1 = won, 0 = died
    */
-  recordRun(playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory) {
+  recordRun(playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory, difficulty = 'normal') {
     return this._stmtLeaderboardInsert.run(
-      playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory
+      playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory, difficulty
     );
   }
 
@@ -233,6 +236,23 @@ class GameDatabase {
    */
   getPersonalRuns(playerName) {
     return this._stmtLeaderboardPersonal.all(playerName);
+  }
+
+  /**
+   * Get difficulties unlocked by a player (based on victories).
+   * Normal is always unlocked. Beat Normal → unlock Nightmare. Beat Nightmare → unlock Hell.
+   * @param {string} playerName
+   * @returns {string[]}
+   */
+  getUnlockedDifficulties(playerName) {
+    const rows = this.db.prepare(
+      'SELECT DISTINCT difficulty FROM leaderboard WHERE player_name = ? AND victory = 1'
+    ).all(playerName);
+    const unlocked = ['normal'];
+    const won = rows.map(r => r.difficulty);
+    if (won.includes('normal')) unlocked.push('nightmare');
+    if (won.includes('nightmare')) unlocked.push('hell');
+    return unlocked;
   }
 
   close() {

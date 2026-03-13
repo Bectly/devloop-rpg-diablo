@@ -145,8 +145,19 @@ controllerNs.on('connection', (socket) => {
   socket.on('leaderboard:personal', (data) => handlers.handleLeaderboardPersonal(socket, data, ctx));
 
   // ── New Game (restart after victory) ──
-  socket.on('game:restart', () => {
-    console.log('[Game] Restart requested — regenerating dungeon from floor 0');
+  socket.on('game:restart', (data) => {
+    const requestedDiff = (data && data.difficulty) || 'normal';
+    // Validate difficulty unlock
+    const player = players.get(socket.id);
+    if (player) {
+      const unlocked = gameDb.getUnlockedDifficulties(player.name);
+      if (!unlocked.includes(requestedDiff)) {
+        socket.emit('notification', { text: `${requestedDiff} difficulty is locked! Beat ${requestedDiff === 'hell' ? 'Nightmare' : 'Normal'} first.`, type: 'error' });
+        return;
+      }
+    }
+    gameDifficulty = requestedDiff;
+    console.log(`[Game] Restart requested — difficulty: ${gameDifficulty}`);
     gameWon = false;
     gameStartTime = Date.now();
     world.generateFloor(0, gameDifficulty);
@@ -194,7 +205,8 @@ controllerNs.on('connection', (socket) => {
       zoneId: world.zone ? world.zone.id : 'catacombs',
       zoneName: world.zone ? world.zone.name : 'The Catacombs',
     });
-    controllerNs.emit('notification', { text: `New Game! Floor 1: ${world.floorName}`, type: 'quest' });
+    const diffLabel = gameDifficulty === 'normal' ? '' : ` [${gameDifficulty.toUpperCase()}]`;
+    controllerNs.emit('notification', { text: `New Game${diffLabel}! Floor 1: ${world.floorName}`, type: 'quest' });
 
     // Generate fresh quests + update all phone stats
     for (const [sid, p] of players) {
@@ -657,10 +669,17 @@ function gameLoop() {
               gold: p.gold,
             }));
 
+            // Determine what the next unlock is
+            const DIFF_ORDER = ['normal', 'nightmare', 'hell'];
+            const currentIdx = DIFF_ORDER.indexOf(gameDifficulty);
+            const unlockedNext = currentIdx < DIFF_ORDER.length - 1 ? DIFF_ORDER[currentIdx + 1] : null;
+
             const victoryData = {
               players: playerStats,
               totalTime: elapsed,
               finalFloor: FLOOR_NAMES.length,
+              difficulty: gameDifficulty,
+              unlockedNext,
             };
 
             console.log(`[World] VICTORY! Dungeon conquered in ${Math.floor(elapsed / 1000)}s`);
@@ -670,7 +689,7 @@ function gameLoop() {
 
             // Record leaderboard entry for each player
             for (const ps of playerStats) {
-              gameDb.recordRun(ps.name, ps.characterClass, ps.level, FLOOR_NAMES.length, ps.kills, ps.gold, Math.floor(elapsed / 1000), 1);
+              gameDb.recordRun(ps.name, ps.characterClass, ps.level, FLOOR_NAMES.length, ps.kills, ps.gold, Math.floor(elapsed / 1000), 1, gameDifficulty);
             }
 
             gameNs.emit('game:victory', victoryData);

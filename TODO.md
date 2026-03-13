@@ -838,7 +838,7 @@ Update phone index.html script tags (before controller.js).
 - Loot generation: `effectiveFloor = floor + difficultyTierBonus`
 - Player unlock tracking: `player.unlockedDifficulties = ['normal']` persisted in DB
 
-### 12.2 New Game Plus — Server [for Bolt]
+### 12.2 New Game Plus — Server [Steps A-C DONE — Bolt, Cycle #97]
 **Files:** `server/index.js`, `server/game/database.js`, `client/phone/death-victory.js`
 
 **Architecture decision:** Use leaderboard-based unlock detection (simplest, no DB migration needed).
