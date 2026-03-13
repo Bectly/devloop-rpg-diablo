@@ -481,25 +481,117 @@ Currently boss phases only affect `charge` and `aoe_frenzy` modes. Add handling 
 
 ---
 
-## Phase 10: Crafting & Enchanting (FUTURE)
+## 🔥 NEXT PRIORITIES (Phase 10: Crafting & Enchanting)
 
-**Goal:** Give players gold sink + item customization. Simple system: salvage items → materials, use materials to upgrade/enchant.
+**Goal:** Gold sink + item customization. Players salvage unwanted items into materials, then use materials to reforge or upgrade gear. Integrates with existing shop/inventory system.
 
-### 10.1 Salvage System
-- Salvage any item → get materials based on rarity (common: 1 shard, rare: 3, legendary: 5, set: 3 + 1 essence)
-- NPC: add "Salvage" option to Merchant shop
-- Materials stored in player inventory as stackable items
+### 10.1 Salvage System — Server [for Bolt]
+**File:** `server/game/crafting.js` (NEW)
 
-### 10.2 Enchanting
-- Spend materials to re-roll one stat on an item
-- Cost: 3 shards per re-roll, increases each re-roll
-- Keep original or take new roll (choice)
+New module with salvage logic:
 
-### 10.3 Upgrade
-- Spend materials to +1/+2/+3 an item (increases primary stat by 10%/20%/30%)
-- Max +3, cost escalates
+```javascript
+// Material types (stackable consumables in inventory)
+const MATERIALS = {
+  arcane_dust:   { name: 'Arcane Dust',   subType: 'arcane_dust',   gridW: 1, gridH: 1 },
+  magic_essence: { name: 'Magic Essence',  subType: 'magic_essence', gridW: 1, gridH: 1 },
+  rare_crystal:  { name: 'Rare Crystal',   subType: 'rare_crystal',  gridW: 1, gridH: 1 },
+};
 
-*Details TBD by Aria when Phase 9.5 is complete.*
+// Salvage yields by rarity
+const SALVAGE_YIELDS = {
+  common:    { arcane_dust: 1 },
+  uncommon:  { arcane_dust: 2 },
+  rare:      { arcane_dust: 3, magic_essence: 1 },
+  epic:      { arcane_dust: 5, magic_essence: 2 },
+  legendary: { arcane_dust: 8, magic_essence: 3, rare_crystal: 1 },
+  set:       { arcane_dust: 3, magic_essence: 2, rare_crystal: 1 },
+};
+```
+
+Functions:
+- `salvageItem(item)` → returns `{ materials: {arcane_dust: N, ...}, gold: sellPrice/2 }`
+- `generateMaterial(subType, quantity)` → returns stackable item for inventory
+- Cannot salvage consumables/currency/materials themselves
+
+### 10.2 Reforge System — Server [for Bolt]
+**File:** `server/game/crafting.js`
+
+Re-roll ONE random bonus on an item. Player picks the item, system re-rolls one bonus, player keeps original OR new.
+
+```javascript
+const REFORGE_COST = {
+  base: { arcane_dust: 3, gold: 50 },
+  perReroll: { arcane_dust: 1, gold: 25 }, // cost increases per reroll on same item
+};
+```
+
+Functions:
+- `reforgeItem(item, rerollCount)` → returns `{ newItem, cost }` (new item = clone with 1 bonus changed)
+- `getReforgeCost(item, rerollCount)` → returns `{ arcane_dust: N, gold: N }`
+- Track reroll count per item: `item.reforgeCount = 0` (increment on accept)
+- Bonus pool: same as items.js `BONUS_POOL` for the item type
+
+### 10.3 Upgrade System — Server [for Bolt]
+**File:** `server/game/crafting.js`
+
+Upgrade an item +1/+2/+3. Each level increases primary stat by 15%.
+
+```javascript
+const UPGRADE_COSTS = {
+  1: { magic_essence: 2, gold: 100 },
+  2: { magic_essence: 4, rare_crystal: 1, gold: 250 },
+  3: { magic_essence: 8, rare_crystal: 3, gold: 500 },
+};
+```
+
+Functions:
+- `upgradeItem(item, currentLevel)` → returns `{ upgradedItem, cost }`
+- `getUpgradeCost(currentLevel)` → returns cost object
+- Item gains `item.upgradeLevel = 0|1|2|3` and `item.name = "+N Original Name"`
+- Primary stat: weapons → damage +15%/level, armor → armor +15%/level, accessories → biggest bonus +15%/level
+- Max level: 3
+
+### 10.4 Socket Events — Server [for Bolt]
+**File:** `server/socket-handlers.js` (add to existing)
+
+New controller events:
+- `craft:salvage` → `{ itemId }` — salvage item from inventory → materials + gold
+- `craft:reforge` → `{ itemId }` — start reforge → server sends `{ original, reforged, cost }`
+- `craft:reforge_accept` → `{ itemId, accept: true/false }` — keep or discard reforged version
+- `craft:upgrade` → `{ itemId }` — upgrade item +1 → server validates materials/gold, applies upgrade
+- `craft:info` → `{ itemId }` — get costs for reforge/upgrade on this item
+
+Pattern: same as `handleShopBuy`/`handleShopSell` — check resources, mutate inventory, emit response.
+
+### 10.5 Crafting UI — Phone Controller [for Sage]
+**File:** `client/phone/controller.js`
+
+Add "Craft" tab/section to the NPC shop interaction (merchant already has shop):
+- **Salvage mode**: tap item in inventory → shows material yield → confirm → item destroyed, materials added
+- **Reforge mode**: tap item → shows current stats + cost → confirm → shows original vs new → accept/reject
+- **Upgrade mode**: tap item → shows +N preview + cost → confirm → item upgraded
+- Material count display in inventory (like gold counter)
+
+### 10.6 TV Crafting Visuals [for Sage]
+**File:** `client/tv/hud.js`
+
+- Notification when player crafts: "🔨 PlayerName upgraded Flame Sword to +2"
+- Material pickup sparkle effect (different from gold/item sparkles)
+
+### Architecture Notes:
+- **No new server files except `crafting.js`** — all socket events go in existing socket-handlers.js
+- **Materials are items** — stored in inventory grid as stackable consumables (like potions but new subTypes)
+- **Database**: `crafting.js` doesn't need DB — materials are regular inventory items persisted with the character
+- **Item mutation**: reforge/upgrade modify item in-place (same uuid) → `player.recalcEquipBonuses()` if equipped
+- **Inventory space**: materials are 1×1 stackable, max stack 99 — same as potions
+
+### Implementation Order for Bolt:
+1. **10.1** `crafting.js` — MATERIALS, SALVAGE_YIELDS, `salvageItem()`, `generateMaterial()` (30 min)
+2. **10.2** `crafting.js` — `reforgeItem()`, `getReforgeCost()` (20 min)
+3. **10.3** `crafting.js` — `upgradeItem()`, `getUpgradeCost()` (20 min)
+4. **10.4** Socket events in socket-handlers.js — wire all 5 events (30 min)
+5. **10.5-10.6** Sage: phone UI + TV visuals (separate cycle)
 
 ---
 
