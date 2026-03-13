@@ -44,7 +44,7 @@ class Player {
     this.y = 300;
     this.facing = 'down';
     this.moving = false;
-    this.moveSpeed = 160;
+    this.moveSpeed = 120;
     this.auraMoveBuff = 0; // Party aura move speed bonus (Beastmaster Pack Leader)
 
     // Movement input
@@ -577,7 +577,7 @@ class Player {
 
     if (!this.alive) return null;
 
-    // Movement
+    // Movement — predictive collision (check before moving)
     if (this.inputDx !== 0 || this.inputDy !== 0) {
       let dx = this.inputDx;
       let dy = this.inputDy;
@@ -588,8 +588,30 @@ class Player {
       }
 
       const effectiveSpeed = this.moveSpeed * this.speedMultiplier;
-      this.x += dx * effectiveSpeed * (dt / 1000);
-      this.y += dy * effectiveSpeed * (dt / 1000);
+      const stepX = dx * effectiveSpeed * (dt / 1000);
+      const stepY = dy * effectiveSpeed * (dt / 1000);
+
+      // Axis-independent collision: try each axis separately for wall-sliding
+      if (this._world) {
+        const newX = this.x + stepX;
+        const newY = this.y + stepY;
+        // Try both axes
+        if (this._world.isWalkable(newX, newY)) {
+          this.x = newX;
+          this.y = newY;
+        } else if (this._world.isWalkable(newX, this.y)) {
+          // Slide along X only
+          this.x = newX;
+        } else if (this._world.isWalkable(this.x, newY)) {
+          // Slide along Y only
+          this.y = newY;
+        }
+        // else: blocked on both axes, don't move
+      } else {
+        // No world reference (fallback)
+        this.x += stepX;
+        this.y += stepY;
+      }
       this.moving = true;
 
       if (Math.abs(dx) > Math.abs(dy)) {
@@ -601,7 +623,7 @@ class Player {
       this.moving = false;
     }
 
-    // Clamp to world bounds (will be overridden by world.isWalkable check in server)
+    // Clamp to world bounds
     this.x = Math.max(16, Math.min(1920, this.x));
     this.y = Math.max(16, Math.min(1280, this.y));
 

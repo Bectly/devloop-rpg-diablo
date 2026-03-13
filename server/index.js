@@ -435,17 +435,23 @@ function gameLoop() {
     }
   }
 
-  // Collision: prevent players from walking through walls
+  // Collision safety net: if player somehow ended up in a wall, nudge out
   for (const player of allPlayers) {
     if (!player.alive || player.isDying) continue;
     if (!world.isWalkable(player.x, player.y)) {
-      // Push back to previous walkable position
-      const tryX = world.isWalkable(player.x - player.inputDx * player.moveSpeed * (dt / 1000), player.y);
-      const tryY = world.isWalkable(player.x, player.y - player.inputDy * player.moveSpeed * (dt / 1000));
-      if (!tryX) player.x -= player.inputDx * player.moveSpeed * (dt / 1000);
-      if (!tryY) player.y -= player.inputDy * player.moveSpeed * (dt / 1000);
-      if (!world.isWalkable(player.x, player.y)) {
-        // Still in wall, hard reset
+      // Try small offsets to find nearest walkable tile
+      const nudge = 32;
+      const offsets = [[0,-nudge],[0,nudge],[-nudge,0],[nudge,0],[-nudge,-nudge],[nudge,-nudge],[-nudge,nudge],[nudge,nudge]];
+      let found = false;
+      for (const [ox, oy] of offsets) {
+        if (world.isWalkable(player.x + ox, player.y + oy)) {
+          player.x += ox;
+          player.y += oy;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
         const spawn = world.getSpawnPosition(0);
         player.x = spawn.x;
         player.y = spawn.y;
@@ -610,6 +616,7 @@ function gameLoop() {
   // Update monsters (AI + combat)
   const worldBounds = { width: GRID_W * TILE_SIZE, height: GRID_H * TILE_SIZE };
   for (const monster of world.monsters) {
+    if (!monster._world) monster._world = world;  // wall collision reference
     if (!monster.alive) continue;
 
     // Friendly summon AI (spirit wolf — Phase 15.4)

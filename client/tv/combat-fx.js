@@ -680,6 +680,47 @@ const CombatFX = (() => {
     }
   }
 
+  // ── Basic attack slash effect ──
+  function spawnBasicAttackEffect(scene, attackerX, attackerY, targetX, targetY, isCrit) {
+    const angle = Math.atan2(targetY - attackerY, targetX - attackerX);
+    const dist = 28;
+    const cx = attackerX + Math.cos(angle) * dist;
+    const cy = attackerY + Math.sin(angle) * dist;
+
+    // Slash arc
+    const arc = scene.add.graphics();
+    arc.setDepth(10);
+    const color = isCrit ? 0xffdd44 : 0xffffff;
+    arc.lineStyle(isCrit ? 3 : 2, color, 0.9);
+    arc.beginPath();
+    const arcStart = angle - 0.8;
+    const arcEnd = angle + 0.8;
+    arc.arc(cx, cy, isCrit ? 22 : 16, arcStart, arcEnd, false);
+    arc.strokePath();
+
+    scene.tweens.add({
+      targets: arc,
+      alpha: 0,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 200,
+      onComplete: () => arc.destroy(),
+    });
+
+    // Small hit spark at target
+    if (targetX && targetY) {
+      const spark = scene.add.circle(targetX, targetY, isCrit ? 6 : 4, color, 0.8);
+      spark.setDepth(10);
+      scene.tweens.add({
+        targets: spark,
+        alpha: 0,
+        scale: 2,
+        duration: 150,
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
   // ── Process all combat events for a frame ──
   function processCombatEvents(scene, state) {
     if (!state.events) return;
@@ -691,6 +732,14 @@ const CombatFX = (() => {
           HUD.spawnDamageText(scene, target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged, null, ev.damageType);
           if (ev.isCrit) {
             scene.cameras.main.shake(200, 0.003);
+          }
+        }
+
+        // Basic attack visual — slash arc from attacker toward target
+        if (!ev.skillName) {
+          const attacker = state.players?.find(p => p.id === ev.attackerId);
+          if (attacker && target) {
+            spawnBasicAttackEffect(scene, attacker.x, attacker.y, target.x || 0, target.y || 0, ev.isCrit);
           }
         }
 

@@ -461,8 +461,25 @@ class Monster {
     const step = speed * (dt / 1000);
     const ratio = Math.min(step / dist, 1);
 
-    this.x += dx * ratio;
-    this.y += dy * ratio;
+    const stepX = dx * ratio;
+    const stepY = dy * ratio;
+
+    // Axis-independent wall collision (wall-sliding)
+    if (this._world) {
+      const newX = this.x + stepX;
+      const newY = this.y + stepY;
+      if (this._world.isWalkable(newX, newY)) {
+        this.x = newX;
+        this.y = newY;
+      } else if (this._world.isWalkable(newX, this.y)) {
+        this.x = newX;
+      } else if (this._world.isWalkable(this.x, newY)) {
+        this.y = newY;
+      }
+    } else {
+      this.x += stepX;
+      this.y += stepY;
+    }
 
     if (Math.abs(dx) > Math.abs(dy)) {
       this.facing = dx > 0 ? 'right' : 'left';
@@ -480,8 +497,25 @@ class Monster {
     const speed = this.slowed > 0 ? this.speed * 0.5 : this.speed;
     const step = speed * (dt / 1000);
 
-    this.x += (dx / dist) * step;
-    this.y += (dy / dist) * step;
+    const stepX = (dx / dist) * step;
+    const stepY = (dy / dist) * step;
+
+    // Axis-independent wall collision (wall-sliding)
+    if (this._world) {
+      const newX = this.x + stepX;
+      const newY = this.y + stepY;
+      if (this._world.isWalkable(newX, newY)) {
+        this.x = newX;
+        this.y = newY;
+      } else if (this._world.isWalkable(newX, this.y)) {
+        this.x = newX;
+      } else if (this._world.isWalkable(this.x, newY)) {
+        this.y = newY;
+      }
+    } else {
+      this.x += stepX;
+      this.y += stepY;
+    }
 
     if (Math.abs(dx) > Math.abs(dy)) {
       this.facing = dx > 0 ? 'right' : 'left';
@@ -539,15 +573,27 @@ class Monster {
         const worldH = 30 * 32;
         const margin = 20;
 
-        if (newX > margin && newX < worldW - margin && newY > margin && newY < worldH - margin) {
+        // Wall-aware movement for goblin
+        if (this._world && this._world.isWalkable(newX, newY)) {
+          this.x = newX;
+          this.y = newY;
+        } else if (this._world && this._world.isWalkable(newX, this.y)) {
+          this.x = newX;  // slide X
+        } else if (this._world && this._world.isWalkable(this.x, newY)) {
+          this.y = newY;  // slide Y
+        } else if (newX > margin && newX < worldW - margin && newY > margin && newY < worldH - margin) {
+          // Fallback: bounds check only (no world ref)
           this.x = newX;
           this.y = newY;
         } else {
           // Hit boundary — pick a random open direction
           const randAngle = Math.random() * Math.PI * 2;
-          this.x += Math.cos(randAngle) * step;
-          this.y += Math.sin(randAngle) * step;
-          // Clamp to bounds
+          const tryX = this.x + Math.cos(randAngle) * step;
+          const tryY = this.y + Math.sin(randAngle) * step;
+          if (!this._world || this._world.isWalkable(tryX, tryY)) {
+            this.x = tryX;
+            this.y = tryY;
+          }
           this.x = Math.max(margin, Math.min(worldW - margin, this.x));
           this.y = Math.max(margin, Math.min(worldH - margin, this.y));
         }

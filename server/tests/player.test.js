@@ -505,8 +505,8 @@ describe('Player', () => {
       p.inputDx = 1;
       p.inputDy = 0;
       p.update(1000); // 1 second
-      // moveSpeed is 160, so should move 160px in 1 second
-      expect(p.x).toBeCloseTo(560, 0);
+      // moveSpeed is 120, so should move 120px in 1 second
+      expect(p.x).toBeCloseTo(520, 0);
       expect(p.moving).toBe(true);
     });
 
@@ -517,9 +517,9 @@ describe('Player', () => {
       p.inputDx = 1;
       p.inputDy = 1;
       p.update(1000);
-      // Normalized: each axis gets moveSpeed / sqrt(2) ~ 113.14
+      // Normalized: each axis gets moveSpeed / sqrt(2) ~ 84.85
       const distMoved = Math.sqrt((p.x - 400) ** 2 + (p.y - 300) ** 2);
-      expect(distMoved).toBeCloseTo(160, 0);
+      expect(distMoved).toBeCloseTo(120, 0);
     });
 
     it('sets facing direction based on movement', () => {

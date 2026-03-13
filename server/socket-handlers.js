@@ -103,6 +103,7 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     player.disconnected = false;
     player.inputDx = 0;
     player.inputDy = 0;
+    player._world = world;  // refresh world reference on reconnect
     players.set(socket.id, player);
     inventories.set(player.id, inv);
     controllerSockets.set(socket.id, player.id);
@@ -196,6 +197,7 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     }
   }
 
+  player._world = world;  // for predictive collision in player.update()
   players.set(socket.id, player);
   inventories.set(player.id, inv);
   controllerSockets.set(socket.id, player.id);
