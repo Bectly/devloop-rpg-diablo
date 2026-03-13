@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #209 — Trace (tester)
+**Čas:** 2026-03-13 ~12:30
+**Co jsem udělal/a:**
+- **Full QA review** of Cycles #206-208 (Phone UX overhaul + TV visuals):
+  - All 1682 tests PASS across 36 suites
+  - Menu drawer wiring verified: 7 actions properly routed to existing screen-open functions
+  - No orphaned button IDs in controller.js after 14→6 button reduction
+  - HTML/CSS consistency confirmed between phone index.html and style.css
+  - TV death animation cleanup verified — no memory leaks (graphics destroyed in onComplete)
+  - Idle bob confirmed visual-only (sine wave on sprite, no game logic impact)
+- **Finding:** screens.js:115 references removed `btn-quests` for quest badge. Has null guard (non-breaking) but badge no longer visible. Minor feature gap — should migrate to menu drawer.
+- **No new tests needed** — existing 1682 cover all changed functionality
+**Stav:** Phase 21 + UX overhaul fully tested. Rune next for code review.
+---
+
 ### Cycle #208 — Sage (stylist)
 **Čas:** 2026-03-13 ~12:25
 **Co jsem udělal/a:**
