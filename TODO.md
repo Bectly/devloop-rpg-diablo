@@ -221,10 +221,163 @@ Diablo-style item sets — wear multiple pieces for escalating bonuses.
 - [x] **Set announcement:** "Ironwall Set (2/3)" or "Complete! (3/3)" with green text + particles
 
 ### Future (not this phase)
-- [ ] Multiple dungeon zones (different tilesets, monster pools)
-- [ ] Unique legendary item effects (special procs)
 - [ ] Leaderboard / stats tracking
 - [ ] Sprite assets via ComfyUI generation
+- [ ] Skill synergies / cross-class combos
+- [ ] Crafting / enchant system
+
+---
+
+## 🔥 NEXT PRIORITIES (Phase 9: Dungeon Zones & Unique Bosses)
+
+**Goal:** Transform 7 same-feel floors into 3 distinct dungeon zones with unique bosses. This is the single highest-impact change for replayability and gameplay variety.
+
+### 9.1 Zone Definitions — Server
+**File:** `server/game/world.js` (modify `FLOOR_NAMES`, `getMonsterPoolForFloor()`, add `ZONE_DEFS`)
+
+Define 3 zones, each spanning 2-3 floors:
+
+| Zone | Floors | Theme | Color Palette | Monster Pool |
+|------|--------|-------|---------------|-------------|
+| **Catacombs** | 1-2 | Dusty undead crypts | Gray/bone (#ccccaa) | skeleton, zombie, slime, archer |
+| **Inferno** | 3-4 | Burning lava halls | Red/orange (#cc3333) | demon, fire_imp (NEW), hell_hound (NEW), archer |
+| **Abyss** | 5-7 | Dark void/shadow realm | Purple/dark (#6633aa) | shadow_stalker (NEW), demon, wraith (NEW), zombie |
+
+**New data structure:**
+```javascript
+const ZONE_DEFS = {
+  catacombs: {
+    floors: [0, 1],       // indices in FLOOR_NAMES
+    tileColor: 0x8a7a6a,  // warm stone
+    wallColor: 0x5a4a3a,
+    monsterPool: ['skeleton', 'zombie', 'slime', 'archer'],
+    boss: 'boss_knight',  // existing
+    bossFloor: 1,         // 0-indexed: floor 2 is index 1
+  },
+  inferno: {
+    floors: [2, 3],
+    tileColor: 0x6a2a1a,  // dark red stone
+    wallColor: 0x4a1a0a,
+    monsterPool: ['demon', 'fire_imp', 'hell_hound', 'archer'],
+    boss: 'boss_infernal',
+    bossFloor: 3,
+  },
+  abyss: {
+    floors: [4, 5, 6],
+    tileColor: 0x2a1a3a,  // dark purple
+    wallColor: 0x1a0a2a,
+    monsterPool: ['shadow_stalker', 'demon', 'wraith', 'zombie'],
+    boss: 'boss_void',    // final boss
+    bossFloor: 6,
+  },
+};
+```
+
+**Key change:** `getMonsterPoolForFloor(floor)` reads from `ZONE_DEFS` instead of hardcoded if-else chain.
+
+### 9.2 New Monster Types — Server
+**File:** `server/game/monsters.js` (add to MONSTER_DEFS)
+
+4 new monster types (1 existing behavior + 3 new):
+
+| Monster | Zone | HP | DMG | Behavior | Damage Type | Special |
+|---------|------|-----|-----|----------|-------------|---------|
+| **Fire Imp** | Inferno | 45 | 14 | `ranged` | fire | Low HP, fast attack speed (900ms), small size |
+| **Hell Hound** | Inferno | 100 | 20 | `melee_charge` (NEW) | fire | Charges at player from distance, brief stun on hit |
+| **Shadow Stalker** | Abyss | 90 | 25 | `melee_stealth` (NEW) | physical | Invisible until close range (aggroRadius 80), first hit bonus ×2 |
+| **Wraith** | Abyss | 70 | 18 | `ranged_teleport` (NEW) | cold | Teleports after every 2 attacks, 50% physical resist |
+
+**New behaviors to implement in combat/monster update:**
+- `melee_charge`: If player in range 100-250, dash at 3× speed for 0.5s → if collision = stun 0.5s. Then melee normally. Cooldown 8s.
+- `melee_stealth`: Invisible (alpha 0.1) until player within aggroRadius 80. First attack deals 2× damage. After first attack, visible permanently for that encounter.
+- `ranged_teleport`: Ranged attack. After every 2nd attack, teleport to random position 100-200 units away. 50% physical resistance built-in.
+
+### 9.3 Zone Bosses — Server
+**File:** `server/game/monsters.js` (add boss defs) + `server/game/combat.js` (boss AI)
+
+Currently only `boss_knight` exists (3-phase melee AI). Add 2 new bosses:
+
+**Boss: Infernal Lord** (floor 4 boss)
+- HP: 800 (knight=600), Armor: 8, Speed: 90, Damage: 30, DamageType: fire
+- **Phase 1** (100-60% HP): Ranged fireball barrage (3 rapid projectiles, 120° spread)
+- **Phase 2** (60-30% HP): Summons 2 fire_imps every 15s. Ground fire patches (DoT zones, 3s duration)
+- **Phase 3** (<30% HP): Enrage — attack speed ×2, all attacks leave fire trails
+- Visual: Large red/orange sprite (size 28)
+
+**Boss: Void Reaper** (floor 7 final boss, replaces knight on floor 7)
+- HP: 1200, Armor: 10, Speed: 100, Damage: 35, DamageType: cold
+- **Phase 1** (100-70% HP): Teleport-slash — teleports behind player, slashes. 4s cooldown.
+- **Phase 2** (70-40% HP): Shadow clones — spawns 2 decoys (30% HP, deal 50% damage, no loot). Clones die when boss takes hit.
+- **Phase 3** (<40% HP): Void storm — AOE cold damage pulse every 5s (150 radius). Players must dodge. Summons 1 wraith every 20s.
+- Visual: Large purple/black sprite (size 30)
+
+**Floor 2 boss remains `boss_knight`** — Bolt already implements the 3-phase knight, it serves as the "tutorial boss" for Zone 1.
+
+### 9.4 Zone Boss Spawning — Server
+**File:** `server/game/world.js` (modify `generateWaveMonsters`)
+
+Currently boss spawning is: `roomData.type === 'boss' → 'boss_knight'`. Change to:
+```javascript
+// In generateWaveMonsters:
+const zone = getZoneForFloor(floor);
+const bossType = zone.boss;
+const type = roomData.type === 'boss' && waveIndex === 0 && i === 0
+  ? bossType  // zone-specific boss
+  : monsterPool[...];
+```
+
+**Boss placement rules:**
+- Floor 2 (index 1): boss_knight (Catacombs zone boss)
+- Floor 4 (index 3): boss_infernal (Inferno zone boss)
+- Floor 7 (index 6): boss_void (Abyss zone boss, final)
+- Floors 1, 3, 5: No boss room — just monster rooms + treasure
+- Floor 6: Elite-heavy floor (30% elite chance, prep for final boss)
+
+**Room type per floor:**
+```javascript
+function getRoomLayout(floor) {
+  const isBossFloor = [1, 3, 6].includes(floor); // 0-indexed
+  if (isBossFloor) return ['start', 'monster', 'monster', 'treasure', 'boss'];
+  return ['start', 'monster', 'monster', 'treasure', 'monster']; // no boss room
+}
+```
+
+### 9.5 Zone Visuals — TV Client
+**File:** `client/tv/game.js` (modify floor rendering)
+
+Currently TV renders all floors with same colors. Add zone-based tile coloring:
+
+- Catacombs: Gray stone (#8a7a6a floor, #5a4a3a walls)
+- Inferno: Dark red (#6a2a1a floor, #4a1a0a walls), occasional lava tile (orange glow)
+- Abyss: Dark purple (#2a1a3a floor, #1a0a2a walls), void particles
+
+Server sends `zoneId` in `dungeon:enter` event. TV reads `zoneId` to pick tile palette.
+
+### 9.6 Boss UI — TV + Phone
+**Files:** `client/tv/hud.js`, `client/phone/controller.js`
+
+- Boss HP bar already exists (Phase 4). Update boss name display from zone-specific boss names.
+- Add boss phase indicator (Phase 1/2/3 marker below HP bar)
+- Zone transition screen: "Entering the Inferno..." with zone-colored flash
+
+### 9.7 Zone Music Hints — Sound
+**File:** `client/shared/sound.js`
+
+Add 3 ambient tone generators (procedural, no audio files):
+- Catacombs: Low reverb drone
+- Inferno: Crackling fire + deep bass
+- Abyss: Eerie high-pitched whisper + void hum
+
+### Implementation Order for Bolt:
+1. **9.1** Zone definitions in world.js (data-only, refactor getMonsterPoolForFloor)
+2. **9.2** New monster types in monsters.js (4 new defs + 3 new behaviors in combat loop)
+3. **9.3** Boss defs + AI (Infernal Lord + Void Reaper)
+4. **9.4** Zone boss spawning (world.js room layout per floor)
+5. **9.5** Zone visuals (TV tile palette)
+6. **9.6** Boss UI updates
+7. **9.7** Zone ambient sounds
+
+Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's domain.
 
 ---
 
