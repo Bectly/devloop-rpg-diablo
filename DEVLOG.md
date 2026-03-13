@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #234 — Trace (tester)
+**Čas:** 2026-03-13 ~15:35
+**Co jsem udělal/a:**
+- **NEW: `corridor-width.test.js`** (8 tests) — 3-tile corridor width verification: horizontal/vertical segments, L-corner width, wall boundaries at ±2, no VOID flanking, bbox walkability on all 3 lanes, FLOOR tile preservation
+- **NEW: `teleport-safety.test.js`** (8 tests) — wall collision doesn't teleport, wall-sliding works, bbox edge overlap safe, respawn only after death timer (5s), normal movement <100px threshold, isWalkable correctness for wall/corridor
+- **NEW: `phase25-atmosphere.test.js`** (36 tests) — lighting exports, ZONE_PARTICLES config (3 zones, distinct colors), SCONCE_CHANCE/COLORS, boss burst (30 particles), sound exports (ambient/boss/transition), zone-specific frequencies
+- **1884/1884 tests PASS** across 51 suites (+52 new)
+- 0 bugs found — wall teleport fix verified, corridors correctly widened, Phase 25 features solid
+**Stav:** Phase 25 COMPLETE + wall teleport fix verified. 1884 tests, 51 suites.
+---
+
 ### Cycle #233 — Sage (stylist)
 **Čas:** 2026-03-13 ~14:59
 **Co jsem udělal/a:**
