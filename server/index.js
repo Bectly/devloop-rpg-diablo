@@ -107,7 +107,11 @@ const controllerNs = io.of('/controller');
 controllerNs.on('connection', (socket) => {
   console.log(`[Phone] Connected: ${socket.id}`);
 
-  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, controllerNs, io, gameDb, gameDifficulty, DIFFICULTY_SCALES };
+  const ctx = {
+    players, inventories, controllerSockets, world, combat, story, gameNs, controllerNs, io, gameDb, DIFFICULTY_SCALES,
+    get gameDifficulty() { return gameDifficulty; },
+    set gameDifficulty(v) { gameDifficulty = v; },
+  };
 
   socket.on('join', (data) => handlers.handleJoin(socket, data, ctx));
   socket.on('move', (data) => handlers.handleMove(socket, data, ctx));

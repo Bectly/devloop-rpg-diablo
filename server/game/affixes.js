@@ -164,25 +164,25 @@ function rollAffixes(floor, monsterType, eliteBonus = 0) {
 
   if (floor <= 2) {
     if (eliteBonus <= 0) return null; // no elites on early floors in Normal
-    eliteChance = eliteBonus;
+    eliteChance = eliteBonus; // only the difficulty bonus on early floors
     maxAffixes = 1;
     rank = 'champion';
   } else if (floor <= 4) {
-    eliteChance = 0.15;
+    eliteChance = 0.15 + eliteBonus;
     maxAffixes = 1;
     rank = 'champion';
   } else if (floor <= 6) {
-    eliteChance = 0.25;
+    eliteChance = 0.25 + eliteBonus;
     maxAffixes = 2;
     rank = 'champion';
   } else {
-    eliteChance = 0.30;
+    eliteChance = 0.30 + eliteBonus;
     maxAffixes = 3;
     rank = 'rare';
   }
 
-  // Apply difficulty bonus to elite chance
-  eliteChance = Math.min(0.60, eliteChance + eliteBonus);
+  // Cap elite chance at 60%
+  eliteChance = Math.min(0.60, eliteChance);
 
   if (Math.random() >= eliteChance) return null;
 

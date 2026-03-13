@@ -371,6 +371,18 @@ function assignRoomTypes(rooms, floor) {
   return roomData;
 }
 
+// ─── Monster helpers ────────────────────────────────────────────
+function _spawnScaledMonster(type, mx, my, floor, scale) {
+  const monster = createMonster(type, mx, my, floor);
+  monster.hp = Math.floor(monster.hp * scale.hpMult);
+  monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
+  monster.damage = Math.floor(monster.damage * scale.dmgMult);
+  monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
+  const affixResult = rollAffixes(floor, type, scale.eliteBonus);
+  if (affixResult) applyAffixes(monster, affixResult);
+  return monster;
+}
+
 // ─── Monster wave generator ─────────────────────────────────────
 function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal') {
   const monsters = [];
@@ -399,14 +411,7 @@ function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal')
 
     const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
     const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
-    const monster = createMonster(type, mx, my, floor);
-    // Apply difficulty scaling
-    monster.hp = Math.floor(monster.hp * scale.hpMult);
-    monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
-    monster.damage = Math.floor(monster.damage * scale.dmgMult);
-    monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
-    const affixResult = rollAffixes(floor, type, scale.eliteBonus);
-    if (affixResult) applyAffixes(monster, affixResult);
+    const monster = _spawnScaledMonster(type, mx, my, floor, scale);
     monsters.push(monster);
   }
 
@@ -416,14 +421,7 @@ function generateWaveMonsters(roomData, waveIndex, floor, difficulty = 'normal')
       const type = monsterPool[Math.floor(Math.random() * monsterPool.length)];
       const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
       const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
-      const monster = createMonster(type, mx, my, floor);
-      // Apply difficulty scaling
-      monster.hp = Math.floor(monster.hp * scale.hpMult);
-      monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
-      monster.damage = Math.floor(monster.damage * scale.dmgMult);
-      monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
-      const affixResult = rollAffixes(floor, type, scale.eliteBonus);
-      if (affixResult) applyAffixes(monster, affixResult);
+      const monster = _spawnScaledMonster(type, mx, my, floor, scale);
       monsters.push(monster);
     }
   }

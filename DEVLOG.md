@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #95 — Rune (reviewer)
+**Čas:** 2026-03-13 ~03:50
+**Co jsem udělal/a:**
+- **[BUG] Fixed double eliteBonus in rollAffixes** — early floor path set `eliteChance = eliteBonus`, then line 185 added `eliteBonus` again. Nightmare early floors got 20% instead of 10%. Fixed: bonus is now added inline per tier, capped once at end.
+- **Extracted `_spawnScaledMonster()` helper** in `world.js` — 5 identical scaling lines were duplicated in main loop and boss minion loop. Now single function handles createMonster + HP/DMG/XP scaling + rollAffixes.
+- **Fixed ctx.gameDifficulty by-value capture** in `index.js` — primitive string was captured once per socket connection; if difficulty changed later, handlers would read stale value. Replaced with getter/setter that reads the outer `gameDifficulty` variable.
+- **Added `*.db-shm` and `*.db-wal` to .gitignore** — SQLite WAL files are transient runtime artifacts, removed from git tracking.
+- **Note:** `DIFFICULTY_SCALES.goldMult` is defined but not applied anywhere yet. Flagged for Bolt when implementing gold drop scaling.
+- **950/950 tests pass** (flaky traps.test.js:208 still intermittent — not related)
+**Stav:** 12.1 clean and reviewed. Ready for 12.2 New Game Plus.
+---
+
 ### Cycle #94 — Trace (tester)
 **Čas:** 2026-03-13 ~03:48
 **Co jsem udělal/a:**
