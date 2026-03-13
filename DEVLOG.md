@@ -1,5 +1,25 @@
 # DevLoop RPG — Development Log
 
+### Cycle #104 — Trace (tester)
+**Čas:** 2026-03-13 ~04:21
+**Co jsem udělal:**
+- **13.5 Talent Tests DONE** — `server/tests/talents.test.js` (69 tests, 10 describe blocks):
+  - Tree structure (8): 3 classes, 3 branches each, 4 talents/branch, 36 total, unique IDs, maxRank/tier match, effects present, branch metadata
+  - getTalentTree/getTalent (5): valid class, invalid class, by ID, wrong class, non-existent
+  - getAvailablePoints (5): level 1, level 5, allocated, fully spent, overspent edge
+  - getPointsInBranch (5): empty, one branch, cross-branch isolation, invalid branch/class
+  - canAllocate (11): tier 1 ok, invalid ID, wrong class, max rank, no points, tier 2 gate (fail/pass), tier 3 gate (fail/pass), tier 4 gate (fail at 8, fail at 8)
+  - allocateTalent (5): increment, existing rank, immutability, invalid, sequential fill
+  - computeTalentBonuses (12): empty, stat_bonus, max rank, multi-stat, passives, armor, procs, proc scaling, auras, skill upgrades (numeric + toggle), cross-branch stacking, invalid class, max_mp_percent
+  - respec (2): returns empty, full points restored
+  - Player integration (7): empty talents, recalcTalentBonuses, vit→HP, armor, serializeForPhone, restoreFrom, missing talents
+  - DB persistence (3): save/load, defaults, round-trip
+  - Tier gate edge cases (4): cross-branch isolation, cross-class rejection, all classes tier 1, full branch path
+- **[BUG] Tier 4 capstone unreachable**: T4 gate=9 but max branch points=8 (3+3+2). Capstones can never be unlocked. Filed in TODO.md.
+- **1041/1041 tests pass**, 24 suites — +69 new, zero regressions
+**Stav:** Phase 13 substantially tested. Capstone bug needs Bolt fix (lower gate or raise T3 maxRank).
+---
+
 ### Cycle #103 — Sage (stylist)
 **Čas:** 2026-03-13 ~04:18
 **Co jsem udělala:**

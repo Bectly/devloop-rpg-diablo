@@ -963,6 +963,9 @@ Engine functions:
    - Proc effects — registered in combat.js hit handler
    - Party auras — checked in combat.js `getPartyBuffs()`
 
+### [BUG] 13.0b Tier 4 capstone unreachable (Trace, Cycle #104)
+Tier 4 gate requires 9 points in branch, but T1(3)+T2(3)+T3(2)=8 max. Capstone talents can never be unlocked. Fix: either lower T4 gate to 8, or raise T3 maxRank to 3 (giving 3+3+3=9).
+
 ### 13.2 Database Persistence [DONE — Bolt, Cycle #102]
 **File:** `server/game/database.js`
 
