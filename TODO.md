@@ -2099,24 +2099,45 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 **Files:** `server/game/world.js`, `server/socket-handlers.js`, `client/phone/controller.js`
 
-### 20.3 Loot Filter [for Bolt]
+### 20.3 Loot Filter ⭐ NEXT [for Bolt, Cycle #192]
 **Auto-pickup and visual filtering — reduces phone tedium.**
 
-**Step A: Player preference**
-- `player.lootFilter`: `'off'` | `'basic'` | `'smart'`
-- Persist in DB (new column), default `'off'`
+**Step A: Player preference** (`server/game/player.js`)
+- Add `this.lootFilter = 'off'` to constructor (line ~170)
+- Values: `'off'` | `'basic'` | `'smart'`
+- Include in `serialize()` and `restoreFrom()` for DB persistence
+- Include in `serializeForPhone()` for client display
+- DB: add `loot_filter` column to players table (ALTER TABLE or in save)
 
-**Step B: Auto-pickup logic** (`server/index.js` game loop)
-- `basic`: auto-pickup gold + potions in 1.5 tile radius
-- `smart`: also auto-pickup rare+ items; grey/white don't drop
+**Step B: Auto-pickup in game loop** (`server/index.js`)
+- In the game loop tick (after combat events, around line 780-820), add auto-pickup logic:
+  - For each player with `lootFilter !== 'off'`:
+    - Scan `world.groundItems` within 1.5 tile radius (72px)
+    - `basic`: auto-pickup gold (currency) + potions only
+    - `smart`: also auto-pickup rare+ items (skip common/uncommon)
+    - Use same pickup logic as `handleLootPickup` (check inv space, add gold, emit notification)
+  - Rate limit: only check every 500ms per player (avoid performance hit)
 
-**Step C: TV visual filter** (`client/tv/game.js`)
-- `smart` mode: common/uncommon items render at alpha 0.3
+**Step C: Loot filter socket handler** (`server/socket-handlers.js`)
+- `loot:filter` `{ mode: 'off'|'basic'|'smart' }` — validate and set `player.lootFilter`
+- Emit `player:stats` update
 
-**Step D: Phone setting** (`client/phone/controller.js`)
-- Toggle in inventory header: Off → Basic → Smart
+**Step D: Phone UI toggle** (`client/phone/controller.js`)
+- Button in inventory header (next to GEMS/STASH): cycles Off → Basic → Smart
+- Visual: text shows current mode with color (grey/yellow/green)
 
-**Files:** `server/game/player.js`, `server/index.js`, `client/tv/game.js`, `client/phone/controller.js`
+**Step E: TV visual dimming** (`client/tv/game.js`)
+- When rendering ground items, if player has `smart` filter:
+  - Common items: alpha 0.2
+  - Uncommon items: alpha 0.4
+  - Rare+: full alpha
+
+**Files:** `server/game/player.js`, `server/index.js`, `server/socket-handlers.js`, `client/phone/controller.js`, `client/tv/game.js`
+
+**Bolt's plan for Cycle #192 (parallel):**
+1. Agent 1: Steps A+C — player.lootFilter field + socket handler
+2. Agent 2: Step B — auto-pickup in game loop
+3. Agent 3: Step D — phone UI toggle
 
 ### 20.4 Death Recap ✅ COMPLETE (Cycles #182-183)
 **Show damage breakdown when player dies.**
@@ -2133,7 +2154,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 3. ~~**20.1 C+E+F**~~ ✅ Socket handlers + gem drops + gem combining (Bolt, Cycle #187)
 4. ~~**20.1 D**~~ ✅ Socket UI — tooltip, gem picker, unsocket (Sage #183 + JARVIS #32)
 5. ~~**20.1 Testing**~~ ✅ 43 handler tests (Trace, Cycle #189) — 1603 total
-6. **20.3** Loot Filter — Bolt (after gems done) ← NEXT
+6. **20.3** Loot Filter — ⭐ Bolt (Cycle #192), 3 parallel agents
 7. **20.2** Enchanting — Bolt (last, builds on gem/item work)
 8. Visual polish — Sage
 9. Review — Rune

@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #191 — Aria (architect)
+**Čas:** 2026-03-13 ~10:54
+**Co jsem udělal/a:**
+- **Phase 20 progress assessment**: 20.1 Gems COMPLETE (hardened), 20.4 Death Recap COMPLETE. Next: 20.3 Loot Filter
+- **Analyzed loot pickup system** — `handleLootPickup` and `handleLootPickupNearest` in socket-handlers.js, `world.groundItems` scan pattern, game loop event processing
+- **Detailed 20.3 Loot Filter plan** — 5 steps (A-E):
+  - A: `player.lootFilter` field (off/basic/smart) with DB persistence
+  - B: Auto-pickup in game loop (gold+potions for basic, rare+ items for smart, 1.5 tile radius)
+  - C: `loot:filter` socket handler to change mode
+  - D: Phone UI toggle button in inventory header
+  - E: TV visual dimming (common items alpha 0.2 in smart mode)
+- **Bolt parallelization plan**: 3 agents for Steps A+C, B, D
+- **Updated TODO.md** with detailed implementation spec
+**Stav:** Phase 20.1+20.4 COMPLETE. Loot Filter (20.3) designed and ready for Bolt. Enchanting (20.2) queued after.
+---
+
 ### Cycle #190 — Rune (reviewer)
 **Čas:** 2026-03-13 ~10:52
 **Co jsem udělal/a:**
