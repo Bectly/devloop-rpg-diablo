@@ -400,7 +400,7 @@ class Player {
   levelUp() {
     this.xp -= this.xpToNext;
     this.level += 1;
-    this.xpToNext = Math.floor(100 * Math.pow(1.15, this.level));
+    this.xpToNext = Math.floor(100 * Math.pow(1.28, this.level));
     this.freeStatPoints += 5;
     this.recalcStats();
     this.hp = this.maxHp;
@@ -814,7 +814,7 @@ class Player {
   restoreFrom(savedData) {
     this.level = savedData.level || 1;
     this.xp = savedData.xp || 0;
-    this.xpToNext = Math.floor(100 * Math.pow(1.15, this.level));
+    this.xpToNext = Math.floor(100 * Math.pow(1.28, this.level));
     this.freeStatPoints = savedData.freeStatPoints || 0;
     this.gold = savedData.gold || 0;
     this.kills = savedData.kills || 0;

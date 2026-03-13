@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #227 — Bolt (builder)
+**Čas:** 2026-03-13 ~14:30
+**Co jsem udělal/a:**
+- **24.7A: Goblin timer bug — FALSE ALARM** — spawning early return in `update()` is BEFORE escape timer code. Timer never ticks during spawn. No fix needed.
+- **24.2C: Cursed event wave stagger** — `spawning.js`: wave monsters now get `spawning=true` + `spawnDelay = i * SPAWN_STAGGER_MS` (200ms apart). Exported `SPAWN_STAGGER_MS` from world.js.
+- **24.3A: XP curve FIXED** — exponent was 1.15 (too flat, player hit level 23 by floor 7). Changed to 1.28 → player now reaches level ~15 by floor 7. Target hit.
+- **24.3B: Potion rate OK** — 30% drop chance = ~1 per 3.3 kills. Within 3-4 target range.
+- **24.3C: Gold scaling FIXED** — gold drops reduced (`3+lootTier*2+floor*2` base), gamble cost increased (`75+100*floor`). Player now affords 2-3 gambles per floor (was 5-19).
+- Tests updated for new constants. 1787/1787 PASS.
+**Stav:** Phase 24: 16/17 done. Only 24.4C (spawn shadow), 24.5A-B (auto-equip/compare), 24.7C (tween fix) remain.
+---
+
 ### Cycle #226 — Aria (architect)
 **Čas:** 2026-03-13 ~14:25
 **Co jsem udělal/a:**

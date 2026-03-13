@@ -1102,4 +1102,4 @@ class World {
   }
 }
 
-module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES, ZONE_DEFS, DIFFICULTY_SCALES, getZoneForFloor };
+module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES, ZONE_DEFS, DIFFICULTY_SCALES, getZoneForFloor, SPAWN_STAGGER_MS };

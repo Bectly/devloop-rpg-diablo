@@ -5,7 +5,7 @@
  */
 
 const { createMonster } = require('./game/monsters');
-const { TILE_SIZE, DIFFICULTY_SCALES, getZoneForFloor } = require('./game/world');
+const { TILE_SIZE, DIFFICULTY_SCALES, getZoneForFloor, SPAWN_STAGGER_MS } = require('./game/world');
 const { AFFIX_DEFS, rollAffixes, applyAffixes } = require('./game/affixes');
 const { rollCursedEvent } = require('./game/events');
 
@@ -61,6 +61,10 @@ function spawnCursedEventWave(cursedEvent, ctx) {
     // Mark as event monster for tracking
     monster.eventMonster = true;
     monster.aiState = 'alert'; // immediately aggressive
+
+    // Staggered spawn: each monster pops in 200ms apart (24.2C)
+    monster.spawning = true;
+    monster.spawnDelay = i * SPAWN_STAGGER_MS;
 
     world.monsters.push(monster);
     spawned.push(monster);

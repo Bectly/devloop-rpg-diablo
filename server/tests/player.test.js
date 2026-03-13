@@ -156,11 +156,11 @@ describe('Player', () => {
       expect(p.xp).toBe(30);
     });
 
-    it('increases xpToNext with formula 100 * 1.15^level', () => {
+    it('increases xpToNext with formula 100 * 1.28^level', () => {
       const p = new Player('T', 'warrior');
       p.gainXp(100);
-      // level 2: xpToNext = floor(100 * 1.15^2) = floor(132.25) = 132
-      expect(p.xpToNext).toBe(Math.floor(100 * Math.pow(1.15, 2)));
+      // level 2: xpToNext = floor(100 * 1.28^2) = floor(163.84) = 163
+      expect(p.xpToNext).toBe(Math.floor(100 * Math.pow(1.28, 2)));
     });
 
     it('does not gain XP when dead', () => {
@@ -720,7 +720,7 @@ describe('Player', () => {
       // attackPower should incorporate weapon damage + str bonuses
       expect(p.attackPower).toBeGreaterThan(0);
       // xpToNext should be recalculated for level 10
-      expect(p.xpToNext).toBe(Math.floor(100 * Math.pow(1.15, 10)));
+      expect(p.xpToNext).toBe(Math.floor(100 * Math.pow(1.28, 10)));
     });
 
     it('preserves potions count', () => {

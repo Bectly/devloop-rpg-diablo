@@ -704,6 +704,9 @@ window.Sprites = {
     if (!sprite || sprite._dying) return;
     sprite._dying = true;
 
+    // Kill any active spawn animation tweens — prevents spawn+death tween conflict
+    scene.tweens.killTweensOf(sprite);
+
     // Immediately hide HP bar, name, and affix text
     if (sprite.nameText) sprite.nameText.setAlpha(0);
     if (sprite.affixText) sprite.affixText.setAlpha(0);

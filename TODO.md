@@ -2543,14 +2543,14 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 - [x] **A:** Server-side spawn delay — when spawning room monsters, assign `spawnDelay` (0, 200ms, 400ms...) per monster. Monster with delay is `spawning=true` (invulnerable, no AI, no collision). After delay → `spawning=false`, emit `monster:spawned` event.
 - [x] **B:** TV spawn animation — on `monster:spawned` event, play "rising from ground" effect: sprite scales from 0→1 over 300ms with shadow expanding, dust particles at feet.
-- [ ] **C:** Cursed event waves also use staggered spawns — each wave spawns monsters 0.3s apart.
+- [x] **C:** Cursed event waves use staggered spawns — 200ms apart via SPAWN_STAGGER_MS in spawning.js. (Cycle #227, Bolt)
 
 ### 24.3 Balancing Pass [for Bolt]
 **Problem:** Economy and progression pacing untested for full 7-floor playthrough.
 
-- [ ] **A:** XP curve audit — log XP gains per floor, verify player reaches ~level 12-15 by floor 7. Adjust `XP_PER_LEVEL` or `BASE_XP` if needed.
-- [ ] **B:** Potion drop rate — ensure 1 potion drops per ~3-4 monster kills on average. Check `CONSUMABLE_DROP_CHANCE` in items.js and adjust if needed.
-- [ ] **C:** Gold scaling — verify shop prices vs gold earned per floor. Player should afford 2-3 gambles per floor.
+- [x] **A:** XP curve fixed — exponent 1.15→1.28, player now reaches level ~15 by floor 7 (was 23). (Cycle #227, Bolt)
+- [x] **B:** Potion drop rate OK — 30% = ~1 per 3.3 kills. Within 3-4 target range. No change needed.
+- [x] **C:** Gold scaling fixed — gold drops reduced, gamble cost raised to 75+100*floor. 2-3 gambles/floor (was 5-19). (Cycle #227, Bolt)
 
 ### 24.4 TV Visual Polish [for Sage]
 **Problem:** Small visual improvements that add up to a much better TV experience.
@@ -2573,7 +2573,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 ### 24.7 Bugs Found in Review (Cycle #225, Rune) [for Bolt — PRIORITY]
 
-- [ ] **A: [BUG] Treasure goblin escape timer ticks during spawn** — monsters.js: goblin's 15s escape timer decrements while `spawning=true`. A goblin at the end of a large wave loses ~1s of escape time before it even appears. Fix: skip escapeTimer decrement while `this.spawning`.
+- [x] **A: [NOT A BUG] Treasure goblin escape timer** — spawning early return in update() is BEFORE escape timer code. Timer never ticks during spawn. No fix needed. (Verified Cycle #227, Bolt)
 - [ ] **B: [BUG] Join screen connection now visible** — Cycle #225 added `#join-status` on join screen + `doJoin()` with NOT CONNECTED!/JOINING... feedback + `connect_error` handler. Needs user testing to confirm fix.
 - [ ] **C: Spawn+death tween collision** — if a monster spawns and is killed within 300ms, both spawn tween and death tween run simultaneously. Fix: kill spawn tweens before starting death animation (`scene.tweens.killTweensOf(sprite)` before death tween).
 

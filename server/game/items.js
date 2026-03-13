@@ -341,8 +341,8 @@ function generateLoot(lootTier, monsterType, floor = 0, goldMult = 1.0) {
   const drops = [];
 
   // Gold always drops (scaled by floor + difficulty)
-  const goldBase = Math.floor((5 + lootTier * 3 + floor * 5) * goldMult);
-  const goldMax = Math.floor((15 + lootTier * 8 + floor * 10) * goldMult);
+  const goldBase = Math.floor((3 + lootTier * 2 + floor * 2) * goldMult);
+  const goldMax = Math.floor((8 + lootTier * 4 + floor * 4) * goldMult);
   drops.push(generateConsumable('gold', randomInt(goldBase, goldMax)));
 
   // Chance for potion

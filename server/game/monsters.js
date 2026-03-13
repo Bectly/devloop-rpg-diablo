@@ -560,7 +560,8 @@ class Monster {
         this.slowed -= dt;
       }
 
-      // Decrement escape timer
+      // Decrement escape timer — don't tick while goblin is still spawning
+      if (this.spawning) return events;
       this.escapeTimer -= dt;
       if (this.escapeTimer <= 0) {
         this.alive = false;

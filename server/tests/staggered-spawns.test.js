@@ -127,6 +127,55 @@ describe('Staggered Monster Spawns', () => {
     });
   });
 
+  // ── Goblin escape timer spawn guard (24.7A) ────────────────────
+  describe('treasure goblin escape timer during spawn', () => {
+    it('escape timer does not decrement while goblin is spawning', () => {
+      const goblin = createMonster('treasure_goblin', 100, 100);
+      goblin.spawning = true;
+      goblin.spawnDelay = 1000;
+      const initialTimer = goblin.escapeTimer;
+
+      goblin.update(500, []);
+      expect(goblin.escapeTimer).toBe(initialTimer);
+    });
+
+    it('goblin does not escape while spawning even if timer would expire', () => {
+      const goblin = createMonster('treasure_goblin', 100, 100);
+      goblin.spawning = true;
+      goblin.spawnDelay = 200;
+      goblin.escapeTimer = 100; // very short timer
+
+      const events = goblin.update(500, []);
+      expect(goblin.alive).toBe(true);
+      expect(events.some(e => e.type === 'goblin:escaped')).toBe(false);
+    });
+
+    it('escape timer decrements normally after spawning completes', () => {
+      const goblin = createMonster('treasure_goblin', 100, 100);
+      goblin.spawning = true;
+      goblin.spawnDelay = 200;
+
+      goblin.update(200, []); // finish spawning
+      expect(goblin.spawning).toBe(false);
+
+      const timerBefore = goblin.escapeTimer;
+      goblin.update(100, []);
+      expect(goblin.escapeTimer).toBe(timerBefore - 100);
+    });
+
+    it('goblin escapes when timer reaches 0 after spawning', () => {
+      const goblin = createMonster('treasure_goblin', 100, 100);
+      goblin.spawning = true;
+      goblin.spawnDelay = 100;
+      goblin.escapeTimer = 50;
+
+      goblin.update(100, []); // finish spawning
+      const events = goblin.update(50, []); // expire escape timer
+      expect(events.some(e => e.type === 'goblin:escaped')).toBe(true);
+      expect(goblin.alive).toBe(false);
+    });
+  });
+
   // ── Serialization ──────────────────────────────────────────────
   describe('serialization', () => {
     it('includes spawning: true when monster is spawning', () => {

@@ -333,8 +333,8 @@ describe('handleGamble', () => {
 
   it('successful gamble deducts gold', () => {
     handlers.handleGamble(socket, { slot: 'weapon' }, makeCtx(player, inv));
-    // Cost = 50 * 1 = 50
-    expect(player.gold).toBe(4950);
+    // Cost = 75 + 100 * 1 = 175
+    expect(player.gold).toBe(4825);
   });
 
   it('successful gamble emits gamble:result', () => {
@@ -342,7 +342,7 @@ describe('handleGamble', () => {
     const result = socket._find('gamble:result');
     expect(result).toBeTruthy();
     expect(result.data).toHaveProperty('item');
-    expect(result.data).toHaveProperty('cost', 50);
+    expect(result.data).toHaveProperty('cost', 175);
     expect(result.data).toHaveProperty('rarity');
   });
 

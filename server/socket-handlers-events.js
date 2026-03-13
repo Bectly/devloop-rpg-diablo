@@ -175,9 +175,9 @@ exports.handleGamble = (socket, data, { players, inventories, world, gameNs }) =
     return;
   }
 
-  // Cost: 50 × current floor (minimum floor 1)
-  const floor = world.currentFloor || 1;
-  const cost = 50 * Math.max(1, floor);
+  // Cost: 75 base + 100 per floor (scales with progression)
+  const floor = world.currentFloor || 0;
+  const cost = 75 + 100 * floor;
 
   if (player.gold < cost) {
     socket.emit('notification', { text: `Not enough gold! Need ${cost}g`, type: 'error' });
