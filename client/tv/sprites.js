@@ -4,6 +4,22 @@
 // scene as the first parameter.  Sprite Maps (playerSprites, etc.)
 // remain on the scene object — this module only provides helpers.
 
+// ─── Loot Beam Rarity Config ──────────────────────────────────
+const LOOT_BEAM_RARITIES = {
+  rare:      0xffff00,  // yellow
+  epic:      0xcc44ff,  // purple
+  legendary: 0xff8800,  // orange
+  set:       0x00cc66,  // green
+};
+
+// ─── Damage Type Indicator Colors ─────────────────────────────
+const DAMAGE_TYPE_DOT_COLORS = {
+  fire:      0xff3333,
+  cold:      0x4488ff,
+  poison:    0x44cc44,
+  lightning: 0xffdd00,
+};
+
 // ─── Elite Affix Display Names ──────────────────────────────────
 const AFFIX_DISPLAY = {
   fast: 'Fast',
@@ -669,6 +685,13 @@ window.Sprites = {
       const mHpRatio = m.hp / m.maxHp;
       sprite.hpBar.fillStyle(m.friendly ? 0x4488cc : 0xcc2222, 1);
       sprite.hpBar.fillRect(mBarX, mBarY, mBarW * mHpRatio, mBarH);
+
+      // Damage type indicator dot (non-physical only)
+      const dotColor = DAMAGE_TYPE_DOT_COLORS[m.damageType];
+      if (dotColor) {
+        sprite.hpBar.fillStyle(dotColor, 0.9);
+        sprite.hpBar.fillCircle(mBarX + mBarW + 5, mBarY + mBarH / 2, 3);
+      }
     }
   },
 
@@ -885,6 +908,13 @@ window.Sprites = {
       }
     }
 
+    // Loot beam for rare+ items
+    const rLower = (gi.rarity || '').toLowerCase();
+    if (LOOT_BEAM_RARITIES[rLower]) {
+      sprite._lootBeam = scene.add.graphics().setDepth(3);
+      sprite._lootBeamColor = LOOT_BEAM_RARITIES[rLower];
+    }
+
     return sprite;
   },
 
@@ -929,6 +959,21 @@ window.Sprites = {
         sparkle.fillRect(sx - 3, sy - 1, 6, 2);
       }
     }
+
+    // Loot beam: thin vertical light pillar for rare+ items
+    if (sprite._lootBeam) {
+      sprite._lootBeam.clear();
+      const beamAlpha = 0.4 + Math.sin(now / 500 + idHash * 1.1) * 0.4; // pulse 0.4–0.8 (actually 0.0–0.8 but sin range makes it 0.4±0.4)
+      const beamX = sprite._glowX;
+      const beamBaseY = sprite._baseY + bobOffset;
+      const beamH = 40;
+      // Core beam (2px wide)
+      sprite._lootBeam.fillStyle(sprite._lootBeamColor, beamAlpha * 0.8 * dimAlpha);
+      sprite._lootBeam.fillRect(beamX - 1, beamBaseY - beamH, 2, beamH);
+      // Softer outer glow (4px wide, lower alpha)
+      sprite._lootBeam.fillStyle(sprite._lootBeamColor, beamAlpha * 0.25 * dimAlpha);
+      sprite._lootBeam.fillRect(beamX - 2, beamBaseY - beamH, 4, beamH);
+    }
   },
 
   /** Remove sprites for items no longer in the seen set, or destroy ALL (for dungeon:enter). */
@@ -941,6 +986,7 @@ window.Sprites = {
         if (sprite._sparkles) {
           for (const sp of sprite._sparkles) sp.destroy();
         }
+        if (sprite._lootBeam) sprite._lootBeam.destroy();
         sprite.destroy();
       }
       scene.itemSprites.clear();
@@ -953,6 +999,7 @@ window.Sprites = {
         if (sprite._sparkles) {
           for (const sp of sprite._sparkles) sp.destroy();
         }
+        if (sprite._lootBeam) sprite._lootBeam.destroy();
         sprite.destroy();
         scene.itemSprites.delete(id);
       }

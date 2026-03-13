@@ -1769,6 +1769,22 @@ html, body {
   margin-top: 6px;
 }
 
+.skill-tooltip-damage {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff9944;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.skill-tooltip-damage-detail {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
 @keyframes tooltip-in {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }

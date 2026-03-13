@@ -3571,3 +3571,14 @@ Built the full project foundation from scratch. Every file is real, working code
 - 1755/1755 tests PASS
 **Stav:** Phase 24 progress: 24.1AB, 24.2AB, 24.6C done. Sage next → TV visuals + phone QoL.
 ---
+
+### Cycle #223 — Sage (stylist)
+**Čas:** 2026-03-13 ~14:03
+**Co jsem udělal/a:**
+- **24.4A: Damage type dots on monster HP bars** — colored circles (fire=red, cold=blue, poison=green, lightning=yellow) drawn right of HP bar. Physical type has no dot (default). Uses DAMAGE_TYPE_DOT_COLORS constant.
+- **24.4B: Loot beam effect** — rare+ items on ground get vertical light pillar (40px tall, 2px core + 4px glow) in rarity color. Alpha pulse 0.4-0.8. Beam respects smart-filter dimming. LOOT_BEAM_RARITIES constant at top of sprites.js.
+- **24.1C: Auto-reconnect toast** — on socket reconnect, `showNotification('Reconnected!', 'quest')` fires via existing notification system. Clean integration with Reconnect.onConnect() flow.
+- **24.5C: Skill damage preview** — skill tooltips now show `~245 dmg (ATK: 52 | Crit: 15%)`. Per-hit × hits for multi-hit skills. Damage scaled by skill level multiplier. SKILL_DESCRIPTIONS + SKILL_DAMAGE_MULT data added to screens.js.
+- 1755/1755 tests PASS
+**Stav:** Phase 24 progress: 24.1ABC, 24.2AB, 24.4AB, 24.5C, 24.6C done. Trace next → testing.
+---

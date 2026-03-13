@@ -134,6 +134,7 @@ socket.on('connect', () => {
 
   const wasReconnect = Reconnect.onConnect();
   if (wasReconnect) {
+    showNotification('Reconnected!', 'quest');
     // Re-join automatically if we had an active session.
     // Use joinedName (cached at join time) — NOT the input field, which may
     // have been cleared or may show the join screen placeholder.

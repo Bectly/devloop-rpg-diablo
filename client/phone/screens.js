@@ -473,21 +473,24 @@ window.Screens = (() => {
   }
 
   // ─── Skill Tooltip System ──────────────────────────────────
+  // Damage multiplier per skill level (mirrors server skill-levels.js DAMAGE_MULT)
+  const SKILL_DAMAGE_MULT = [1.0, 1.15, 1.30, 1.45, 1.60];
+
   const SKILL_DESCRIPTIONS = {
     warrior: [
-      { name: 'Whirlwind', desc: 'Spin attack dealing 3 hits to all nearby enemies within 70px. 0.6x per hit.', type: 'Spin' },
-      { name: 'Charging Strike', desc: 'Dash to nearest enemy. 2x damage + stun 2s. Trail damages enemies in path.', type: 'Charge' },
-      { name: 'Battle Shout', desc: 'Party gains +30% attack 8s. Terrorizes nearby enemies (flee 1.5s).', type: 'Buff+Fear' },
+      { name: 'Whirlwind', desc: 'Spin attack dealing 3 hits to all nearby enemies within 70px. 0.6x per hit.', type: 'Spin', damage: 0.6, hits: 3 },
+      { name: 'Charging Strike', desc: 'Dash to nearest enemy. 2x damage + stun 2s. Trail damages enemies in path.', type: 'Charge', damage: 2.0 },
+      { name: 'Battle Shout', desc: 'Party gains +30% attack 8s. Terrorizes nearby enemies (flee 1.5s).', type: 'Buff+Fear', damage: 0 },
     ],
     ranger: [
-      { name: 'Arrow Volley', desc: 'Fire 5 piercing arrows in a 30° cone. Each deals 0.6x damage. Pierces first target.', type: 'Volley' },
-      { name: 'Sniper Shot', desc: 'Heavy piercing shot dealing 3x damage through ALL targets in a line. Range 400px.', type: 'Sniper' },
-      { name: 'Shadow Step', desc: 'Teleport 100px forward. 100% dodge for 1s. Leaves shadow decoy drawing aggro 2s.', type: 'Movement' },
+      { name: 'Arrow Volley', desc: 'Fire 5 piercing arrows in a 30° cone. Each deals 0.6x damage. Pierces first target.', type: 'Volley', damage: 0.6, hits: 5 },
+      { name: 'Sniper Shot', desc: 'Heavy piercing shot dealing 3x damage through ALL targets in a line. Range 400px.', type: 'Sniper', damage: 3.0 },
+      { name: 'Shadow Step', desc: 'Teleport 100px forward. 100% dodge for 1s. Leaves shadow decoy drawing aggro 2s.', type: 'Movement', damage: 0 },
     ],
     mage: [
-      { name: 'Meteor Strike', desc: 'Fiery meteor dealing 2.5x spell damage. Explodes on impact (80px AOE). Fire damage.', type: 'Meteor' },
-      { name: 'Blizzard', desc: 'Icy storm around you dealing 1.2x × 3 hits. Slows enemies for 3s. Radius 120px.', type: 'Blizzard' },
-      { name: 'Chain Lightning', desc: 'Lightning bolt bouncing to 4 targets. 2x spell damage, 50% falloff per bounce.', type: 'Chain' },
+      { name: 'Meteor Strike', desc: 'Fiery meteor dealing 2.5x spell damage. Explodes on impact (80px AOE). Fire damage.', type: 'Meteor', damage: 2.5, useSpellPower: true },
+      { name: 'Blizzard', desc: 'Icy storm around you dealing 1.2x × 3 hits. Slows enemies for 3s. Radius 120px.', type: 'Blizzard', damage: 1.2, hits: 3, useSpellPower: true },
+      { name: 'Chain Lightning', desc: 'Lightning bolt bouncing to 4 targets. 2x spell damage, 50% falloff per bounce.', type: 'Chain', damage: 2.0, useSpellPower: true },
     ],
   };
 
@@ -529,6 +532,28 @@ window.Screens = (() => {
     descEl.className = 'skill-tooltip-desc';
     descEl.textContent = skillInfo.desc;
 
+    // Damage estimate based on current player stats
+    const dmgEl = document.createElement('div');
+    dmgEl.className = 'skill-tooltip-damage';
+    if (playerStats && skillInfo.damage > 0) {
+      const isSpell = skillInfo.useSpellPower === true;
+      const statValue = isSpell ? (playerStats.spellPower || 0) : (playerStats.attackPower || 0);
+      const statLabel = isSpell ? 'SPL' : 'ATK';
+      const lvMult = SKILL_DAMAGE_MULT[Math.min(skillLevel, 5) - 1] || 1.0;
+      const perHit = Math.floor(statValue * skillInfo.damage * lvMult);
+      const hits = skillInfo.hits || 1;
+      const totalDmg = perHit * hits;
+      const critPct = playerStats.critChance || 0;
+      if (hits > 1) {
+        dmgEl.innerHTML = `~${totalDmg} dmg <span class="skill-tooltip-damage-detail">(${perHit}&times;${hits}) | ${statLabel}: ${statValue} | Crit: ${critPct}%</span>`;
+      } else {
+        dmgEl.innerHTML = `~${perHit} dmg <span class="skill-tooltip-damage-detail">${statLabel}: ${statValue} | Crit: ${critPct}%</span>`;
+      }
+    } else if (playerStats && skillInfo.damage === 0) {
+      // Utility/buff skill — show stat summary
+      dmgEl.innerHTML = `<span class="skill-tooltip-damage-detail">ATK: ${playerStats.attackPower || 0} | SPL: ${playerStats.spellPower || 0} | Crit: ${playerStats.critChance || 0}%</span>`;
+    }
+
     const typeEl = document.createElement('div');
     typeEl.className = 'skill-tooltip-type';
     typeEl.textContent = skillInfo.type;
@@ -536,6 +561,9 @@ window.Screens = (() => {
     tooltip.appendChild(nameEl);
     tooltip.appendChild(statsEl);
     tooltip.appendChild(descEl);
+    if (dmgEl.innerHTML) {
+      tooltip.appendChild(dmgEl);
+    }
     tooltip.appendChild(typeEl);
 
     document.body.appendChild(tooltip);
