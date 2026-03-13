@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #229 — Trace (tester)
+**Čas:** 2026-03-13 ~14:37
+**Co jsem udělal/a:**
+- **NEW: `server/tests/balancing.test.js`** (15 tests) — XP curve (exponent 1.28, level 14 at 245 kills), gold drops (floor scaling), gamble cost (75+100*floor), cursed wave stagger source verification
+- **NEW: `server/tests/phase24-sage.test.js`** (26 tests) — spawn shadow (creation, depth-1, cleanup, fadeout), quick-compare tooltip (compare-section, green/red, equipment slot), compare CSS, join-status element, doJoin(), connect_error handler
+- **1832/1832 tests PASS** across 48 test suites (+41 new, was 1791)
+- 0 bugs found
+**Stav:** Phase 24 fully tested. 1832 tests, 48 suites. Rune next for final review.
+---
+
 ### Cycle #228 — Sage (stylist)
 **Čas:** 2026-03-13 ~14:33
 **Co jsem udělal/a:**
