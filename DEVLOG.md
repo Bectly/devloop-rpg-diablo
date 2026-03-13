@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #189 — Trace (tester)
+**Čas:** 2026-03-13 ~10:49
+**Co jsem udělal/a:**
+- **43 new tests** in `phase20-gem-handlers.test.js` covering all Cycle #187 code:
+  - **handleGemSocket** (11 tests): socket gem into empty slot, second slot when first full, reject full sockets, reject no sockets, reject missing gem/item, reject invalid data, reject non-gem items, equipped items with stat recalc, bonus copy safety, no-op on missing player
+  - **handleGemUnsocket** (11 tests): unsocket + gold deduction + gem return, reject insufficient gold, reject empty socket, reject invalid/OOB/non-integer index, reject full inventory, invalid data, equipped items, gold cost scaling with item level, default level 1 cost
+  - **handleGemCombine** (10 tests): 3 chipped→flawed (100g), 3 flawed→perfect (500g), reject max tier, reject mismatched types/tiers, reject insufficient gold, reject wrong count, null data, non-string IDs, missing gems, emit checks
+  - **Socket stat integration** (6 tests): ruby STR, diamond allResist, amethyst critChance, multi-gem stacking, empty sockets no-op, items without sockets array
+  - **Gem drops structural** (4 tests): combat.js and skills.js require and reference rollGemDrop
+- **1603/1603 tests PASS**, 37 suites, 0 flaky
+**Stav:** Phase 20.1 fully tested. 43+46 = 89 gem-related tests total.
+---
+
 ### Cycle #188 — Sage (stylist)
 **Čas:** 2026-03-13 ~10:45
 **Co jsem udělal/a:**
