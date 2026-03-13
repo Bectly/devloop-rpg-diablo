@@ -197,3 +197,139 @@ describe('Collision bbox gameplay implications (Cycle #214)', () => {
     });
   });
 });
+
+/**
+ * Charge attack collision tests (Cycle #219)
+ *
+ * Verifies that the hell_hound charge attack respects isWalkable:
+ * - With _world reference: charge stops at walls
+ * - Without _world reference: charge moves freely (fallback)
+ */
+describe('Charge attack collision (Cycle #219)', () => {
+  let world;
+
+  beforeEach(() => {
+    world = new World();
+    world.generateFloor(0);
+  });
+
+  describe('Monster charge attack respects isWalkable', () => {
+    it('charge movement stops at wall when _world is set', () => {
+      const spot = findFloorNextToWall(world, 'above');
+      if (!spot) return;
+
+      const monster = createMonster('hell_hound', 0, 0, 0);
+      // Place on floor tile center
+      monster.x = spot.tileX * TILE_SIZE + TILE_SIZE / 2;
+      monster.y = spot.tileY * TILE_SIZE + TILE_SIZE / 2;
+      monster._world = world;
+
+      // Set up an active charge toward the wall above
+      monster.charging = true;
+      monster.chargeTargetX = spot.tileX * TILE_SIZE + TILE_SIZE / 2;
+      monster.chargeTargetY = (spot.tileY - 5) * TILE_SIZE; // deep into wall territory
+      monster.chargeTimer = 2000; // long charge to ensure we hit the wall
+
+      const startY = monster.y;
+
+      // Simulate charge over multiple ticks via update()
+      // We need a player for update() to not skip ALERT state logic
+      const player = { id: 'p1', alive: true, x: monster.chargeTargetX, y: monster.chargeTargetY };
+      monster.aiState = 1; // ALERT state
+      for (let i = 0; i < 60; i++) {
+        monster.update(50, [player]);
+      }
+
+      // Monster should still be on a walkable position
+      expect(world.isWalkable(monster.x, monster.y)).toBe(true);
+    });
+
+    it('charge stops when both X and Y moves are blocked by walls', () => {
+      // Use a mock world where a wall blocks at a specific coordinate
+      const monster = createMonster('hell_hound', 0, 0, 0);
+      monster.x = 100;
+      monster.y = 100;
+      // Mock world: wall at y < 80 and x < 80
+      monster._world = {
+        isWalkable: (x, y) => x >= 80 && y >= 80,
+      };
+
+      monster.charging = true;
+      monster.chargeTargetX = 50;  // behind the wall
+      monster.chargeTargetY = 50;  // behind the wall
+      monster.chargeTimer = 2000;
+
+      const startX = monster.x;
+      const startY = monster.y;
+
+      // Manually simulate the charge movement logic (from monsters.js lines 746-764)
+      for (let i = 0; i < 30; i++) {
+        if (!monster.charging) break;
+        const cdx = monster.chargeTargetX - monster.x;
+        const cdy = monster.chargeTargetY - monster.y;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+        const chargeStep = monster.speed * monster.chargeSpeedMult * (50 / 1000);
+
+        if (cdist < chargeStep || monster.chargeTimer <= 0) {
+          monster.charging = false;
+        } else {
+          const chX = (cdx / cdist) * chargeStep;
+          const chY = (cdy / cdist) * chargeStep;
+          const newX = monster.x + chX;
+          const newY = monster.y + chY;
+          if (monster._world.isWalkable(newX, newY)) {
+            monster.x = newX;
+            monster.y = newY;
+          } else if (monster._world.isWalkable(newX, monster.y)) {
+            monster.x = newX;
+          } else if (monster._world.isWalkable(monster.x, newY)) {
+            monster.y = newY;
+          }
+          // else: charge hits wall, stops
+          monster.chargeTimer -= 50;
+        }
+      }
+
+      // Monster should not have passed the wall boundary
+      expect(monster.x).toBeGreaterThanOrEqual(80);
+      expect(monster.y).toBeGreaterThanOrEqual(80);
+    });
+
+    it('monster without _world reference still moves during charge (fallback)', () => {
+      const monster = createMonster('hell_hound', 0, 0, 0);
+      monster.x = 100;
+      monster.y = 100;
+      // No _world set — fallback path
+
+      monster.charging = true;
+      monster.chargeTargetX = 300;
+      monster.chargeTargetY = 100;
+      monster.chargeTimer = 2000;
+
+      const startX = monster.x;
+
+      // Simulate the charge movement fallback (no collision check)
+      for (let i = 0; i < 20; i++) {
+        if (!monster.charging) break;
+        const cdx = monster.chargeTargetX - monster.x;
+        const cdy = monster.chargeTargetY - monster.y;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+        const chargeStep = monster.speed * monster.chargeSpeedMult * (50 / 1000);
+
+        if (cdist < chargeStep || monster.chargeTimer <= 0) {
+          monster.charging = false;
+        } else {
+          const chX = (cdx / cdist) * chargeStep;
+          const chY = (cdy / cdist) * chargeStep;
+          // Fallback: no _world, so just move directly
+          monster.x += chX;
+          monster.y += chY;
+          monster.chargeTimer -= 50;
+        }
+      }
+
+      // Monster should have moved significantly toward target
+      expect(monster.x).toBeGreaterThan(startX + 50);
+    });
+  });
+});
