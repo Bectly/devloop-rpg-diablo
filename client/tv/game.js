@@ -857,6 +857,56 @@ socket.on('player:respawn', (data) => {
   }
 });
 
+socket.on('hardcore:death', (data) => {
+  console.log(`[TV] HARDCORE DEATH: ${data.name || 'unknown'}`);
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      // Red screen flash
+      const flash = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0xff0000, 0.4).setDepth(999).setScrollFactor(0);
+      scene.tweens.add({
+        targets: flash,
+        alpha: 0,
+        duration: 1200,
+        onComplete: () => flash.destroy(),
+      });
+
+      // Big dramatic skull text
+      const skullText = scene.add.text(GAME_W / 2, GAME_H / 2 - 40, '☠ HARDCORE DEATH ☠', {
+        fontSize: '48px', fill: '#ff2222', fontFamily: 'Courier New',
+        fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 6,
+        backgroundColor: '#00000099', padding: { x: 16, y: 8 },
+      }).setOrigin(0.5).setDepth(1000).setScrollFactor(0).setAlpha(0);
+
+      const nameText = scene.add.text(GAME_W / 2, GAME_H / 2 + 20, data.name || 'A hero', {
+        fontSize: '28px', fill: '#ff6666', fontFamily: 'Courier New',
+        stroke: '#000000', strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(1000).setScrollFactor(0).setAlpha(0);
+
+      const subtitleText = scene.add.text(GAME_W / 2, GAME_H / 2 + 55, `Lv${data.level || '?'} ${data.characterClass || ''} — Rest in Peace`, {
+        fontSize: '16px', fill: '#cc4444', fontFamily: 'Courier New',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(1000).setScrollFactor(0).setAlpha(0);
+
+      // Fade in
+      scene.tweens.add({ targets: skullText, alpha: 1, duration: 400, ease: 'Power2' });
+      scene.tweens.add({ targets: nameText, alpha: 1, duration: 400, delay: 200, ease: 'Power2' });
+      scene.tweens.add({ targets: subtitleText, alpha: 1, duration: 400, delay: 400, ease: 'Power2' });
+
+      // Fade out after 4 seconds
+      scene.time.delayedCall(4000, () => {
+        scene.tweens.add({ targets: [skullText, nameText, subtitleText], alpha: 0, duration: 800, onComplete: () => {
+          skullText.destroy(); nameText.destroy(); subtitleText.destroy();
+        }});
+      });
+
+      // Camera shake
+      scene.cameras.main.shake(500, 0.008);
+    }
+  }
+});
+
 socket.on('chat:message', (data) => {
   if (window.gameInstance) {
     const scene = window.gameInstance.scene.getScene('Game');

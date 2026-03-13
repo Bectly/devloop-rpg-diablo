@@ -8,6 +8,7 @@ let playerId = null;
 let playerStats = null;
 let inventoryData = null;
 let selectedClass = 'warrior';
+let hardcoreMode = false;
 let joinedName = null;   // cached at join time so reconnect uses correct name
 let currentDialogue = null;
 let typewriterInterval = null;
@@ -69,17 +70,28 @@ document.querySelectorAll('.class-card').forEach(card => {
   });
 });
 
+// ─── Hardcore Toggle ──────────────────────────────────────────
+document.getElementById('hc-toggle').addEventListener('click', () => {
+  hardcoreMode = !hardcoreMode;
+  document.getElementById('hc-toggle').classList.toggle('active', hardcoreMode);
+});
+document.getElementById('hc-toggle').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  hardcoreMode = !hardcoreMode;
+  document.getElementById('hc-toggle').classList.toggle('active', hardcoreMode);
+});
+
 document.getElementById('btn-join').addEventListener('touchstart', (e) => {
   e.preventDefault();
   Sound.unlock();
   joinedName = document.getElementById('name-input').value.trim() || 'Hero';
-  socket.emit('join', { name: joinedName, characterClass: selectedClass });
+  socket.emit('join', { name: joinedName, characterClass: selectedClass, hardcore: hardcoreMode });
 });
 // Fallback for desktop testing
 document.getElementById('btn-join').addEventListener('click', () => {
   Sound.unlock();
   joinedName = document.getElementById('name-input').value.trim() || 'Hero';
-  socket.emit('join', { name: joinedName, characterClass: selectedClass });
+  socket.emit('join', { name: joinedName, characterClass: selectedClass, hardcore: hardcoreMode });
 });
 
 // ─── Socket Events ──────────────────────────────────────────────
@@ -119,6 +131,31 @@ socket.on('joined', (data) => {
   if ('wakeLock' in navigator) {
     navigator.wakeLock.request('screen').catch(() => {});
   }
+});
+
+socket.on('hardcore:death', (data) => {
+  // Show dramatic HC death overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'hc-death-overlay';
+  overlay.innerHTML = `
+    <div class="hc-death-skull">&#9760;</div>
+    <div class="hc-death-title">HARDCORE DEATH</div>
+    <div class="hc-death-stats">
+      <div>Your hero <span>${data.name}</span> has fallen forever.</div>
+      <div>Level <span>${data.level}</span> &bull; <span>${data.kills}</span> kills &bull; <span>${data.gold}</span> gold</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  // Return to join screen after 5 seconds
+  setTimeout(() => {
+    overlay.remove();
+    joinScreen.classList.remove('hidden');
+    controller.classList.add('hidden');
+    playerId = null;
+    playerStats = null;
+    hardcoreMode = false;
+    document.getElementById('hc-toggle').classList.remove('active');
+  }, 5000);
 });
 
 let _prevSetBonusKeys = new Set();
@@ -411,7 +448,15 @@ function flashDamage() {
 function updateHUD(stats) {
   if (!stats) return;
 
-  document.getElementById('hud-name').textContent = stats.name;
+  const hudName = document.getElementById('hud-name');
+  hudName.textContent = stats.name;
+  // Append HC badge if hardcore character
+  if (stats.hardcore) {
+    const badge = document.createElement('span');
+    badge.className = 'hc-badge';
+    badge.textContent = 'HC';
+    hudName.appendChild(badge);
+  }
 
   // Level display — show paragon suffix when at max level
   const MAX_LEVEL = 30;

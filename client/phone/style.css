@@ -3289,3 +3289,95 @@ html, body {
   color: #7cf;
   line-height: 1;
 }
+
+/* ─── Hardcore Toggle ─────────────────────────────────────── */
+.hc-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px auto;
+  padding: 8px 20px;
+  border: 2px solid #444;
+  border-radius: 8px;
+  background: rgba(40, 10, 10, 0.3);
+  color: #888;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.hc-toggle.active {
+  border-color: #cc2222;
+  background: rgba(200, 20, 20, 0.2);
+  color: #ff4444;
+  box-shadow: 0 0 15px rgba(200, 20, 20, 0.3);
+}
+.hc-toggle .hc-skull {
+  font-size: 20px;
+  filter: grayscale(1);
+  transition: filter 0.3s;
+}
+.hc-toggle.active .hc-skull {
+  filter: none;
+}
+.hc-toggle .hc-label {
+  text-transform: uppercase;
+}
+
+/* ─── Hardcore Death Screen ───────────────────────────────── */
+.hc-death-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: hc-fade-in 0.5s ease;
+}
+.hc-death-overlay .hc-death-skull {
+  font-size: 80px;
+  animation: hc-pulse 1.5s ease-in-out infinite;
+}
+.hc-death-overlay .hc-death-title {
+  font-size: 24px;
+  color: #cc2222;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin: 16px 0 8px;
+}
+.hc-death-overlay .hc-death-stats {
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.8;
+}
+.hc-death-overlay .hc-death-stats span {
+  color: #cc8800;
+  font-weight: bold;
+}
+@keyframes hc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes hc-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* ─── Hardcore Badge (HUD) ────────────────────────────────── */
+.hc-badge {
+  display: inline-block;
+  background: #cc2222;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  letter-spacing: 1px;
+  vertical-align: middle;
+}

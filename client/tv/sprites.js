@@ -30,6 +30,10 @@ window.Sprites = {
       fontSize: '12px', fill: '#ffffff', fontFamily: 'Courier New',
       backgroundColor: '#00000088', padding: { x: 3, y: 1 },
     }).setOrigin(0.5).setDepth(11);
+    sprite.hcBadge = scene.add.text(0, 0, '☠ HC', {
+      fontSize: '10px', fill: '#ff4444', fontFamily: 'Courier New',
+      backgroundColor: '#33000088', padding: { x: 2, y: 0 },
+    }).setOrigin(0.5).setDepth(12).setVisible(false);
     sprite.hpBar = scene.add.graphics().setDepth(11);
     scene.playerSprites.set(p.id, sprite);
     return sprite;
@@ -42,6 +46,12 @@ window.Sprites = {
     sprite.y += (p.y - sprite.y) * 0.3;
     sprite.nameText.setPosition(sprite.x, sprite.y - 28);
 
+    // HC badge positioning
+    if (sprite.hcBadge) {
+      sprite.hcBadge.setPosition(sprite.nameText.x + sprite.nameText.width / 2 + 18, sprite.nameText.y);
+      sprite.hcBadge.setVisible(p.hardcore === true);
+    }
+
     // Texture swap + disconnected ghost effect
     if (p.disconnected) {
       // Ghost sprite: semi-transparent with pulsing effect
@@ -50,6 +60,10 @@ window.Sprites = {
     } else if (p.isDying) {
       sprite.setTexture('player_dying');
       sprite.setAlpha(0.5 + Math.sin(Date.now() / 200) * 0.3);
+      // HC death: red tint
+      if (p.hardcore) {
+        sprite.setTint(0xff2222);
+      }
     } else if (p.alive) {
       sprite.setTexture(`player_${p.characterClass}`);
       // Debuff visual tint on player sprite
@@ -164,6 +178,7 @@ window.Sprites = {
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
         if (sprite.dcLabel) sprite.dcLabel.destroy();
+        if (sprite.hcBadge) { sprite.hcBadge.destroy(); sprite.hcBadge = null; }
         if (sprite.auraGlow) sprite.auraGlow.destroy();
         sprite.destroy();
       }
@@ -175,6 +190,7 @@ window.Sprites = {
         if (sprite.nameText) sprite.nameText.destroy();
         if (sprite.hpBar) sprite.hpBar.destroy();
         if (sprite.dcLabel) sprite.dcLabel.destroy();
+        if (sprite.hcBadge) { sprite.hcBadge.destroy(); sprite.hcBadge = null; }
         if (sprite.auraGlow) sprite.auraGlow.destroy();
         sprite.destroy();
         scene.playerSprites.delete(id);

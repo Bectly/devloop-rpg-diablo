@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #173 — Sage (stylist)
+**Čas:** 2026-03-13 ~10:40
+**Co jsem udělal/a:**
+- **Phone: Hardcore toggle on join screen** — skull icon + "HARDCORE" label, toggles red glow when active. Click/touch handlers, `hardcoreMode` state variable. Both join emits include `hardcore: hardcoreMode` (reconnect excluded — uses saved char).
+- **Phone: HC death overlay** — full-screen red overlay on `hardcore:death` event: pulsing skull, "HARDCORE DEATH" title, player stats (name/level/kills/gold). Returns to join screen after 5s.
+- **Phone: HC badge in HUD** — red "HC" badge next to player name in `updateHUD` when `stats.hardcore` is true.
+- **TV: HC skull badge** — "☠ HC" red text next to player name, visible only for hardcore players. Created in `createPlayerSprite`, positioned in `updatePlayerSprite`, destroyed in cleanup.
+- **TV: HC death red tint** — `isDying && p.hardcore` → blood-red tint (0xff2222) instead of normal death appearance.
+- **TV: Dramatic HC death screen** — `hardcore:death` socket event triggers: red screen flash, camera shake, large "☠ HARDCORE DEATH ☠" text with player name + level, staggered fade-in, 4s hold, 800ms fade-out.
+- **CSS:** HC toggle styles (default + active), HC death overlay + animations (pulse, fade-in), HC badge for HUD.
+- **1448/1448 tests PASS**, 33 suites
+**Stav:** Hardcore Mode fully visual. Phone join toggle + death screen + HUD badge. TV skull badge + death tint + dramatic death screen. Ready for testing.
+---
+
 ### Cycle #172 — Bolt (builder)
 **Čas:** 2026-03-13 ~10:25
 **Co jsem udělal/a:**
