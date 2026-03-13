@@ -24,9 +24,6 @@ const ZONE_COLORS = {
   inferno: '#ff6622',
   abyss: '#8844dd',
 };
-let isDead = false;
-let deathCountdown = 0;
-let deathInterval = null;
 let buttonsInitialized = false;
 let notificationCount = 0;
 let shopData = null;
@@ -38,6 +35,8 @@ const joinScreen = document.getElementById('join-screen');
 const controller = document.getElementById('controller');
 const inventoryScreen = document.getElementById('inventory-screen');
 const dialogueScreen = document.getElementById('dialogue-screen');
+
+DeathVictory.init(socket);
 
 // ─── Join Screen — Class Card Selection ─────────────────────────
 document.querySelectorAll('.class-card').forEach(card => {
@@ -248,11 +247,11 @@ socket.on('damage:taken', (data) => {
 });
 
 socket.on('player:death', (data) => {
-  showDeathScreen(data.deathTimer, data.goldDropped);
+  DeathVictory.showDeathScreen(data.deathTimer, data.goldDropped);
 });
 
 socket.on('player:respawn', (data) => {
-  hideDeathScreen();
+  DeathVictory.hideDeathScreen();
 });
 
 socket.on('shop:inventory', (data) => {
@@ -297,7 +296,7 @@ socket.on('quest:claimed', (data) => {
 });
 
 socket.on('chat:message', (data) => {
-  showChatMessage(data.name, data.text);
+  ChatUI.showChatMessage(data.name, data.text);
 });
 
 socket.on('leaderboard:data', (data) => {
@@ -306,16 +305,32 @@ socket.on('leaderboard:data', (data) => {
 
 socket.on('game:victory', (data) => {
   console.log('[Phone] VICTORY!', data);
+
+  // Dismiss any open dialogue to prevent overlay stacking
+  if (dialogueScreen && !dialogueScreen.classList.contains('hidden')) {
+    dialogueScreen.style.display = 'none';
+    currentDialogue = null;
+    if (typewriterInterval) {
+      clearInterval(typewriterInterval);
+      typewriterInterval = null;
+    }
+    staggerTimeouts.forEach(id => clearTimeout(id));
+    staggerTimeouts = [];
+    const textEl = document.getElementById('dialogue-text');
+    if (textEl) textEl.classList.remove('typing');
+    _hideSyncBar();
+  }
+
   Sound.victory();
 
   // Victory haptic pattern
   if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
 
-  showVictoryScreen(data);
+  DeathVictory.showVictoryScreen(data);
 });
 
 socket.on('game:restarted', () => {
-  hideVictoryScreen();
+  DeathVictory.hideVictoryScreen();
 });
 
 // ─── Reconnect Overlay — delegated to reconnect.js (window.Reconnect) ──
@@ -348,142 +363,6 @@ function flashDamage() {
     overlay.style.opacity = '0';
     setTimeout(() => overlay.classList.add('hidden'), 200);
   }, 100);
-}
-
-// ─── Death Screen ───────────────────────────────────────────────
-function showDeathScreen(timerMs, goldDropped) {
-  isDead = true;
-  deathCountdown = timerMs || 5000;
-
-  const deathEl = document.getElementById('death-overlay');
-  if (!deathEl) return;
-  deathEl.classList.remove('hidden');
-
-  const goldText = goldDropped > 0 ? `Lost ${goldDropped} gold` : '';
-  document.getElementById('death-gold-text').textContent = goldText;
-
-  // Strong haptic
-  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-
-  // Countdown
-  if (deathInterval) clearInterval(deathInterval);
-  deathInterval = setInterval(() => {
-    deathCountdown -= 100;
-    if (deathCountdown < 0) deathCountdown = 0;
-    const secs = (deathCountdown / 1000).toFixed(1);
-    document.getElementById('death-timer-text').textContent = `Reviving in ${secs}s`;
-
-    if (deathCountdown <= 0) {
-      hideDeathScreen();
-    }
-  }, 100);
-}
-
-function hideDeathScreen() {
-  isDead = false;
-  if (deathInterval) {
-    clearInterval(deathInterval);
-    deathInterval = null;
-  }
-  const deathEl = document.getElementById('death-overlay');
-  if (deathEl) deathEl.classList.add('hidden');
-}
-
-// ─── Victory Screen ──────────────────────────────────────────────
-function showVictoryScreen(data) {
-  // Dismiss any open dialogue to prevent overlay stacking
-  if (dialogueScreen && !dialogueScreen.classList.contains('hidden')) {
-    dialogueScreen.style.display = 'none';
-    currentDialogue = null;
-    if (typewriterInterval) {
-      clearInterval(typewriterInterval);
-      typewriterInterval = null;
-    }
-    staggerTimeouts.forEach(id => clearTimeout(id));
-    staggerTimeouts = [];
-    const textEl = document.getElementById('dialogue-text');
-    if (textEl) textEl.classList.remove('typing');
-    _hideSyncBar();
-  }
-
-  const victoryEl = document.getElementById('victory-overlay');
-  if (!victoryEl) return;
-  victoryEl.classList.remove('hidden');
-
-  // Time display
-  const totalSecs = Math.floor((data.totalTime || 0) / 1000);
-  const mins = Math.floor(totalSecs / 60);
-  const secs = totalSecs % 60;
-  document.getElementById('victory-time').textContent = `Time: ${mins}m ${secs.toString().padStart(2, '0')}s`;
-
-  // Player stats
-  const statsEl = document.getElementById('victory-stats');
-  statsEl.innerHTML = '';
-  const classIcons = { warrior: '\u2694\uFE0F', ranger: '\uD83C\uDFF9', mage: '\uD83D\uDD2E' };
-
-  // Find MVP (most kills)
-  const players = data.players || [];
-  let mvpIndex = -1;
-  let maxKills = -1;
-  for (let i = 0; i < players.length; i++) {
-    if ((players[i].kills || 0) > maxKills) {
-      maxKills = players[i].kills || 0;
-      mvpIndex = i;
-    }
-  }
-
-  for (let i = 0; i < players.length; i++) {
-    const p = players[i];
-    const card = document.createElement('div');
-    card.className = 'victory-player-card';
-    if (p.characterClass) card.setAttribute('data-class', p.characterClass);
-    if (i === mvpIndex && maxKills > 0) card.classList.add('mvp');
-    card.innerHTML = `
-      <div class="victory-player-icon">${classIcons[p.characterClass] || '\u2694\uFE0F'}</div>
-      <div class="victory-player-info">
-        <div class="victory-player-name">${p.name}</div>
-        <div class="victory-player-class">${p.characterClass}</div>
-        <div class="victory-player-stats">\u2B06\uFE0F Lv.${p.level} \u00B7 \uD83D\uDC80 ${p.kills} \u00B7 \uD83E\uDE99 ${p.gold}</div>
-      </div>
-    `;
-    statsEl.appendChild(card);
-  }
-
-  // New Game button handler
-  const newGameBtn = document.getElementById('btn-new-game');
-  // Remove old listener by cloning
-  const freshBtn = newGameBtn.cloneNode(true);
-  newGameBtn.parentNode.replaceChild(freshBtn, newGameBtn);
-
-  const handleNewGame = () => {
-    Sound.uiClick();
-    if (navigator.vibrate) navigator.vibrate(50);
-    socket.emit('game:restart');
-    hideVictoryScreen();
-  };
-  freshBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    handleNewGame();
-  });
-  freshBtn.addEventListener('click', handleNewGame);
-
-  // "View Leaderboard" button on victory screen
-  const ldbVicBtn = document.getElementById('btn-victory-leaderboard');
-  if (ldbVicBtn) {
-    const freshLdbBtn = ldbVicBtn.cloneNode(true);
-    ldbVicBtn.parentNode.replaceChild(freshLdbBtn, ldbVicBtn);
-    const openLdb = () => {
-      Sound.uiClick();
-      Screens.toggleLeaderboard(socket);
-    };
-    freshLdbBtn.addEventListener('touchstart', (e) => { e.preventDefault(); openLdb(); });
-    freshLdbBtn.addEventListener('click', openLdb);
-  }
-}
-
-function hideVictoryScreen() {
-  const victoryEl = document.getElementById('victory-overlay');
-  if (victoryEl) victoryEl.classList.add('hidden');
 }
 
 // ─── HUD Update ─────────────────────────────────────────────────
@@ -560,8 +439,8 @@ function updateHUD(stats) {
   }
 
   // Check if respawned
-  if (isDead && stats.alive && !stats.isDying) {
-    hideDeathScreen();
+  if (DeathVictory.isDead() && stats.alive && !stats.isDying) {
+    DeathVictory.hideDeathScreen();
   }
 
   // Update debuff indicators
@@ -587,7 +466,7 @@ function initJoystick() {
   });
 
   joystick.on('move', (evt, data) => {
-    if (!data || !data.vector || isDead) return;
+    if (!data || !data.vector || DeathVictory.isDead()) return;
     socket.emit('move', {
       dx: data.vector.x,
       dy: -data.vector.y,
@@ -607,13 +486,13 @@ function initButtons() {
   // Attack
   document.getElementById('btn-attack').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     Sound.hit(0.3);
     socket.emit('attack');
     hapticFeedback();
   });
   document.getElementById('btn-attack').addEventListener('click', () => {
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     Sound.hit(0.3);
     socket.emit('attack');
   });
@@ -622,12 +501,12 @@ function initButtons() {
   for (let i = 0; i < 3; i++) {
     document.getElementById(`btn-skill-${i}`).addEventListener('touchstart', (e) => {
       e.preventDefault();
-      if (isDead) return;
+      if (DeathVictory.isDead()) return;
       socket.emit('skill', { skillIndex: i });
       hapticFeedback();
     });
     document.getElementById(`btn-skill-${i}`).addEventListener('click', () => {
-      if (isDead) return;
+      if (DeathVictory.isDead()) return;
       socket.emit('skill', { skillIndex: i });
     });
   }
@@ -635,34 +514,34 @@ function initButtons() {
   // Health Potion
   document.getElementById('btn-potion').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     socket.emit('use:potion', { type: 'health' });
   });
   document.getElementById('btn-potion').addEventListener('click', () => {
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     socket.emit('use:potion', { type: 'health' });
   });
 
   // Interact
   document.getElementById('btn-interact').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     socket.emit('interact');
   });
   document.getElementById('btn-interact').addEventListener('click', () => {
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     socket.emit('interact');
   });
 
   // Pickup (LOOT button)
   document.getElementById('btn-pickup').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     Sound.uiClick();
     socket.emit('loot:pickup_nearest');
   });
   document.getElementById('btn-pickup').addEventListener('click', () => {
-    if (isDead) return;
+    if (DeathVictory.isDead()) return;
     Sound.uiClick();
     socket.emit('loot:pickup_nearest');
   });
@@ -700,9 +579,9 @@ function initButtons() {
   if (chatBtn) {
     chatBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      toggleChatInput();
+      ChatUI.toggleChatInput();
     });
-    chatBtn.addEventListener('click', () => toggleChatInput());
+    chatBtn.addEventListener('click', () => ChatUI.toggleChatInput());
   }
 
   // Leaderboard
@@ -753,78 +632,8 @@ function showSaveToast(text) {
   setTimeout(() => toast.remove(), 2000);
 }
 
-// ─── Chat ──────────────────────────────────────────────────────
-const chatMessages = [];
-const MAX_CHAT_DISPLAY = 3;
-
-function showChatMessage(name, text) {
-  chatMessages.push({ name, text, time: Date.now() });
-  if (chatMessages.length > 10) chatMessages.shift();
-  renderChatMessages();
-}
-
-function renderChatMessages() {
-  let container = document.getElementById('chat-messages');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'chat-messages';
-    document.getElementById('controller').appendChild(container);
-  }
-  // Show last N messages (safe DOM creation — no innerHTML with user text)
-  const recent = chatMessages.slice(-MAX_CHAT_DISPLAY);
-  container.innerHTML = '';
-  for (const m of recent) {
-    const row = document.createElement('div');
-    row.className = 'chat-msg';
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'chat-name';
-    nameSpan.textContent = m.name + ':';
-    row.appendChild(nameSpan);
-    row.appendChild(document.createTextNode(' ' + m.text));
-    container.appendChild(row);
-  }
-  // Auto-fade after 5s
-  clearTimeout(container._fadeTimer);
-  container.classList.remove('fading');
-  container._fadeTimer = setTimeout(() => container.classList.add('fading'), 5000);
-}
-
-function sendChat() {
-  const input = document.getElementById('chat-input');
-  if (!input) return;
-  const text = input.value.trim();
-  if (!text) return;
-  socket.emit('chat:send', { text });
-  input.value = '';
-  input.blur();
-  toggleChatInput(false);
-}
-
-function toggleChatInput(show) {
-  const wrapper = document.getElementById('chat-wrapper');
-  if (!wrapper) return;
-  if (show === undefined) show = wrapper.classList.contains('collapsed');
-  wrapper.classList.toggle('collapsed', !show);
-  if (show) {
-    const input = document.getElementById('chat-input');
-    if (input) input.focus();
-  }
-}
-
-// Wire chat send
-document.addEventListener('DOMContentLoaded', () => {
-  const sendBtn = document.getElementById('chat-send');
-  if (sendBtn) {
-    sendBtn.addEventListener('touchstart', (e) => { e.preventDefault(); sendChat(); });
-    sendBtn.addEventListener('click', () => sendChat());
-  }
-  const chatInput = document.getElementById('chat-input');
-  if (chatInput) {
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
-    });
-  }
-});
+// ─── Chat — delegated to chat-ui.js (window.ChatUI) ──────────
+ChatUI.init(socket);
 
 // ─── Inventory ──────────────────────────────────────────────────
 function openInventory() {

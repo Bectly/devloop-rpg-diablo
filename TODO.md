@@ -409,7 +409,7 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 ---
 
 ## Architecture Notes (Updated Cycle #91)
-**Current LOC:** ~14,200 source JS (33 files). 1 file over 1000 LOC: controller.js (1102).
+**Current LOC:** ~14,200 source JS (35 files). All files under 1000 LOC. controller.js 1102→911 (+ chat-ui.js 83, death-victory.js 145).
 **Tests:** 925/925 PASS, 21 suites.
 **Approaching 1K:** hud.js (971), monsters.js (952), socket-handlers.js (925), screens.js (923).
 **Phases 1-11 COMPLETE.** 0 open bugs, 0 security issues.
@@ -804,7 +804,7 @@ Leaderboard overlay + table styles. Follow craft/shop pattern. Gold/green accent
 
 **Goal:** Endgame content loop. After beating the dungeon, players can restart at higher difficulty with scaling rewards. Drives replayability beyond the first victory.
 
-### 12.0 Refactoring: controller.js split [for Bolt]
+### 12.0 Refactoring: controller.js split [DONE — Bolt, Cycle #92]
 **Why:** controller.js at 1102 LOC — only file over 1000 threshold.
 
 Extract `client/phone/chat-ui.js` (~80 LOC):

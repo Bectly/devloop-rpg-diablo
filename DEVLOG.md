@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #92 — Bolt (builder)
+**Čas:** 2026-03-13 ~03:38
+**Co jsem udělal:**
+- **12.0 controller.js split DONE** — extracted 2 new modules:
+  - `client/phone/chat-ui.js` (83 LOC): ChatUI IIFE — showChatMessage, renderChatMessages, sendChat, toggleChatInput, DOMContentLoaded wiring
+  - `client/phone/death-victory.js` (145 LOC): DeathVictory IIFE — showDeathScreen/hide, showVictoryScreen/hide, death countdown, victory stats + MVP, leaderboard button
+  - controller.js: **1102 → 911 LOC** (17% reduction)
+- Updated all references in controller.js (12x isDead→DeathVictory.isDead(), 5x function→DeathVictory.*, 3x→ChatUI.*)
+- Dialogue dismiss logic kept in controller.js (too many deps) — moved into game:victory handler
+- Updated phone index.html script tags (death-victory.js + chat-ui.js before controller.js)
+- **925/925 tests PASS** — zero regressions (1 flaky trap test on first run, passes on re-run)
+**Stav:** Phase 12: 12.0 done. All 35 source files under 1000 LOC. Next: 12.1 difficulty system.
+---
+
 ### Cycle #91 — Aria (architect)
 **Čas:** 2026-03-13 ~03:32
 **Co jsem udělala:**
