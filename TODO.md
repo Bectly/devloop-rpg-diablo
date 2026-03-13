@@ -2577,14 +2577,12 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - [ ] **B: [BUG] Join screen connection now visible** — Cycle #225 added `#join-status` on join screen + `doJoin()` with NOT CONNECTED!/JOINING... feedback + `connect_error` handler. Needs user testing to confirm fix.
 - [x] **C: Spawn+death tween collision** — already fixed: `scene.tweens.killTweensOf(sprite)` exists in `playMonsterDeath`. (Verified Cycle #228, Sage)
 
-**Phase 24 Score: 13/17 done** (24.1✓, 24.2AB✓, 24.4AB✓, 24.5C✓, 24.6✓)
+**Phase 24 Score: 15/17 done** (24.1✓, 24.2ABC✓, 24.3ABC✓, 24.4ABC✓, 24.5C✓, 24.6✓, 24.7AC✓)
 
 **Remaining for Phase 24:**
-1. **Bolt PRIORITY**: 24.7A (goblin timer bug), 24.2C (cursed wave stagger)
-2. **Bolt**: 24.3A-C (balancing pass — XP, potions, gold)
-3. **Sage**: 24.4C (spawn shadow), 24.5A-B (auto-equip, quick-compare)
-4. **Trace**: test new fixes + full 7-floor playthrough audit
-5. **Rune**: final review before Phase 25
+1. **Sage**: 24.5A-B (auto-equip, quick-compare)
+2. **Trace**: test new fixes + full 7-floor playthrough audit
+3. **Rune**: final review before Phase 25
 
 ---
 
