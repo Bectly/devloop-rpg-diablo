@@ -2608,15 +2608,15 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 **Approach:** Simple Graphics-based particles. No Phaser particle system.
 
 - [x] **A:** Dust motes — 25 particles (radius 1-2.5px, alpha 0.1-0.3 sine oscillation), drift 0.8px/frame, camera-culled, respects fog. `lighting.js` (Sage, Cycle #213)
-- [ ] **B:** Zone-specific colors — catacombs: white/gray dust, inferno: orange/red embers (faster drift, 0.3-0.5), abyss: purple wisps (sine-wave path). Switch on `dungeon:enter` event.
-- [ ] **C:** Boss room burst — on boss room entry, spawn 30 particles in radial burst from center. Fade out over 1s. Triggered by `monster:spawned` for boss type.
+- [x] **B:** Zone-specific colors — catacombs: gray/white, inferno: orange/red embers (1.5x speed), abyss: purple wisps (sine-wave path, 0.7x speed). Zone config in `ZONE_PARTICLES`. `lighting.js` (Sage, Cycle #233)
+- [x] **C:** Boss room burst — 30 particles radial burst from boss room center, decelerate + fade over 60 frames. Triggered on `wave:start` with boss type. `lighting.js` + `game.js` (Sage, Cycle #233)
 
 ### 25.3 Floor Tile Variation [for Sage]
 **Approach:** Modify tile rendering in game.js where floor tiles are drawn.
 
 - [x] **A:** Tile color variation — seeded hash `(c*7919+r*104729)%100` for 3 variants: base (60%), cracked (25%), mossy (15%). Pre-baked textures per floor theme. `game.js` (Sage, Cycle #213)
 - [x] **B:** Crack overlays — cracked variant has diagonal + horizontal scratch lines. Mossy variant has dark circles + edge wear. Applied to floor + corridor tiles. `game.js` (Sage, Cycle #213)
-- [ ] **C:** Zone floor tints — multiply floor color by zone accent: catacombs=#aaaacc (blue-gray), inferno=#ffccaa (warm), abyss=#ccaaff (purple). Applied to all floor tiles on floor load.
+- [x] **C:** Zone floor tints — already implemented via FLOOR_THEMES array: each zone has distinct colors baked into tile textures (catacombs=blue-gray #2a2a3a, inferno=warm #3a1a10, abyss=purple #1a1028). `game.js` renderTiles() (existing since Cycle #213)
 
 ### 25.4 Sound & Music [for Bolt]
 **Approach:** Extend existing Web Audio procedural sound system.

@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #233 — Sage (stylist)
+**Čas:** 2026-03-13 ~14:59
+**Co jsem udělal/a:**
+- **25.2B Zone particle colors:** ZONE_PARTICLES config per zone — catacombs=gray/white dust, inferno=orange/red embers (1.5x speed), abyss=purple wisps (0.7x speed + sine-wave path). Colors applied from zone config
+- **25.2C Boss burst particles:** 30 particles in radial burst from boss room center on wave:start, decelerate (0.96x/frame) + fade over 60 frames. Fallback to camera center if no room coords
+- **25.3C Zone floor tints:** Confirmed already done — FLOOR_THEMES has per-zone colors baked into tile textures since Cycle #213
+- Phase 25 now **12/12 COMPLETE**
+- All 1832 tests pass
+**Stav:** Phase 25 DONE! All dungeon atmosphere features implemented.
+---
+
 ### Cycle #232 — Bolt (builder)
 **Čas:** 2026-03-13 ~14:56
 **Co jsem udělal/a:**

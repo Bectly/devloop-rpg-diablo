@@ -30,6 +30,17 @@ const Lighting = (() => {
     abyss:     { color: 0xaa66ff, r: 0xaa, g: 0x66, b: 0xff },
   };
 
+  // Zone-specific particle colors + behavior
+  const ZONE_PARTICLES = {
+    catacombs: { colors: [0xbbbbbb, 0x999999, 0xaaaaaa], speedMult: 1.0, sineWave: false },
+    inferno:   { colors: [0xff6622, 0xff4400, 0xffaa44], speedMult: 1.5, sineWave: false },
+    abyss:     { colors: [0xaa66ff, 0x8844cc, 0xcc88ff], speedMult: 0.7, sineWave: true },
+  };
+
+  const BOSS_BURST_COUNT = 30;     // Particles in boss burst
+  const BOSS_BURST_SPEED = 3.0;    // Initial radial speed
+  const BOSS_BURST_LIFE = 60;      // Frames before fade-out complete
+
   // ── State ──
   let fogRT = null;                // Phaser.GameObjects.RenderTexture — the visible fog overlay
   let exploredMask = null;         // Persistent RT — white pixels where players have been
@@ -47,6 +58,7 @@ const Lighting = (() => {
   let frameCount = 0;              // Frame counter for flicker updates
   let lastExploredPositions = {};  // Track last stamped tile per player id
   let lastZoneId = 'catacombs';    // Current zone for sconce coloring
+  let burstParticles = [];         // Boss room burst particles (temporary)
 
   // ── Init ──
   function init(scene) {
@@ -335,7 +347,7 @@ const Lighting = (() => {
     }
   }
 
-  // ── C: Ambient Particles ──
+  // ── C: Ambient Particles (zone-colored) ──
   function _updateParticles(scene, camL, camT, camR, camB) {
     if (!particleGfx) return;
     particleGfx.clear();
@@ -343,6 +355,7 @@ const Lighting = (() => {
     const margin = 60;
     const viewW = camR - camL;
     const viewH = camB - camT;
+    const zoneCfg = ZONE_PARTICLES[lastZoneId] || ZONE_PARTICLES.catacombs;
 
     for (let i = 0; i < particles.length; i++) {
       const pt = particles[i];
@@ -354,9 +367,14 @@ const Lighting = (() => {
         pt.needsSpawn = false;
       }
 
-      // Move (very slow drift)
-      pt.x += pt.vx;
-      pt.y += pt.vy;
+      // Move — zone-specific speed multiplier
+      pt.x += pt.vx * zoneCfg.speedMult;
+      pt.y += pt.vy * zoneCfg.speedMult;
+
+      // Abyss: sine-wave path for wispy movement
+      if (zoneCfg.sineWave) {
+        pt.x += Math.sin(pt.alphaPhase * 1.5 + i) * 0.4;
+      }
 
       // Alpha pulse: smooth oscillation between 0.1 and 0.3
       pt.alphaPhase += pt.alphaSpeed;
@@ -384,10 +402,47 @@ const Lighting = (() => {
         if (!revealedTiles.has(`${tr},${tc}`)) continue;
       }
 
-      // Draw — tiny white/gray dust mote
-      const color = (i % 3 === 0) ? 0xbbbbbb : 0x999999;
+      // Draw — zone-colored particle
+      const color = zoneCfg.colors[i % zoneCfg.colors.length];
       particleGfx.fillStyle(color, pulseAlpha);
       particleGfx.fillCircle(pt.x, pt.y, pt.size);
+    }
+
+    // ── Boss burst particles (temporary, fade out) ──
+    for (let i = burstParticles.length - 1; i >= 0; i--) {
+      const bp = burstParticles[i];
+      bp.x += bp.vx;
+      bp.y += bp.vy;
+      bp.vx *= 0.96; // Decelerate
+      bp.vy *= 0.96;
+      bp.life--;
+
+      if (bp.life <= 0) {
+        burstParticles.splice(i, 1);
+        continue;
+      }
+
+      const alpha = (bp.life / BOSS_BURST_LIFE) * 0.5;
+      particleGfx.fillStyle(bp.color, alpha);
+      particleGfx.fillCircle(bp.x, bp.y, bp.size * (bp.life / BOSS_BURST_LIFE));
+    }
+  }
+
+  // ── Boss burst: radial particle explosion from center ──
+  function triggerBossBurst(centerX, centerY) {
+    const zoneCfg = ZONE_PARTICLES[lastZoneId] || ZONE_PARTICLES.catacombs;
+    for (let i = 0; i < BOSS_BURST_COUNT; i++) {
+      const angle = (i / BOSS_BURST_COUNT) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = BOSS_BURST_SPEED * (0.6 + Math.random() * 0.8);
+      burstParticles.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 2 + Math.random() * 2,
+        life: BOSS_BURST_LIFE,
+        color: zoneCfg.colors[i % zoneCfg.colors.length],
+      });
     }
   }
 
@@ -451,6 +506,7 @@ const Lighting = (() => {
     lastExploredPositions = {};
     sconcePositions = [];
     _lastSconceFloor = -1;
+    burstParticles = [];
 
     // Re-scatter particles (they'll get positioned on next update)
     for (let i = 0; i < particles.length; i++) {
@@ -458,5 +514,5 @@ const Lighting = (() => {
     }
   }
 
-  return { init, update, cleanup };
+  return { init, update, cleanup, triggerBossBurst };
 })();

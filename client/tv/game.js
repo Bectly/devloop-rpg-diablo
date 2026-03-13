@@ -942,6 +942,14 @@ socket.on('wave:start', (data) => {
         HUD.showBossAnnouncement(scene, data.bossName);
         Sound.bossSpawn();
         Sound.bossMusic();
+        // Boss burst particles from room center
+        if (data.roomCenterX && data.roomCenterY) {
+          Lighting.triggerBossBurst(data.roomCenterX, data.roomCenterY);
+        } else {
+          // Fallback: burst from camera center
+          const cam = scene.cameras.main;
+          Lighting.triggerBossBurst(cam.scrollX + cam.width / 2, cam.scrollY + cam.height / 2);
+        }
       }
     }
   }
