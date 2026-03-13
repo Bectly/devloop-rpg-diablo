@@ -310,12 +310,12 @@ function generateConsumable(subType, quantity = 1) {
   };
 }
 
-function generateLoot(lootTier, monsterType, floor = 0) {
+function generateLoot(lootTier, monsterType, floor = 0, goldMult = 1.0) {
   const drops = [];
 
-  // Gold always drops (scaled by floor)
-  const goldBase = 5 + lootTier * 3 + floor * 5;
-  const goldMax = 15 + lootTier * 8 + floor * 10;
+  // Gold always drops (scaled by floor + difficulty)
+  const goldBase = Math.floor((5 + lootTier * 3 + floor * 5) * goldMult);
+  const goldMax = Math.floor((15 + lootTier * 8 + floor * 10) * goldMult);
   drops.push(generateConsumable('gold', randomInt(goldBase, goldMax)));
 
   // Chance for potion

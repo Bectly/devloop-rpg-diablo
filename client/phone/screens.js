@@ -855,6 +855,14 @@ window.Screens = (() => {
       timeEl.className = 'ldb-time';
       timeEl.textContent = timeStr;
 
+      // Difficulty badge on name
+      if (entry.difficulty && entry.difficulty !== 'normal') {
+        const diffBadge = document.createElement('span');
+        diffBadge.className = 'ldb-diff ldb-diff-' + entry.difficulty;
+        diffBadge.textContent = entry.difficulty === 'nightmare' ? 'NM' : 'HELL';
+        nameEl.appendChild(diffBadge);
+      }
+
       row.appendChild(rankEl);
       row.appendChild(nameEl);
       row.appendChild(classEl);

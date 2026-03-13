@@ -117,7 +117,7 @@ class CombatSystem {
 
     // Check for kill
     if (!nearest.alive) {
-      const loot = generateLoot(nearest.lootTier, nearest.type);
+      const loot = generateLoot(nearest.lootTier, nearest.type, nearest.floor || 0, nearest.goldMult || 1.0);
 
       // Set item drop chance
       const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);
@@ -311,7 +311,7 @@ class CombatSystem {
 
           if (!nearest.alive) {
             player.kills = (player.kills || 0) + 1;
-            const loot = generateLoot(nearest.lootTier, nearest.type);
+            const loot = generateLoot(nearest.lootTier, nearest.type, nearest.floor || 0, nearest.goldMult || 1.0);
             const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);
             if (setDrop) {
               const setItem = generateSetItem(setDrop.setId, setDrop.slot);
@@ -468,7 +468,7 @@ class CombatSystem {
 
           if (!nearest.alive) {
             player.kills = (player.kills || 0) + 1;
-            const loot = generateLoot(nearest.lootTier, nearest.type);
+            const loot = generateLoot(nearest.lootTier, nearest.type, nearest.floor || 0, nearest.goldMult || 1.0);
             const setDrop = rollSetDrop(nearest.floor || 0, nearest.isElite, nearest.eliteRank);
             if (setDrop) {
               const setItem = generateSetItem(setDrop.setId, setDrop.slot);

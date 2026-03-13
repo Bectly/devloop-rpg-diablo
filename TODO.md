@@ -898,13 +898,13 @@ gameDifficulty = requestedDiff;
 
 **Note from Rune (Cycle #95):** `goldMult` in DIFFICULTY_SCALES is defined but unused. Apply it to chest loot gold in `world.js:spawnChestLoot()` and monster gold drops.
 
-### 12.3 Difficulty UI — Phone [for Sage]
-**Files:** `client/phone/controller.js`, `client/phone/style.css`
+### 12.3 Difficulty UI — Phone [DONE — Sage, Cycle #98]
+**Files:** `death-victory.js`, `controller.js`, `screens.js`, `index.html`, `style.css`
 
-- Difficulty selector on victory screen (replace simple NEW GAME button)
-- 3 buttons: Normal (gray), Nightmare (orange, locked if not unlocked), Hell (red, locked)
-- Current difficulty badge on HUD status bar
-- Locked difficulties show lock icon + "Beat [previous] to unlock"
+- [x] Victory screen: 3 difficulty buttons (Normal/Nightmare/Hell) with lock state + unlock animation
+- [x] HUD difficulty badge (NM/HELL) on status bar
+- [x] Leaderboard difficulty badges per entry
+- [x] Full CSS for all difficulty UI elements
 
 ### 12.4 Difficulty Visual Scaling — TV [for Sage]
 **Files:** `client/tv/game.js`, `client/tv/hud.js`

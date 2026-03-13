@@ -24,6 +24,19 @@ const ZONE_COLORS = {
   inferno: '#ff6622',
   abyss: '#8844dd',
 };
+// Update difficulty badge
+function updateDifficultyBadge(difficulty) {
+  const badge = document.getElementById('hud-difficulty');
+  if (!badge) return;
+  if (!difficulty || difficulty === 'normal') {
+    badge.classList.add('hidden');
+    return;
+  }
+  badge.classList.remove('hidden');
+  badge.textContent = difficulty === 'nightmare' ? 'NM' : 'HELL';
+  badge.className = 'diff-badge diff-' + difficulty;
+}
+
 let buttonsInitialized = false;
 let notificationCount = 0;
 let shopData = null;
@@ -228,6 +241,7 @@ socket.on('floor:change', (data) => {
   currentZoneName = data.zoneName || '';
   Reconnect.clearElites();
   updateFloorDisplay();
+  if (data.difficulty) updateDifficultyBadge(data.difficulty);
 });
 
 socket.on('damage:taken', (data) => {
@@ -329,8 +343,9 @@ socket.on('game:victory', (data) => {
   DeathVictory.showVictoryScreen(data);
 });
 
-socket.on('game:restarted', () => {
+socket.on('game:restarted', (data) => {
   DeathVictory.hideVictoryScreen();
+  if (data && data.difficulty) updateDifficultyBadge(data.difficulty);
 });
 
 // ─── Reconnect Overlay — delegated to reconnect.js (window.Reconnect) ──

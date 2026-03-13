@@ -2315,3 +2315,70 @@ html, body {
 #btn-victory-leaderboard:active {
   background: rgba(255, 215, 0, 0.15);
 }
+
+/* ── Difficulty Selector (Victory Screen) ────────────────────── */
+.difficulty-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+.diff-btn {
+  padding: 12px;
+  border: 2px solid #555;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.diff-btn:active { transform: scale(0.96); }
+.diff-btn.locked {
+  opacity: 0.35;
+  border-color: #333;
+  cursor: not-allowed;
+}
+.diff-btn.newly-unlocked {
+  animation: diffUnlock 1s ease infinite alternate;
+}
+@keyframes diffUnlock {
+  from { box-shadow: 0 0 8px rgba(255,180,0,0.4); }
+  to { box-shadow: 0 0 20px rgba(255,180,0,0.8); }
+}
+.unlock-message {
+  text-align: center;
+  color: #ffcc00;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  animation: diffUnlock 1s ease infinite alternate;
+}
+
+/* ── HUD Difficulty Badge ────────────────────────────────────── */
+.diff-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  letter-spacing: 1px;
+}
+.diff-nightmare { background: #e88a2a; color: #000; }
+.diff-hell { background: #e83a3a; color: #fff; }
+
+/* ── Leaderboard Difficulty Badge ────────────────────────────── */
+.ldb-diff {
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.ldb-diff-nightmare { background: #e88a2a; color: #000; }
+.ldb-diff-hell { background: #e83a3a; color: #fff; }

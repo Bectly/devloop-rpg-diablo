@@ -4,6 +4,7 @@ const DeathVictory = (() => {
   let _isDead = false;
   let _deathCountdown = 0;
   let _deathInterval = null;
+  let _currentDifficulty = 'normal';
 
   function init(socket) {
     _socket = socket;
@@ -97,23 +98,65 @@ const DeathVictory = (() => {
       statsEl.appendChild(card);
     }
 
-    // New Game button handler
-    const newGameBtn = document.getElementById('btn-new-game');
-    // Remove old listener by cloning
-    const freshBtn = newGameBtn.cloneNode(true);
-    newGameBtn.parentNode.replaceChild(freshBtn, newGameBtn);
+    // Difficulty selector — replaces single NEW GAME button
+    _currentDifficulty = data.difficulty || 'normal';
+    const unlockedNext = data.unlockedNext || null;
 
-    const handleNewGame = () => {
-      Sound.uiClick();
-      if (navigator.vibrate) navigator.vibrate(50);
-      _socket.emit('game:restart');
-      hideVictoryScreen();
-    };
-    freshBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      handleNewGame();
-    });
-    freshBtn.addEventListener('click', handleNewGame);
+    const newGameBtn = document.getElementById('btn-new-game');
+    // Build difficulty selector container
+    const selector = document.createElement('div');
+    selector.className = 'difficulty-selector';
+
+    const DIFFS = [
+      { key: 'normal', label: 'NORMAL', color: '#aaa' },
+      { key: 'nightmare', label: 'NIGHTMARE', color: '#e88a2a' },
+      { key: 'hell', label: 'HELL', color: '#e83a3a' },
+    ];
+    const DIFF_ORDER = ['normal', 'nightmare', 'hell'];
+
+    // Determine unlocked set: current + newly unlocked
+    const unlockedSet = new Set(['normal']);
+    const currentIdx = DIFF_ORDER.indexOf(_currentDifficulty);
+    for (let i = 0; i <= currentIdx; i++) unlockedSet.add(DIFF_ORDER[i]);
+    if (unlockedNext) unlockedSet.add(unlockedNext);
+
+    for (const diff of DIFFS) {
+      const btn = document.createElement('button');
+      btn.className = 'diff-btn';
+      btn.setAttribute('data-diff', diff.key);
+      const isUnlocked = unlockedSet.has(diff.key);
+      const isNew = diff.key === unlockedNext;
+
+      if (!isUnlocked) {
+        btn.classList.add('locked');
+        btn.textContent = diff.label + ' \uD83D\uDD12';
+        btn.disabled = true;
+      } else {
+        btn.textContent = diff.label;
+        if (isNew) btn.classList.add('newly-unlocked');
+        btn.style.borderColor = diff.color;
+        const startGame = () => {
+          Sound.uiClick();
+          if (navigator.vibrate) navigator.vibrate(50);
+          _socket.emit('game:restart', { difficulty: diff.key });
+          hideVictoryScreen();
+        };
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); startGame(); });
+        btn.addEventListener('click', startGame);
+      }
+      selector.appendChild(btn);
+    }
+
+    // Show unlock message
+    if (unlockedNext) {
+      const unlockMsg = document.createElement('div');
+      unlockMsg.className = 'unlock-message';
+      unlockMsg.textContent = unlockedNext.toUpperCase() + ' UNLOCKED!';
+      selector.insertBefore(unlockMsg, selector.firstChild);
+    }
+
+    // Replace the old button with difficulty selector
+    newGameBtn.parentNode.replaceChild(selector, newGameBtn);
 
     // "View Leaderboard" button on victory screen
     const ldbVicBtn = document.getElementById('btn-victory-leaderboard');
@@ -132,6 +175,14 @@ const DeathVictory = (() => {
   function hideVictoryScreen() {
     const victoryEl = document.getElementById('victory-overlay');
     if (victoryEl) victoryEl.classList.add('hidden');
+    // Restore the btn-new-game placeholder for next victory
+    const selector = document.querySelector('.difficulty-selector');
+    if (selector) {
+      const btn = document.createElement('button');
+      btn.id = 'btn-new-game';
+      btn.textContent = 'NEW GAME';
+      selector.parentNode.replaceChild(btn, selector);
+    }
   }
 
   return {

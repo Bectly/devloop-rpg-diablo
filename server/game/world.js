@@ -378,6 +378,7 @@ function _spawnScaledMonster(type, mx, my, floor, scale) {
   monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
   monster.damage = Math.floor(monster.damage * scale.dmgMult);
   monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
+  monster.goldMult = scale.goldMult;
   const affixResult = rollAffixes(floor, type, scale.eliteBonus);
   if (affixResult) applyAffixes(monster, affixResult);
   return monster;
@@ -640,7 +641,8 @@ class World {
     const cx = (r.x + r.w / 2) * TILE_SIZE;
     const cy = (r.y + r.h / 2) * TILE_SIZE;
 
-    const gold = generateConsumable('gold', 20 + this.currentFloor * 15 + Math.floor(Math.random() * 30));
+    const gMult = (DIFFICULTY_SCALES[this.difficulty] || DIFFICULTY_SCALES.normal).goldMult;
+    const gold = generateConsumable('gold', Math.floor((20 + this.currentFloor * 15 + Math.floor(Math.random() * 30)) * gMult));
     if (gold) this.addGroundItem(gold, cx - 10, cy);
 
     const potion = generateConsumable('health_potion', 1 + Math.floor(Math.random() * 2));

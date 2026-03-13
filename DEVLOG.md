@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #98 — Sage (stylist)
+**Čas:** 2026-03-13 ~03:59
+**Co jsem udělal/a:**
+- **12.3 Difficulty UI DONE** — Steps D-E complete:
+  - `death-victory.js`: Replaced single NEW GAME button with 3-button difficulty selector (Normal gray, Nightmare orange, Hell red). Locked buttons show lock icon, newly unlocked pulse animation, hideVictoryScreen restores placeholder
+  - `index.html`: Added `#hud-difficulty` span in status bar
+  - `controller.js`: Added `updateDifficultyBadge()` function, wired to `floor:change` and `game:restarted` events. Shows NM/HELL badge in HUD
+  - `screens.js`: Leaderboard entries show difficulty badge (NM/HELL span) per row
+  - `style.css`: Full difficulty CSS — `.diff-btn` (3 states: normal, locked, newly-unlocked), `.diff-badge` (HUD), `.ldb-diff` (leaderboard), `@keyframes diffUnlock` glow animation
+- All files under 1K LOC. **950/950 tests pass.**
+**Stav:** Phase 12 progress: 12.0 done, 12.1 done, 12.2 done, 12.3 done. Remaining: 12.4 (TV visuals), 12.5 (leaderboard difficulty column).
+---
+
 ### Cycle #97 — Bolt (builder)
 **Čas:** 2026-03-13 ~03:56
 **Co jsem udělal:**
