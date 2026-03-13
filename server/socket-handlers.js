@@ -1306,5 +1306,221 @@ exports.handleStashRetrieve = (socket, data, { players, inventories, gameDb }) =
   socket.emit('notification', { text: 'Retrieved from stash', type: 'info' });
 };
 
+// ── Gem Socket/Unsocket ──
+
+exports.handleGemSocket = (socket, data, { players, inventories }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+  const inv = inventories.get(player.id);
+  if (!inv) return;
+
+  // Validate input
+  if (!data || typeof data.itemId !== 'string' || typeof data.gemId !== 'string') {
+    socket.emit('notification', { text: 'Invalid socket request', type: 'error' });
+    return;
+  }
+
+  // Find the target item (check equipped items first, then inventory)
+  let item = null;
+  let itemLocation = null; // 'equipped' or 'inventory'
+
+  for (const [slot, equip] of Object.entries(player.equipment)) {
+    if (equip && equip.id === data.itemId) {
+      item = equip;
+      itemLocation = 'equipped';
+      break;
+    }
+  }
+  if (!item) {
+    item = inv.getItem(data.itemId);
+    if (item) itemLocation = 'inventory';
+  }
+
+  if (!item) {
+    socket.emit('notification', { text: 'Item not found', type: 'error' });
+    return;
+  }
+
+  // Check item has empty sockets
+  if (!item.sockets || !Array.isArray(item.sockets)) {
+    socket.emit('notification', { text: 'Item has no sockets', type: 'error' });
+    return;
+  }
+  const emptyIdx = item.sockets.findIndex(s => s === null);
+  if (emptyIdx === -1) {
+    socket.emit('notification', { text: 'No empty sockets', type: 'error' });
+    return;
+  }
+
+  // Find gem in inventory
+  const gem = inv.getItem(data.gemId);
+  if (!gem || gem.type !== 'gem') {
+    socket.emit('notification', { text: 'Gem not found in inventory', type: 'error' });
+    return;
+  }
+
+  // Socket the gem: put gem data into socket slot, remove gem from inventory
+  item.sockets[emptyIdx] = {
+    id: gem.id,
+    name: gem.name,
+    gemType: gem.gemType,
+    gemTier: gem.gemTier,
+    bonuses: { ...gem.bonuses },
+    color: gem.color,
+  };
+  inv.removeItem(gem.id);
+
+  // Recalc player stats if item is equipped
+  if (itemLocation === 'equipped') {
+    player.recalcEquipBonuses();
+  }
+
+  socket.emit('inventory:update', inv.serialize());
+  socket.emit('notification', { text: `Socketed ${gem.name} into ${item.name}`, type: 'info' });
+};
+
+exports.handleGemUnsocket = (socket, data, { players, inventories }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+  const inv = inventories.get(player.id);
+  if (!inv) return;
+
+  // Validate input
+  if (!data || typeof data.itemId !== 'string' || typeof data.socketIndex !== 'number') {
+    socket.emit('notification', { text: 'Invalid unsocket request', type: 'error' });
+    return;
+  }
+
+  // Find the target item (equipped or inventory)
+  let item = null;
+  let itemLocation = null;
+
+  for (const [slot, equip] of Object.entries(player.equipment)) {
+    if (equip && equip.id === data.itemId) {
+      item = equip;
+      itemLocation = 'equipped';
+      break;
+    }
+  }
+  if (!item) {
+    item = inv.getItem(data.itemId);
+    if (item) itemLocation = 'inventory';
+  }
+
+  if (!item) {
+    socket.emit('notification', { text: 'Item not found', type: 'error' });
+    return;
+  }
+
+  // Validate socket index
+  if (!item.sockets || !Array.isArray(item.sockets) ||
+      !Number.isInteger(data.socketIndex) || data.socketIndex < 0 || data.socketIndex >= item.sockets.length) {
+    socket.emit('notification', { text: 'Invalid socket index', type: 'error' });
+    return;
+  }
+
+  const socketedGem = item.sockets[data.socketIndex];
+  if (!socketedGem) {
+    socket.emit('notification', { text: 'Socket is empty', type: 'error' });
+    return;
+  }
+
+  // Gold cost: 50 × item level (minimum 50)
+  const itemLevel = item.level || item.itemLevel || 1;
+  const cost = 50 * itemLevel;
+  if (player.gold < cost) {
+    socket.emit('notification', { text: `Need ${cost} gold to unsocket`, type: 'error' });
+    return;
+  }
+
+  // Check inventory space for the returned gem
+  if (!inv.findSpace(1, 1)) {
+    socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    return;
+  }
+
+  // Unsocket: deduct gold, create gem item, clear socket
+  player.gold -= cost;
+
+  const { generateGem } = require('./game/gems');
+  const returnedGem = generateGem(socketedGem.gemType, socketedGem.gemTier);
+  if (returnedGem) {
+    inv.addItem(returnedGem);
+  }
+
+  item.sockets[data.socketIndex] = null;
+
+  // Recalc if equipped
+  if (itemLocation === 'equipped') {
+    player.recalcEquipBonuses();
+  }
+
+  socket.emit('inventory:update', inv.serialize());
+  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('notification', { text: `Unsocketed ${socketedGem.name} (−${cost}g)`, type: 'info' });
+};
+
+// ── Gem Combine ──
+exports.handleGemCombine = (socket, data, { players, inventories }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+  const inv = inventories.get(player.id);
+  if (!inv) return;
+
+  // Validate: need array of exactly 3 gem IDs
+  if (!data || !Array.isArray(data.gemIds) || data.gemIds.length !== 3) {
+    socket.emit('notification', { text: 'Select 3 gems to combine', type: 'error' });
+    return;
+  }
+
+  // Validate all IDs are strings
+  if (!data.gemIds.every(id => typeof id === 'string')) {
+    socket.emit('notification', { text: 'Invalid gem IDs', type: 'error' });
+    return;
+  }
+
+  // Find all 3 gems in inventory
+  const gems = data.gemIds.map(id => inv.getItem(id));
+  if (gems.some(g => !g || g.type !== 'gem')) {
+    socket.emit('notification', { text: 'Gems not found in inventory', type: 'error' });
+    return;
+  }
+
+  // Use combineGems to validate and get result
+  const { combineGems } = require('./game/gems');
+  const result = combineGems(gems);
+  if (!result) {
+    socket.emit('notification', { text: 'Gems must be same type and tier (not max)', type: 'error' });
+    return;
+  }
+
+  // Gold cost: tier 1→2 = 100g, tier 2→3 = 500g
+  const cost = gems[0].gemTier === 1 ? 100 : 500;
+  if (player.gold < cost) {
+    socket.emit('notification', { text: `Need ${cost} gold to combine`, type: 'error' });
+    return;
+  }
+
+  // Remove the 3 source gems first
+  for (const gem of gems) {
+    inv.removeItem(gem.id);
+  }
+
+  // Deduct gold
+  player.gold -= cost;
+
+  // Add the upgraded gem
+  const addResult = inv.addItem(result);
+  if (!addResult || !addResult.success) {
+    // Shouldn't happen since we freed 3 slots, but handle it
+    socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    return;
+  }
+
+  socket.emit('inventory:update', inv.serialize());
+  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('notification', { text: `Combined into ${result.name}! (−${cost}g)`, type: 'info' });
+};
+
 // ── Exports for external access ──
 exports.disconnectedPlayers = disconnectedPlayers;

@@ -261,7 +261,7 @@ describe('Item socket generation', () => {
     const sockets = rollSockets('weapon', 'legendary');
     expect(Array.isArray(sockets)).toBe(true);
     expect(sockets.length).toBeGreaterThanOrEqual(1);
-    expect(sockets.length).toBeLessThanOrEqual(2);
+    expect(sockets.length).toBeLessThanOrEqual(3);
     for (const s of sockets) {
       expect(s).toBeNull();
     }

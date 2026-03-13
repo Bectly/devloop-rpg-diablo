@@ -1,6 +1,7 @@
 const { generateLoot } = require('./items');
 const { modifyDamageByAffixes, processAffixOnHitPlayer, processAffixOnDealDamage, processAffixOnDeath } = require('./affixes');
 const { rollSetDrop, generateSetItem } = require('./sets');
+const { rollGemDrop } = require('./gems');
 const { executeSkill, applyShatter } = require('./skills');
 
 class CombatSystem {
@@ -204,6 +205,10 @@ class CombatSystem {
         const setItem = generateSetItem(setDrop.setId, setDrop.slot);
         if (setItem) loot.push(setItem);
       }
+
+      // Gem drop chance (5% base, tier by floor)
+      const gemDrop = rollGemDrop(nearest.floor || 0);
+      if (gemDrop) loot.push(gemDrop);
 
       const deathEvent = {
         type: 'combat:death',

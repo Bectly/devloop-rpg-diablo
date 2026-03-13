@@ -163,6 +163,11 @@ controllerNs.on('connection', (socket) => {
   socket.on('stash:store', (data) => handlers.handleStashStore(socket, data, ctx));
   socket.on('stash:retrieve', (data) => handlers.handleStashRetrieve(socket, data, ctx));
 
+  // Gem socket/unsocket
+  socket.on('gem:socket', (data) => handlers.handleGemSocket(socket, data, ctx));
+  socket.on('gem:unsocket', (data) => handlers.handleGemUnsocket(socket, data, ctx));
+  socket.on('gem:combine', (data) => handlers.handleGemCombine(socket, data, ctx));
+
   // ── New Game (restart after victory) ──
   socket.on('game:restart', (data) => {
     const requestedDiff = (data && data.difficulty) || 'normal';

@@ -585,7 +585,7 @@ describe('Integration: trap triggers on player', () => {
   it('multiple traps can trigger on same player', () => {
     const trap1 = makeTrap('spike', 100, 100);
     const trap2 = makeTrap('fire', 100, 100);
-    const player = makePlayer({ x: 100, y: 100, hp: 200 });
+    const player = makePlayer({ x: 100, y: 100, hp: 200, dodgeChance: 0 });
 
     trap1.trigger(player);
     const hpAfterFirst = player.hp;

@@ -2056,7 +2056,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - Legendary: +1 max socket, set items: +1 max socket
 - Add `sockets: []` array to item schema (empty = available socket)
 
-**Step C: Socket/unsocket handlers** ⭐ NEXT (Cycle #187 — Bolt) (`server/socket-handlers.js`)
+**Step C: Socket/unsocket handlers** ✅ DONE (Cycle #187) (`server/socket-handlers.js`)
 - `gem:socket` `{ itemId, gemId }` — insert gem into first empty socket, remove gem from inventory
 - `gem:unsocket` `{ itemId, socketIndex }` — remove gem (costs 50 × item level gold), return gem to inventory
 - Recalc player stats after socket change via `player.recalcStats()`
@@ -2069,12 +2069,12 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - [ ] Gem selection popup: list available gems from inventory, tap to socket
 - [ ] "Unsocket" button on filled sockets (shows gold cost)
 
-**Step E: Gem drops in combat** ⭐ NEXT (Cycle #187 — Bolt) (`server/game/combat.js`, `server/game/skills.js`)
+**Step E: Gem drops in combat** ✅ DONE (Cycle #187) (`server/game/combat.js`, `server/game/skills.js`)
 - After monster kill: call `rollGemDrop(floorNumber)`, if gem → add to loot drops
 - Same flow as existing item drops — add to `droppedItems`, emit `loot:dropped`
 - Both combat.js kill handler AND skills.js kill handler need gem drop call
 
-**Step F: Gem combining** ⭐ NEXT (Cycle #187 — Bolt) (crafting integration)
+**Step F: Gem combining** ✅ DONE (Cycle #187) (new `gem:combine` handler)
 - New socket event: `gem:combine` `{ gemIds: [id, id, id] }` — validate same type+tier, deduct gold (100/500), return upgraded gem
 - OR add to existing `crafting:execute` handler as a new recipe type
 - 3 chipped → 1 flawed (100 gold), 3 flawed → 1 perfect (500 gold)
@@ -2130,7 +2130,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 ### Implementation Order:
 1. ~~**20.1 A+B**~~ ✅ Gem data + sockets (Cycle #182)
 2. ~~**20.4**~~ ✅ Death Recap COMPLETE (Cycles #182-183)
-3. **20.1 C+E+F** ⭐ NEXT — Socket handlers + gem drops + gem combining (Bolt, Cycle #187)
+3. ~~**20.1 C+E+F**~~ ✅ Socket handlers + gem drops + gem combining (Bolt, Cycle #187)
 4. **20.1 D** — Socket UI polish (Sage, after handlers exist)
 5. **20.3** Loot Filter — Bolt (after gems done)
 6. **20.2** Enchanting — Bolt (last, builds on gem/item work)
@@ -2138,11 +2138,12 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 8. Visual polish — Sage
 9. Review — Rune
 
-### Bolt's Priority for Cycle #187:
-**Implement 20.1 C+E+F in parallel:**
-1. **gem:socket + gem:unsocket handlers** in socket-handlers.js + wire in index.js
-2. **Gem drops from combat** — call `rollGemDrop()` in combat.js + skills.js kill paths
-3. **gem:combine handler** — 3→1 upgrade with gold cost, integrate with crafting
+### Sage's Priority for Cycle #188:
+**Gem socket UI on phone — "Socket Gem" + "Unsocket" buttons in item tooltip, gem combine UI:**
+1. **"Socket Gem" button** in tooltip when item has empty sockets + player has gems
+2. **Gem selection popup** — list available gems, tap to socket
+3. **"Unsocket" button** on filled sockets (shows gold cost)
+4. **Gem combine button** — in crafting or inventory, select 3 matching gems
 
 ---
 

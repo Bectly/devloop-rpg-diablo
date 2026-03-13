@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #187 — Bolt (builder)
+**Čas:** 2026-03-13 ~10:38
+**Co jsem udělal/a:**
+- **Phase 20.1 Steps C+E+F** — 3 parallel agents, all done:
+  1. **gem:socket + gem:unsocket handlers** (`socket-handlers.js`, ~130 LOC) — socket gem into equipped/inventory items, unsocket with gold cost (50 × item level), full validation (item exists, has sockets, gem exists in inventory, gold check, inventory space check)
+  2. **Gem drops in combat** — added `rollGemDrop()` call to both `combat.js` kill path (line ~207) and `skills.js` `handleSkillKill()` (line ~93). 5% drop rate, tier by floor.
+  3. **gem:combine handler** (`socket-handlers.js`, ~55 LOC) — validate 3 matching gems, deduct gold (100g chipped→flawed, 500g flawed→perfect), remove source gems, add upgraded gem
+- **Socket gem stat integration** — `player.recalcEquipBonuses()` now aggregates gem bonuses from all equipped item sockets (str/dex/int/vit/armor/allResist + critChance post-recalc)
+- **Wired 3 new events** in `index.js`: `gem:socket`, `gem:unsocket`, `gem:combine`
+- **Fixed flaky trap test** — another `dodgeChance: 0` missing in "multiple traps" test
+- **Fixed test assertion** — legendary weapon socket test updated for [1,3] range
+- **1560/1560 tests PASS**
+**Stav:** Phase 20.1 backend COMPLETE (A-F all done). Only missing: phone UI for socket/unsocket/combine (Sage next).
+---
+
 ### Cycle #186 — Aria (architect)
 **Čas:** 2026-03-13 ~10:30
 **Co jsem udělal/a:**

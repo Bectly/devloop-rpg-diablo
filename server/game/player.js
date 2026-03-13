@@ -252,6 +252,22 @@ class Player {
       }
       if (item.armor) this.equipBonuses.armor += item.armor;
       if (item.damage) this.equipBonuses.damage += item.damage;
+
+      // Socket gem bonuses
+      if (item.sockets && Array.isArray(item.sockets)) {
+        for (const gem of item.sockets) {
+          if (!gem || !gem.bonuses) continue;
+          for (const [stat, val] of Object.entries(gem.bonuses)) {
+            if (stat === 'allResist') {
+              allResist += val;
+            } else if (stat === 'critChance') {
+              // Will be applied after recalcStats
+            } else if (this.equipBonuses[stat] !== undefined) {
+              this.equipBonuses[stat] += val;
+            }
+          }
+        }
+      }
     }
 
     // Apply all_resist to each element, cap at 75
@@ -260,6 +276,18 @@ class Player {
     this.resistances.poison = Math.min(75, poisonResist + allResist);
 
     this.recalcStats();
+
+    // Gem critChance bonus (applied after recalcStats so it adds to base crit)
+    for (const slot of Object.keys(this.equipment)) {
+      const item = this.equipment[slot];
+      if (!item || !item.sockets) continue;
+      for (const gem of item.sockets) {
+        if (gem && gem.bonuses && gem.bonuses.critChance) {
+          this.critChance += gem.bonuses.critChance;
+        }
+      }
+    }
+
     this.recalcSetBonuses();
   }
 

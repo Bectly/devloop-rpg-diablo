@@ -1,4 +1,5 @@
 const { generateLoot } = require('./items');
+const { rollGemDrop } = require('./gems');
 const { modifyDamageByAffixes, processAffixOnDeath } = require('./affixes');
 const { getSkillDamageType } = require('./damage-types');
 const { rollSetDrop, generateSetItem } = require('./sets');
@@ -90,6 +91,10 @@ function handleSkillKill(player, monster, results, partyBuffs) {
     const setItem = generateSetItem(setDrop.setId, setDrop.slot);
     if (setItem) loot.push(setItem);
   }
+
+  // Gem drop chance
+  const gemDrop = rollGemDrop(monster.floor || 0);
+  if (gemDrop) loot.push(gemDrop);
 
   const deathEvent = {
     type: 'combat:death',
