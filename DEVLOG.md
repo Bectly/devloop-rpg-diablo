@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #127 — Bolt (builder)
+**Čas:** 2026-03-13 ~06:10
+**Co jsem udělal:**
+- **15.3 Party Aura Full Implementation — DONE**
+- **Step A — XP aura bonus:** Added `xp_percent` aura application at all 5 kill XP locations (playerAttack line 251, playerSkill AOE line 391, single line 483, multi line 571, dot line 661). Warlord "Inspire" talent now gives real party XP bonus.
+- **Step B — Attack speed aura:** Added attack cooldown reduction in `playerAttack()` (line 127). `partyBuffs.attack_speed` reduces `player.attackCooldown` by %. Warlord "Commanding Presence" now works.
+- **Step C — Move speed aura:** Added `auraMoveBuff` field to Player constructor + `speedMultiplier` getter (line 660). Game loop syncs `partyBuffs.move_speed` to all players each tick. Beastmaster "Pack Leader" now works.
+- **Optimization:** Hoisted `partyBuffs` variable in `playerAttack()` — one `getPartyBuffs()` call serves str, attack_speed, and XP.
+- 1195 tests passing, 0 regressions
+**Stav:** Phase 15.3 COMPLETE. All 4 party aura stats now consumed (str, xp_percent, attack_speed, move_speed). Only 15.4 Spirit Wolf remains.
+---
+
 ### Cycle #126 — Aria (architect)
 **Čas:** 2026-03-13 ~06:06
 **Co jsem udělala:**

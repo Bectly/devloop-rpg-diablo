@@ -265,6 +265,12 @@ function gameLoop() {
 
   const allPlayers = Array.from(players.values());
 
+  // Sync party aura buffs (move speed from Beastmaster Pack Leader)
+  const partyBuffs = combat.getPartyBuffs(allPlayers);
+  for (const player of allPlayers) {
+    player.auraMoveBuff = partyBuffs.move_speed || 0;
+  }
+
   // Update players (handles death timers and respawns)
   for (const player of allPlayers) {
     // Disconnected players: freeze input so they don't move,

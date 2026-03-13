@@ -117,12 +117,14 @@ class CombatSystem {
     player.startAttackCooldown();
     let { damage, isCrit, damageType } = this.calcPlayerDamage(player);
 
-    // Party aura: str bonus adds flat damage from co-op partner
-    if (allPlayers) {
-      const partyBuffs = this.getPartyBuffs(allPlayers);
-      if (partyBuffs.str > 0) {
-        damage += partyBuffs.str;
-      }
+    // Party aura buffs (str, attack_speed, xp_percent from Warlord/Beastmaster talents)
+    const partyBuffs = allPlayers ? this.getPartyBuffs(allPlayers) : null;
+    if (partyBuffs && partyBuffs.str > 0) {
+      damage += partyBuffs.str;
+    }
+    // Attack speed aura: reduce cooldown (Warlord Commanding Presence)
+    if (partyBuffs && partyBuffs.attack_speed > 0) {
+      player.attackCooldown = Math.floor(player.attackCooldown * (1 - partyBuffs.attack_speed / 100));
     }
 
     // Shatter bonus: extra damage to frozen/stunned targets (Phase 15.1)
@@ -245,6 +247,10 @@ class CombatSystem {
       let xpReward = nearest.xpReward;
       if (player.setBonuses && player.setBonuses.xpPercent) {
         xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+      }
+      // Party aura: XP bonus (Warlord Inspire talent)
+      if (partyBuffs && partyBuffs.xp_percent > 0) {
+        xpReward = Math.floor(xpReward * (1 + partyBuffs.xp_percent / 100));
       }
       // On-kill talent procs (Bloodbath heal, etc.)
       if (player.talentBonuses && player.talentBonuses.procs) {
@@ -377,6 +383,11 @@ class CombatSystem {
               if (player.setBonuses && player.setBonuses.xpPercent) {
                 xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
               }
+              // Party aura: XP bonus (Warlord Inspire)
+              if (allPlayers) {
+                const pb = this.getPartyBuffs(allPlayers);
+                if (pb.xp_percent > 0) xpReward = Math.floor(xpReward * (1 + pb.xp_percent / 100));
+              }
               const levelResult = player.gainXp(xpReward);
               if (levelResult) {
                 results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
@@ -464,6 +475,11 @@ class CombatSystem {
             if (player.setBonuses && player.setBonuses.xpPercent) {
               xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
             }
+            // Party aura: XP bonus (Warlord Inspire)
+            if (allPlayers) {
+              const pb = this.getPartyBuffs(allPlayers);
+              if (pb.xp_percent > 0) xpReward = Math.floor(xpReward * (1 + pb.xp_percent / 100));
+            }
             const levelResult = player.gainXp(xpReward);
             if (levelResult) {
               results.push({ type: 'player:levelup', playerId: player.id, level: levelResult.level });
@@ -547,6 +563,11 @@ class CombatSystem {
             let xpReward = t.xpReward;
             if (player.setBonuses && player.setBonuses.xpPercent) {
               xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+            }
+            // Party aura: XP bonus (Warlord Inspire)
+            if (allPlayers) {
+              const pb = this.getPartyBuffs(allPlayers);
+              if (pb.xp_percent > 0) xpReward = Math.floor(xpReward * (1 + pb.xp_percent / 100));
             }
             const levelResult = player.gainXp(xpReward);
             if (levelResult) {
@@ -636,6 +657,11 @@ class CombatSystem {
             let xpReward = nearest.xpReward;
             if (player.setBonuses && player.setBonuses.xpPercent) {
               xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+            }
+            // Party aura: XP bonus (Warlord Inspire)
+            if (allPlayers) {
+              const pb = this.getPartyBuffs(allPlayers);
+              if (pb.xp_percent > 0) xpReward = Math.floor(xpReward * (1 + pb.xp_percent / 100));
             }
             const levelResult = player.gainXp(xpReward);
             if (levelResult) {

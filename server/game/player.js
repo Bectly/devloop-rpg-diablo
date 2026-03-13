@@ -45,6 +45,7 @@ class Player {
     this.facing = 'down';
     this.moving = false;
     this.moveSpeed = 160;
+    this.auraMoveBuff = 0; // Party aura move speed bonus (Beastmaster Pack Leader)
 
     // Movement input
     this.inputDx = 0;
@@ -653,6 +654,10 @@ class Player {
     // Set bonus: speed percent
     if (this.setBonuses && this.setBonuses.speedPercent) {
       mult *= (1 + this.setBonuses.speedPercent / 100);
+    }
+    // Party aura: move speed (Beastmaster Pack Leader)
+    if (this.auraMoveBuff > 0) {
+      mult *= (1 + this.auraMoveBuff / 100);
     }
     return mult;
   }
