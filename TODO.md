@@ -1938,6 +1938,10 @@ This lets TV client differentiate friendly wolves visually.
 
 ## Open Bugs
 
+### Found in Cycle #159 (Trace — skill leveling QA)
+
+- [ ] [BUG/MEDIUM] `skills.js` — **Projectile skill damage not level-scaled.** `executeMeteor`, `executeVolley`, `executeSniper` compute `projDamage = floor(attackPower/spellPower * skill.damage)` without applying `getDamageMult(skillLevel)`. Only direct-hit skills (spin, blizzard, chain) get level scaling via `calcSkillDamage()`. **Fix:** Apply `getDamageMult(skillLevel)` to `projDamage` in all 3 projectile handlers, e.g. `projDamage = Math.floor(projDamage * getDamageMult(skillLevel))`.
+
 ### Found in Cycle #44, Fixed in Cycle #45 (Rune)
 
 - [x] [BUG/HIGH] `socket-handlers.js:handleDisconnect` — **Double disconnect leaks timer, nukes reconnected player's inventory.** **Fixed:** `handleDisconnect` now checks `disconnectedPlayers.has(player.name)` and `clearTimeout()`s the existing timer before creating a new grace entry.

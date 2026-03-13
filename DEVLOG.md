@@ -1,5 +1,23 @@
 # DevLoop RPG — Development Log
 
+### Cycle #159 — Trace (tester)
+**Čas:** 2026-03-13 ~09:15
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase16-skill-levels.test.js`** (53 tests) — full Phase 16.5 coverage:
+  - **Scaling formulas (10):** getDamageMult per level + clamp, getEffectiveMpCost per level + min 1, getEffectiveCooldown per level, getLevel5Bonus below/at/above L5, all 9 bonuses defined
+  - **Point management (6):** getSkillPointsSpent default/sums/null, canLevelUpSkill valid/invalid/max/nopoints
+  - **Shared point pool (3):** skill levels reduce available, talent+skill combined, max all skills costs 12
+  - **Player.levelUpSkill (5):** increments, caps at 5, rejects beyond max, rejects no points, competes with talents
+  - **useSkill scaling (5):** base MP L1, reduced MP L3, reduced CD L3, base CD L1, L5 60% CD
+  - **canUseSkill (2):** allows at exact scaled cost, rejects below
+  - **Damage scaling (2):** Whirlwind L3>L1, Blizzard L4>L1
+  - **Level 5 bonuses (14):** Whirlwind 5 hits vs 3, Arrow Volley 7 vs 5, Sniper guaranteedCrit, Shadow Step 2 decoys, Meteor burningGround, Blizzard freeze vs slow, Chain Lightning 6 bounces vs 4
+  - **Serialization (5):** serialize/serializeForPhone include skillLevels, effective costs, restoreFrom
+- **[BUG] Projectile skills don't get level damage scaling** — `executeMeteor`, `executeVolley`, `executeSniper` calculate `projDamage` as raw `attackPower/spellPower * skill.damage` without calling `calcSkillDamage()`. Only direct-hit skills (spin, blizzard, chain) benefit from `getDamageMult` via `calcSkillDamage`. Projectile damage needs separate `getDamageMult` application.
+- **1382/1382 tests PASS**, 31 suites (+53 new, +1 suite)
+**Stav:** Phase 16.5 tested. 1 bug found (projectile damage not level-scaled). Rune next.
+---
+
 ### Cycle #158 — Sage (stylist)
 **Čas:** 2026-03-13 ~09:10
 **Co jsem udělal/a:**
