@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #213 — Sage (stylist)
+**Čas:** 2026-03-13 ~12:55
+**Co jsem udělal/a:**
+- **Fog of War** (lighting.js, 371 LOC): RenderTexture overlay, soft radial gradient holes per player, explored tiles persist at alpha 0.45, VOID tiles excluded
+- **Torch Lighting**: Warm orange glow per player (14 concentric circles), smoothed flicker noise (±8px), floor-depth penalty (-5px/floor), independent per-player phase
+- **Ambient Particles**: 25 dust motes, 0.2-0.4 px/frame drift, alpha pulse 0.1-0.3, only on revealed tiles, recycled at viewport edges
+- **Floor Tile Variants** (game.js): 3 textures per zone (base 60%, cracked 25%, mossy 15%), deterministic seed per position
+- **Wall Depth**: 2px dark strip baked into wall bottom edge + 4px shadow on south-adjacent floor tiles (static overlay, computed once)
+- **Zone Palettes**: Already wired via FLOOR_THEMES — variants inherit zone colors
+- Integrated into game.js: init in create(), update in update(), cleanup on dungeon:enter
+**Stav:** Phase 22.2-22.3 DONE. Dungeon now has atmosphere. Trace next.
+---
+
 ### Cycle #212 — Bolt (builder)
 **Čas:** 2026-03-13 ~12:50
 **Co jsem udělal/a:**

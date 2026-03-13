@@ -358,6 +358,7 @@ class GameScene extends Phaser.Scene {
     this.itemSprites = new Map();
     this.npcSprites = new Map();
     this.tileSprites = [];
+    this._shadowOverlay = null;
     this.tilesDirty = true;
     this.lastTileFloor = -1;
 
@@ -395,6 +396,9 @@ class GameScene extends Phaser.Scene {
 
     // Initialize HUD layer (hud.js)
     HUD.init(this);
+
+    // Initialize fog of war + torch lighting + ambient particles (lighting.js)
+    Lighting.init(this);
 
     // Camera
     this.cameras.main.setBackgroundColor('#111122');
@@ -539,6 +543,9 @@ class GameScene extends Phaser.Scene {
       this.cameras.main.centerOn(this.camTargetX, this.camTargetY);
     }
 
+    // ── Fog of War + Torch Lighting + Ambient Particles (lighting.js) ──
+    Lighting.update(this, state.players, state.world);
+
     // ── Minimap (delegated to hud.js) ──
     HUD.renderMinimap(state);
   }
@@ -547,38 +554,88 @@ class GameScene extends Phaser.Scene {
     // Clear existing
     for (const s of this.tileSprites) s.destroy();
     this.tileSprites = [];
+    // Destroy shadow overlay from previous floor
+    if (this._shadowOverlay) { this._shadowOverlay.destroy(); this._shadowOverlay = null; }
     if (!tiles) return;
 
     const theme = FLOOR_THEMES[floor % FLOOR_THEMES.length];
 
     // Generate tile textures for this floor theme
     // Remove existing tile textures first to avoid overwrite warnings
-    const tileTexKeys = ['t_floor', 't_wall', 't_door', 't_corridor', 't_spawn', 't_exit_open', 't_exit_locked', 't_chest'];
+    const tileTexKeys = [
+      't_floor', 't_floor_cracked', 't_floor_mossy',
+      't_wall',
+      't_door',
+      't_corridor', 't_corridor_cracked', 't_corridor_mossy',
+      't_spawn', 't_exit_open', 't_exit_locked', 't_chest',
+    ];
     for (const key of tileTexKeys) {
       if (this.textures.exists(key)) this.textures.remove(key);
     }
 
     const g = this.make.graphics({ add: false });
+    const darkLineColor = 0x000000;
 
-    // Floor
+    // ── Helper: darken a color by subtracting, clamped to 0 ──
+    const safeSubColor = (color, sub) => {
+      const r = Math.max(0, ((color >> 16) & 0xff) - ((sub >> 16) & 0xff));
+      const gr = Math.max(0, ((color >> 8) & 0xff) - ((sub >> 8) & 0xff));
+      const b = Math.max(0, (color & 0xff) - (sub & 0xff));
+      return (r << 16) | (gr << 8) | b;
+    };
+
+    // ── Floor — base variant ──
     g.clear();
     g.fillStyle(theme.floor, 1);
     g.fillRect(0, 0, 32, 32);
-    g.lineStyle(1, theme.floor - 0x111111, 0.3);
+    g.lineStyle(1, safeSubColor(theme.floor, 0x111111), 0.3);
     g.strokeRect(0, 0, 32, 32);
     g.generateTexture('t_floor', 32, 32);
 
-    // Wall
+    // ── Floor — cracked variant (base + thin dark cracks) ──
+    g.clear();
+    g.fillStyle(theme.floor, 1);
+    g.fillRect(0, 0, 32, 32);
+    g.lineStyle(1, safeSubColor(theme.floor, 0x111111), 0.3);
+    g.strokeRect(0, 0, 32, 32);
+    // Crack 1: diagonal scratch
+    g.lineStyle(1, darkLineColor, 0.25);
+    g.lineBetween(6, 22, 18, 10);
+    // Crack 2: short horizontal
+    g.lineBetween(20, 18, 28, 20);
+    g.generateTexture('t_floor_cracked', 32, 32);
+
+    // ── Floor — mossy/damaged variant (base + dark spots / edge wear) ──
+    g.clear();
+    g.fillStyle(theme.floor, 1);
+    g.fillRect(0, 0, 32, 32);
+    g.lineStyle(1, safeSubColor(theme.floor, 0x111111), 0.3);
+    g.strokeRect(0, 0, 32, 32);
+    // Moss/damage spots
+    g.fillStyle(darkLineColor, 0.15);
+    g.fillCircle(8, 24, 3);
+    g.fillCircle(22, 8, 2);
+    g.fillCircle(26, 26, 2.5);
+    // Edge wear — faint darkening along one edge
+    g.fillStyle(darkLineColor, 0.1);
+    g.fillRect(0, 0, 32, 3);
+    g.fillRect(0, 0, 3, 32);
+    g.generateTexture('t_floor_mossy', 32, 32);
+
+    // ── Wall ──
     g.clear();
     g.fillStyle(theme.wall, 1);
     g.fillRect(0, 0, 32, 32);
     g.fillStyle(theme.wallLight, 1);
     g.fillRect(2, 2, 28, 28);
-    g.lineStyle(1, theme.wall - 0x111111, 0.8);
+    g.lineStyle(1, safeSubColor(theme.wall, 0x111111), 0.8);
     g.strokeRect(0, 0, 32, 32);
+    // Wall depth: darker 2px strip on bottom edge
+    g.fillStyle(darkLineColor, 0.4);
+    g.fillRect(0, 30, 32, 2);
     g.generateTexture('t_wall', 32, 32);
 
-    // Door (locked = red, unlocked = green)
+    // ── Door ──
     g.clear();
     g.fillStyle(0x886633, 1);
     g.fillRect(0, 0, 32, 32);
@@ -586,15 +643,39 @@ class GameScene extends Phaser.Scene {
     g.fillRect(4, 4, 24, 24);
     g.generateTexture('t_door', 32, 32);
 
-    // Corridor
+    // ── Corridor — base variant ──
     g.clear();
     g.fillStyle(theme.corridor, 1);
     g.fillRect(0, 0, 32, 32);
-    g.lineStyle(1, theme.corridor - 0x080808, 0.2);
+    g.lineStyle(1, safeSubColor(theme.corridor, 0x080808), 0.2);
     g.strokeRect(0, 0, 32, 32);
     g.generateTexture('t_corridor', 32, 32);
 
-    // Spawn
+    // ── Corridor — cracked variant ──
+    g.clear();
+    g.fillStyle(theme.corridor, 1);
+    g.fillRect(0, 0, 32, 32);
+    g.lineStyle(1, safeSubColor(theme.corridor, 0x080808), 0.2);
+    g.strokeRect(0, 0, 32, 32);
+    g.lineStyle(1, darkLineColor, 0.2);
+    g.lineBetween(10, 26, 24, 8);
+    g.lineBetween(4, 14, 14, 16);
+    g.generateTexture('t_corridor_cracked', 32, 32);
+
+    // ── Corridor — mossy/damaged variant ──
+    g.clear();
+    g.fillStyle(theme.corridor, 1);
+    g.fillRect(0, 0, 32, 32);
+    g.lineStyle(1, safeSubColor(theme.corridor, 0x080808), 0.2);
+    g.strokeRect(0, 0, 32, 32);
+    g.fillStyle(darkLineColor, 0.12);
+    g.fillCircle(6, 10, 2.5);
+    g.fillCircle(20, 22, 3);
+    g.fillStyle(darkLineColor, 0.08);
+    g.fillRect(28, 0, 4, 32);
+    g.generateTexture('t_corridor_mossy', 32, 32);
+
+    // ── Spawn ──
     g.clear();
     g.fillStyle(theme.floor, 1);
     g.fillRect(0, 0, 32, 32);
@@ -602,7 +683,7 @@ class GameScene extends Phaser.Scene {
     g.fillCircle(16, 16, 10);
     g.generateTexture('t_spawn', 32, 32);
 
-    // Exit (locked = red tint, unlocked = green)
+    // ── Exit (open) ──
     g.clear();
     g.fillStyle(0x444444, 1);
     g.fillRect(0, 0, 32, 32);
@@ -612,6 +693,7 @@ class GameScene extends Phaser.Scene {
     g.fillRect(10, 10, 12, 12);
     g.generateTexture('t_exit_open', 32, 32);
 
+    // ── Exit (locked) ──
     g.clear();
     g.fillStyle(0x442222, 1);
     g.fillRect(0, 0, 32, 32);
@@ -621,7 +703,7 @@ class GameScene extends Phaser.Scene {
     g.fillRect(10, 10, 12, 12);
     g.generateTexture('t_exit_locked', 32, 32);
 
-    // Chest
+    // ── Chest ──
     g.clear();
     g.fillStyle(theme.floor, 1);
     g.fillRect(0, 0, 32, 32);
@@ -633,28 +715,69 @@ class GameScene extends Phaser.Scene {
 
     g.destroy();
 
-    const exitLocked = gameState?.world?.exitLocked !== false;
+    // ── Pre-compute wall shadow map (static per floor) ──
+    // floorBelowWall[r][c] = true if tile (r,c) is a walkable tile directly south of a wall
+    const rows = tiles.length;
+    const cols = tiles[0] ? tiles[0].length : 0;
+    const isWalkable = (v) => v === TILE.FLOOR || v === TILE.CORRIDOR || v === TILE.SPAWN || v === TILE.DOOR || v === TILE.EXIT || v === TILE.CHEST;
+    const floorBelowWall = [];
+    for (let r = 0; r < rows; r++) {
+      floorBelowWall[r] = [];
+      for (let c = 0; c < cols; c++) {
+        // A walkable tile is "below a wall" if the tile directly north (r-1) is a wall
+        floorBelowWall[r][c] = (r > 0 && tiles[r - 1][c] === TILE.WALL && isWalkable(tiles[r][c]));
+      }
+    }
 
-    for (let r = 0; r < tiles.length; r++) {
-      for (let c = 0; c < tiles[r].length; c++) {
+    // ── Render tile sprites ──
+    const exitLocked = gameState?.world?.exitLocked !== false;
+    const floorVariantKeys = ['t_floor', 't_floor_cracked', 't_floor_mossy'];
+    const corridorVariantKeys = ['t_corridor', 't_corridor_cracked', 't_corridor_mossy'];
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         const val = tiles[r][c];
         let texKey;
+
+        // Seeded random for tile variant selection (deterministic per position)
+        const seed = (c * 7919 + r * 104729) % 100;
+
         switch (val) {
           case TILE.VOID:     continue; // don't render void
-          case TILE.FLOOR:    texKey = 't_floor'; break;
+          case TILE.FLOOR:
+            texKey = seed < 60 ? floorVariantKeys[0] : seed < 85 ? floorVariantKeys[1] : floorVariantKeys[2];
+            break;
           case TILE.WALL:     texKey = 't_wall'; break;
           case TILE.DOOR:     texKey = 't_door'; break;
-          case TILE.CORRIDOR: texKey = 't_corridor'; break;
+          case TILE.CORRIDOR:
+            texKey = seed < 60 ? corridorVariantKeys[0] : seed < 85 ? corridorVariantKeys[1] : corridorVariantKeys[2];
+            break;
           case TILE.SPAWN:    texKey = 't_spawn'; break;
           case TILE.EXIT:     texKey = exitLocked ? 't_exit_locked' : 't_exit_open'; break;
           case TILE.CHEST:    texKey = 't_chest'; break;
-          default:            texKey = 't_floor'; break;
+          default:
+            texKey = seed < 60 ? floorVariantKeys[0] : seed < 85 ? floorVariantKeys[1] : floorVariantKeys[2];
+            break;
         }
 
         const s = this.add.sprite(c * TILE_SIZE + TILE_SIZE / 2, r * TILE_SIZE + TILE_SIZE / 2, texKey).setDepth(0);
         this.tileSprites.push(s);
       }
     }
+
+    // ── Draw wall-cast shadows as a single static graphics overlay ──
+    // This is drawn once per floor and sits on depth 0.5 (above tiles, below entities)
+    const shadowGfx = this.add.graphics().setDepth(0.5);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (floorBelowWall[r][c]) {
+          // Shadow strip at top edge of floor tile that's below a wall
+          shadowGfx.fillStyle(0x000000, 0.15);
+          shadowGfx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, 4);
+        }
+      }
+    }
+    this._shadowOverlay = shadowGfx;
   }
 
   parseColor(hex) {
@@ -720,6 +843,7 @@ socket.on('dungeon:enter', (data) => {
     if (scene) {
       scene.tileSprites.forEach(s => s.destroy());
       scene.tileSprites = [];
+      if (scene._shadowOverlay) { scene._shadowOverlay.destroy(); scene._shadowOverlay = null; }
       scene.tilesDirty = true;
 
       // Clear all sprite types for fresh floor (sprites.js)
@@ -731,6 +855,9 @@ socket.on('dungeon:enter', (data) => {
 
       // Clean up environment sprites (shop NPC, shrines, traps, cursed events)
       Effects.cleanupAll(scene);
+
+      // Clean up fog of war + lighting for new floor
+      Lighting.cleanup();
 
       HUD._forceDestroyDialogue();
       HUD._destroyVictoryScreen();
