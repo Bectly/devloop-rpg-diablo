@@ -130,6 +130,10 @@ window.Screens = (() => {
 
   // ─── Shop Screen ────────────────────────────────────────────
   let shopTab = 'buy';
+  let _shopSocket = null;
+  let _shopHaptic = null;
+  let _shopData = null;
+  let _gambleResult = null;
 
   function createShopScreen() {
     if (document.getElementById('shop-screen')) return;
@@ -146,6 +150,7 @@ window.Screens = (() => {
       <div class="shop-tabs">
         <button class="shop-tab active" data-tab="buy">Buy</button>
         <button class="shop-tab" data-tab="sell">Sell</button>
+        <button class="shop-tab" data-tab="gamble">Gamble</button>
       </div>
       <div class="shop-items" id="shop-items"></div>
     `;
@@ -178,6 +183,10 @@ window.Screens = (() => {
     const shopEl = document.getElementById('shop-screen');
     shopEl.classList.remove('hidden');
     shopTab = 'buy';
+    _shopSocket = socket;
+    _shopHaptic = hapticFeedback;
+    _shopData = shopData;
+    _gambleResult = null;
     // Reset active tab UI
     shopEl.querySelectorAll('.shop-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === 'buy');
@@ -262,7 +271,7 @@ window.Screens = (() => {
         el.appendChild(btn);
         container.appendChild(el);
       }
-    } else {
+    } else if (tab === 'sell') {
       // Sell tab — show player inventory items
       if (!inventoryData || !inventoryData.items || inventoryData.items.length === 0) {
         container.innerHTML = '<div class="shop-empty">No items to sell</div>';
@@ -330,6 +339,109 @@ window.Screens = (() => {
       if (container.children.length === 0) {
         container.innerHTML = '<div class="shop-empty">No items to sell</div>';
       }
+    } else if (tab === 'gamble') {
+      // Gamble tab — Kadala-style mystery items
+      renderGambleTab(container, shopData, socket, hapticFeedback);
+    }
+  }
+
+  // ─── Gamble Tab Rendering ──────────────────────────────────
+  const GAMBLE_SLOTS = [
+    { slot: 'weapon',  icon: '\u2694',     label: 'Weapon' },
+    { slot: 'helmet',  icon: '\uD83E\uDDE2', label: 'Helmet' },
+    { slot: 'chest',   icon: '\uD83E\uDDE5', label: 'Chest' },
+    { slot: 'gloves',  icon: '\uD83E\uDDF4', label: 'Gloves' },
+    { slot: 'boots',   icon: '\uD83E\uDE74', label: 'Boots' },
+    { slot: 'shield',  icon: '\uD83D\uDEE1', label: 'Shield' },
+    { slot: 'ring',    icon: '\uD83D\uDC8D', label: 'Ring' },
+    { slot: 'amulet',  icon: '\uD83D\uDCFF', label: 'Amulet' },
+  ];
+
+  function renderGambleTab(container, shopData, socket, hapticFeedback) {
+    container.innerHTML = '';
+    const playerGold = shopData ? (shopData.playerGold || 0) : 0;
+
+    // Info header
+    const info = document.createElement('div');
+    info.className = 'gamble-info';
+    info.textContent = 'Spend gold for mystery items. Higher floors = better gear!';
+    container.appendChild(info);
+
+    // Show last gamble result if any
+    if (_gambleResult) {
+      const resultEl = document.createElement('div');
+      resultEl.className = 'gamble-result-display';
+      const item = _gambleResult.item;
+      const rarityClass = (item.rarity || 'common').toLowerCase();
+
+      let statsText = '';
+      if (item.damage) statsText += `DMG:${item.damage} `;
+      if (item.armor) statsText += `ARM:${item.armor} `;
+      if (item.bonuses) {
+        for (const [stat, val] of Object.entries(item.bonuses)) {
+          statsText += `+${val} ${stat.toUpperCase()} `;
+        }
+      }
+
+      resultEl.innerHTML = `
+        <div class="gamble-result-label">LAST GAMBLE</div>
+        <div class="shop-item-name ${rarityClass}">${item.name}</div>
+        <div class="shop-item-type">${(item.rarity || '').toUpperCase()} ${item.type || ''}</div>
+        ${statsText.trim() ? `<div class="shop-item-stats">${statsText.trim()}</div>` : ''}
+      `;
+      container.appendChild(resultEl);
+    }
+
+    // Slot grid
+    const grid = document.createElement('div');
+    grid.className = 'gamble-grid';
+
+    for (const { slot, icon, label } of GAMBLE_SLOTS) {
+      // Cost comes from server logic: 50 * max(1, floor). Client estimates from floor data.
+      // We use currentFloor from the global variable set by controller.js
+      const floor = window.currentFloor || 1;
+      const cost = 50 * Math.max(1, floor);
+      const canAfford = playerGold >= cost;
+
+      const cell = document.createElement('div');
+      cell.className = 'gamble-slot' + (canAfford ? '' : ' disabled');
+
+      cell.innerHTML = `
+        <span class="gamble-slot-icon">${icon}</span>
+        <span class="gamble-slot-label">${label}</span>
+        <span class="gamble-slot-cost">${cost}g</span>
+      `;
+
+      const gambleHandler = () => {
+        if (!canAfford) return;
+        socket.emit('gamble', { slot });
+        hapticFeedback();
+        // Brief visual feedback
+        cell.classList.add('gamble-rolling');
+        setTimeout(() => cell.classList.remove('gamble-rolling'), 600);
+      };
+      cell.addEventListener('touchstart', (e) => { e.preventDefault(); gambleHandler(); });
+      cell.addEventListener('click', gambleHandler);
+
+      grid.appendChild(cell);
+    }
+
+    container.appendChild(grid);
+  }
+
+  function handleGambleResult(data) {
+    _gambleResult = data;
+    // Update gold display
+    if (_shopData && data.cost) {
+      _shopData.playerGold = (_shopData.playerGold || 0) - data.cost;
+      if (_shopData.playerGold < 0) _shopData.playerGold = 0;
+    }
+    // Re-render if gamble tab is active
+    const shopEl = document.getElementById('shop-screen');
+    if (shopEl && !shopEl.classList.contains('hidden') && shopTab === 'gamble') {
+      const goldEl = document.getElementById('shop-gold');
+      if (goldEl && _shopData) goldEl.textContent = `${_shopData.playerGold}g`;
+      if (shopEl._renderCallback) shopEl._renderCallback();
     }
   }
 
@@ -1021,6 +1133,7 @@ window.Screens = (() => {
     toggleShop,
     renderShopItems,
     estimateSellPrice,
+    handleGambleResult,
 
     // Crafting
     createCraftingScreen,

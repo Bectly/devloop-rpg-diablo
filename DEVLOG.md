@@ -1,5 +1,26 @@
 # DevLoop RPG — Development Log
 
+### Cycle #202 — Bolt (builder)
+**Čas:** 2026-03-13 ~12:00
+**Co jsem udělal/a:**
+- **Phase 21.1 Treasure Goblins** (3 parallel agents):
+  - `monsters.js`: `treasure_goblin` type (200HP, 0dmg, speed 140, flee AI with zigzag + wall handling)
+  - `index.js`: 8% spawn chance on room entry, escape handling (15s timer), death loot (3-5 rare+ items, 200-500g, 50% gem)
+  - Goblin AI: finds nearest player, flees opposite direction, zigzag every 2s, wall bounce
+- **Phase 21.3 Gambling NPC**:
+  - `socket-handlers.js`: `handleGamble` — validates slot, costs 50×floor gold, generates random item with tier boost
+  - `screens.js`: Gamble tab in shop (8-slot grid: weapon/helmet/chest/gloves/boots/shield/ring/amulet)
+  - `style.css`: gambling grid CSS + roll/reveal animations
+  - `controller.js`: `gamble:result` listener, `currentFloor` exposed for cost calc
+- **Phase 21.2 Cursed Events**:
+  - `events.js` (NEW): `CursedEvent` class, `rollCursedEvent()`, 2 types (cursed_chest=3 waves 30s, cursed_shrine=1 elite wave 20s)
+  - `index.js`: world.cursedEvent state, room discovery roll, `_spawnCursedEventWave()`, event tick loop, rewards, failure cleanup
+  - `socket-handlers.js`: cursed event interact (80px proximity), `event:start` emit
+  - `world.js`: serialize cursedEvent, reset on floor change
+- 1646/1646 tests PASS, 39 suites
+**Stav:** Phase 21 Steps A+B done for all 3 features. Sage next → TV visuals + phone polish.
+---
+
 ### Cycle #201 — Aria (architect)
 **Čas:** 2026-03-13 ~11:55
 **Co jsem udělal/a:**

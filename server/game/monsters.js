@@ -277,6 +277,24 @@ const MONSTER_DEFS = {
     damageType: 'physical',
     color: 0xaabbff, size: 12,
   },
+  // ── Treasure Goblin (Phase 21.1) ────────────────────────────────
+  treasure_goblin: {
+    name: 'Treasure Goblin',
+    hp: 200,
+    damage: 0,
+    armor: 0,
+    speed: 140,          // faster than players (~120)
+    attackRange: 0,      // never attacks
+    attackSpeed: 9999,
+    aggroRadius: 0,      // always in flee mode
+    leashDistance: 9999,  // never leashes
+    xpReward: 150,
+    lootTier: 5,         // legendary-tier loot table
+    behavior: 'flee',
+    damageType: 'physical',
+    color: 0xffcc00,     // gold color
+    size: 14,
+  },
 };
 
 const AI_STATES = {
@@ -400,6 +418,15 @@ class Monster {
     this.bleedTick = 0;
     this.bleedDamage = 0;
 
+    // Treasure Goblin mechanics (Phase 21.1)
+    this.isTreasureGoblin = type === 'treasure_goblin';
+    if (this.isTreasureGoblin) {
+      this.escapeTimer = 15000;   // 15 seconds (in ms, decremented by dt)
+      this.zigzagTimer = 0;
+      this.zigzagAngle = 0;
+      this.aiState = AI_STATES.FLEE; // always fleeing
+    }
+
     // Store floor for reference
     this.floor = floor;
   }
@@ -466,6 +493,77 @@ class Monster {
   update(dt, players) {
     if (!this.alive) return [];
     const events = [];
+
+    // ── Treasure Goblin AI (Phase 21.1) ───────────────────────────
+    // Goblins always flee — separate from normal AI state machine
+    if (this.isTreasureGoblin) {
+      // Stun still affects goblins
+      if (this.stunned > 0) {
+        this.stunned -= dt;
+        return events;
+      }
+      if (this.slowed > 0) {
+        this.slowed -= dt;
+      }
+
+      // Decrement escape timer
+      this.escapeTimer -= dt;
+      if (this.escapeTimer <= 0) {
+        this.alive = false;
+        events.push({ type: 'goblin:escaped', monsterId: this.id });
+        return events;
+      }
+
+      // Find nearest player to flee from
+      const { player: closest, distance: closestDist } = this.findClosestPlayer(players);
+
+      if (closest) {
+        // Base flee direction: away from nearest player
+        let fleeAngle = Math.atan2(this.y - closest.y, this.x - closest.x);
+
+        // Zigzag: every 2 seconds, add a random perpendicular offset (±45°)
+        this.zigzagTimer -= dt;
+        if (this.zigzagTimer <= 0) {
+          this.zigzagTimer = 2000;
+          this.zigzagAngle = (Math.random() - 0.5) * (Math.PI / 2); // ±45°
+        }
+        fleeAngle += this.zigzagAngle;
+
+        const speed = this.slowed > 0 ? this.speed * 0.5 : this.speed;
+        const step = speed * (dt / 1000);
+        const newX = this.x + Math.cos(fleeAngle) * step;
+        const newY = this.y + Math.sin(fleeAngle) * step;
+
+        // Wall/boundary handling: clamp to world bounds, pick random dir if stuck
+        const worldW = 40 * 32; // GRID_W * TILE_SIZE (fallback reasonable bounds)
+        const worldH = 30 * 32;
+        const margin = 20;
+
+        if (newX > margin && newX < worldW - margin && newY > margin && newY < worldH - margin) {
+          this.x = newX;
+          this.y = newY;
+        } else {
+          // Hit boundary — pick a random open direction
+          const randAngle = Math.random() * Math.PI * 2;
+          this.x += Math.cos(randAngle) * step;
+          this.y += Math.sin(randAngle) * step;
+          // Clamp to bounds
+          this.x = Math.max(margin, Math.min(worldW - margin, this.x));
+          this.y = Math.max(margin, Math.min(worldH - margin, this.y));
+        }
+
+        // Update facing
+        const dx = Math.cos(fleeAngle);
+        const dy = Math.sin(fleeAngle);
+        if (Math.abs(dx) > Math.abs(dy)) {
+          this.facing = dx > 0 ? 'right' : 'left';
+        } else {
+          this.facing = dy > 0 ? 'down' : 'up';
+        }
+      }
+
+      return events;
+    }
 
     // Decrement stun/slow
     if (this.stunned > 0) {
@@ -967,6 +1065,11 @@ class Monster {
       physicalResist: this.physicalResist || 0,
       friendly: this.friendly || false,
       ownerId: this.ownerId || null,
+      // Treasure Goblin
+      isTreasureGoblin: this.isTreasureGoblin || false,
+      escapeTimer: this.isTreasureGoblin ? this.escapeTimer : undefined,
+      // Cursed event monster flag
+      eventMonster: this.eventMonster || false,
       // Affix data
       affixes: this.affixes || null,
       isElite: this.isElite || false,

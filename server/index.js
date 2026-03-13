@@ -4,14 +4,15 @@ const { Server } = require('socket.io');
 const path = require('path');
 
 const { Player, DEATH_GOLD_DROP_PERCENT } = require('./game/player');
-const { World, TILE, TILE_SIZE, GRID_W, GRID_H, FLOOR_NAMES, DIFFICULTY_SCALES } = require('./game/world');
+const { World, TILE, TILE_SIZE, GRID_W, GRID_H, FLOOR_NAMES, DIFFICULTY_SCALES, getZoneForFloor } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { Inventory } = require('./game/inventory');
 const { StoryManager } = require('./game/story');
-const { generateConsumable, generateLoot, generateWeapon, generateArmor } = require('./game/items');
+const { generateConsumable, generateLoot, generateWeapon, generateArmor, generateAccessory, RARITIES, PREFIXES, buildItemName } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
 const { createMonster, createSpiritWolf } = require('./game/monsters');
-const { processAffixUpdates, AFFIX_DEFS } = require('./game/affixes');
+const { rollGemDrop, generateGem, GEM_TYPES } = require('./game/gems');
+const { processAffixUpdates, AFFIX_DEFS, rollAffixes, applyAffixes } = require('./game/affixes');
 const { getRiftRewards } = require('./game/rifts');
 const { updateProjectiles, createProjectileAngled } = require('./game/projectiles');
 const uuid = require('uuid');
@@ -19,6 +20,7 @@ const handlers = require('./socket-handlers');
 const craftHandlers = require('./socket-handlers-craft');
 const { GameDatabase } = require('./game/database');
 const { ComboTracker } = require('./game/combos');
+const { rollCursedEvent } = require('./game/events');
 
 const gameDb = new GameDatabase();
 
@@ -71,6 +73,7 @@ const tvSockets = new Set();
 let gameDifficulty = 'normal';
 
 const world = new World();
+world.cursedEvent = null;
 const combat = new CombatSystem();
 const comboTracker = new ComboTracker();
 const story = new StoryManager();
@@ -140,6 +143,7 @@ controllerNs.on('connection', (socket) => {
   socket.on('shop:open', () => handlers.handleShopOpen(socket, null, ctx));
   socket.on('shop:buy', (data) => handlers.handleShopBuy(socket, data, ctx));
   socket.on('shop:sell', (data) => handlers.handleShopSell(socket, data, ctx));
+  socket.on('gamble', (data) => handlers.handleGamble(socket, data, ctx));
   socket.on('shrine:use', () => handlers.handleShrineUse(socket, null, ctx));
   socket.on('craft:info', (data) => craftHandlers.handleCraftInfo(socket, data, ctx));
   socket.on('craft:salvage', (data) => craftHandlers.handleCraftSalvage(socket, data, ctx));
@@ -189,6 +193,7 @@ controllerNs.on('connection', (socket) => {
     gameStartTime = Date.now();
     comboTracker.reset();
     world.generateFloor(0, gameDifficulty);
+    world.cursedEvent = null;
     story.placeNpcs(world.storyNpcs || []);
 
     // Force-reconnect all disconnected players on restart (Bug #4):
@@ -277,6 +282,66 @@ let lastTick = Date.now();
 let tickCount = 0;
 const AUTO_PICKUP_RADIUS = 72; // 1.5 tiles
 const RARE_PLUS_RARITIES = new Set(['rare', 'epic', 'legendary', 'set']);
+
+// ── Cursed Event: spawn wave of monsters for the active event ──
+function _spawnCursedEventWave(cursedEvent) {
+  const count = cursedEvent.getMonstersForWave();
+  if (count <= 0) return;
+
+  const isElite = cursedEvent.isEliteWave();
+  const room = cursedEvent.room.room; // roomData.room = {x,y,w,h}
+  const zone = getZoneForFloor(world.currentFloor);
+  const monsterPool = zone.monsterPool;
+  const scale = DIFFICULTY_SCALES[gameDifficulty] || DIFFICULTY_SCALES.normal;
+
+  const spawned = [];
+  for (let i = 0; i < count; i++) {
+    const type = monsterPool[Math.floor(Math.random() * monsterPool.length)];
+    const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
+    const my = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
+    const monster = createMonster(type, mx, my, world.currentFloor);
+
+    // Apply difficulty scaling
+    monster.hp = Math.floor(monster.hp * scale.hpMult);
+    monster.maxHp = Math.floor(monster.maxHp * scale.hpMult);
+    monster.damage = Math.floor(monster.damage * scale.dmgMult);
+    monster.xpReward = Math.floor(monster.xpReward * scale.xpMult);
+    monster.goldMult = scale.goldMult;
+
+    // Force elite for elite waves (cursed shrine all waves, cursed chest last wave)
+    if (isElite) {
+      const affixCount = cursedEvent.type === 'cursed_shrine' ? 2 : 1;
+      const affixKeys = Object.keys(AFFIX_DEFS);
+      const picked = [];
+      const available = [...affixKeys];
+      for (let a = 0; a < Math.min(affixCount, available.length); a++) {
+        const idx = Math.floor(Math.random() * available.length);
+        picked.push(available[idx]);
+        available.splice(idx, 1);
+      }
+      applyAffixes(monster, { affixes: picked, rank: 'champion' });
+    } else {
+      // Normal waves: still roll for affixes normally
+      const affixResult = rollAffixes(world.currentFloor, type, scale.eliteBonus);
+      if (affixResult) applyAffixes(monster, affixResult);
+    }
+
+    // Mark as event monster for tracking
+    monster.eventMonster = true;
+    monster.aiState = 'alert'; // immediately aggressive
+
+    world.monsters.push(monster);
+    spawned.push(monster);
+  }
+
+  cursedEvent.monstersRemaining = count;
+  cursedEvent.wavesSpawned++;
+
+  const waveNum = cursedEvent.currentWave + 1;
+  gameNs.emit('event:wave', { wave: waveNum, totalWaves: cursedEvent.totalWaves, monstersCount: count });
+  controllerNs.emit('notification', { text: `${cursedEvent.name} — Wave ${waveNum}/${cursedEvent.totalWaves}! (${count} enemies)`, type: 'warning' });
+  console.log(`[Event] ${cursedEvent.name} wave ${waveNum}/${cursedEvent.totalWaves}: ${count} monsters (elite: ${isElite})`);
+}
 
 function gameLoop() {
   const now = Date.now();
@@ -401,6 +466,116 @@ function gameLoop() {
     if (ev.type === 'wave:start') {
       gameNs.emit('wave:start', ev);
       controllerNs.emit('notification', { text: `Wave ${ev.wave}/${ev.totalWaves}!`, type: 'warning' });
+    }
+
+    // ── Treasure Goblin spawn chance (Phase 21.1) ─────────────────
+    if (ev.type === 'room:discovered' && ev.roomType !== 'boss' && ev.roomType !== 'start') {
+      if (Math.random() < 0.08) {
+        // Find the room data to get center position
+        const goblinRoom = world.rooms.find(r => r.id === ev.roomId);
+        if (goblinRoom) {
+          const r = goblinRoom.room;
+          const cx = (r.x + r.w / 2) * TILE_SIZE;
+          const cy = (r.y + r.h / 2) * TILE_SIZE;
+          const goblin = createMonster('treasure_goblin', cx, cy, world.currentFloor);
+          world.monsters.push(goblin);
+          console.log(`[Goblin] Treasure Goblin spawned in ${ev.roomName}!`);
+          gameNs.emit('goblin:spawn', { id: goblin.id, x: Math.round(cx), y: Math.round(cy), roomName: ev.roomName });
+          controllerNs.emit('notification', { text: 'A Treasure Goblin appears!', type: 'warning' });
+        }
+      }
+    }
+
+    // ── Cursed Event spawn chance (Phase 21.2) ───────────────────
+    if (ev.type === 'room:discovered' && !world.cursedEvent) {
+      const discoveredRoom = world.rooms.find(r => r.id === ev.roomId);
+      if (discoveredRoom) {
+        const cursed = rollCursedEvent(discoveredRoom);
+        if (cursed) {
+          const r = discoveredRoom.room;
+          cursed.x = (r.x + r.w / 2) * TILE_SIZE;
+          cursed.y = (r.y + r.h / 2) * TILE_SIZE;
+          world.cursedEvent = cursed;
+          console.log(`[Event] ${cursed.name} spawned in ${ev.roomName}!`);
+          gameNs.emit('event:spawn', cursed.serialize());
+          controllerNs.emit('notification', { text: `A ${cursed.name} appears! Interact to activate.`, type: 'warning' });
+        }
+      }
+    }
+  }
+
+  // ── Cursed Event tick + wave management (Phase 21.2) ──
+  if (world.cursedEvent && world.cursedEvent.active && !world.cursedEvent.completed && !world.cursedEvent.failed) {
+    const ce = world.cursedEvent;
+    ce.tick();
+
+    // Spawn wave if needed (first wave after interact, or subsequent waves after clearing)
+    if (ce.needsSpawn) {
+      ce.needsSpawn = false;
+      _spawnCursedEventWave(ce);
+    }
+
+    // Track remaining event monsters
+    const eventMonstersAlive = world.monsters.filter(m => m.alive && m.eventMonster).length;
+    ce.monstersRemaining = eventMonstersAlive;
+
+    // Wave cleared: all event monsters dead AND at least one wave was spawned
+    if (eventMonstersAlive === 0 && ce.wavesSpawned > 0) {
+      ce.waveCleared();
+
+      if (ce.completed) {
+        // ── Event completed: generate reward ──
+        if (ce.rewardType === 'item') {
+          // Cursed chest: drop high-tier items (large tierBoost for epic+ bias)
+          const rewardCount = 2 + Math.floor(Math.random() * 2); // 2-3 items
+          for (let i = 0; i < rewardCount; i++) {
+            const item = Math.random() < 0.5
+              ? generateWeapon(world.currentFloor + 3)
+              : generateArmor(world.currentFloor + 3);
+            world.addGroundItem(item, ce.x + (Math.random() - 0.5) * 40, ce.y + (Math.random() - 0.5) * 40);
+          }
+          // Bonus gold
+          const gMult = (DIFFICULTY_SCALES[gameDifficulty] || DIFFICULTY_SCALES.normal).goldMult;
+          const gold = generateConsumable('gold', Math.floor((50 + world.currentFloor * 25) * gMult));
+          if (gold) world.addGroundItem(gold, ce.x, ce.y + 20);
+        } else if (ce.rewardType === 'stat_buff') {
+          // Cursed shrine: +2 random stat to all players for rest of floor
+          const statKeys = ['str', 'dex', 'int', 'vit'];
+          const buffStat = statKeys[Math.floor(Math.random() * statKeys.length)];
+          for (const p of allPlayers) {
+            if (!p.stats) continue;
+            p.stats[buffStat] = (p.stats[buffStat] || 0) + ce.buffAmount;
+            if (p.recalcStats) p.recalcStats();
+          }
+          gameNs.emit('event:buff', { stat: buffStat, amount: ce.buffAmount });
+          controllerNs.emit('notification', { text: `Cursed Shrine conquered! +${ce.buffAmount} ${buffStat.toUpperCase()} for all!`, type: 'quest' });
+          // Update phone stats for all players
+          for (const [sid, p] of players) {
+            const sock = controllerNs.sockets.get(sid);
+            if (sock) sock.emit('stats:update', p.serializeForPhone());
+          }
+        }
+
+        gameNs.emit('event:complete', { type: ce.type, reward: ce.rewardType });
+        controllerNs.emit('notification', { text: `${ce.name} conquered!`, type: 'quest' });
+        console.log(`[Event] ${ce.name} completed!`);
+        world.cursedEvent = null;
+      }
+      // needsSpawn is set by waveCleared() if more waves remain
+    }
+
+    // Check for failure (timer expired)
+    if (ce && ce.failed) {
+      gameNs.emit('event:failed', { type: ce.type });
+      controllerNs.emit('notification', { text: `${ce.name} failed! Time expired.`, type: 'error' });
+      console.log(`[Event] ${ce.name} failed — timer expired.`);
+      // Kill remaining event monsters
+      for (const m of world.monsters) {
+        if (m.eventMonster && m.alive) {
+          m.alive = false;
+        }
+      }
+      world.cursedEvent = null;
     }
   }
 
@@ -543,6 +718,13 @@ function gameLoop() {
         // Forward to TV for visual effect
         combat.events.push({ type: 'void_pulse', x: event.x, y: event.y, radius: event.radius });
       }
+      // Treasure Goblin escaped (Phase 21.1)
+      else if (event.type === 'goblin:escaped') {
+        console.log(`[Goblin] Treasure Goblin escaped!`);
+        gameNs.emit('goblin:escaped', { monsterId: event.monsterId });
+        controllerNs.emit('goblin:escaped', { monsterId: event.monsterId });
+        controllerNs.emit('notification', { text: 'The Treasure Goblin escaped!', type: 'warning' });
+      }
       // Visual events — forward to combat events for TV broadcast
       else if (event.type === 'boss_phase' || event.type === 'teleport' || event.type === 'stealth_reveal' || event.type === 'boss_shadow_clones') {
         combat.events.push(event);
@@ -679,6 +861,7 @@ function gameLoop() {
 
       // Return to normal floor
       world.generateFloor(0, gameDifficulty);
+      world.cursedEvent = null;
       story.placeNpcs(world.storyNpcs || []);
       let ridx = 0;
       for (const [sid, p] of players) {
@@ -793,6 +976,74 @@ function gameLoop() {
           }
         }
 
+        // ── Treasure Goblin kill — massive loot explosion (Phase 21.1) ──
+        if (deadMonster.isTreasureGoblin) {
+          console.log(`[Goblin] Treasure Goblin killed by ${event.killedByName}!`);
+          const goblinLoot = [];
+
+          // 3-5 items with boosted rarity (minimum rare, high tierBoost)
+          const goblinItemCount = 3 + Math.floor(Math.random() * 3);
+          const goblinTierBoost = world.currentFloor + 5; // heavy rarity boost
+          const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+          for (let i = 0; i < goblinItemCount; i++) {
+            const roll = Math.random();
+            let item;
+            if (roll < 0.4) {
+              item = generateWeapon(goblinTierBoost);
+            } else if (roll < 0.8) {
+              item = generateArmor(goblinTierBoost);
+            } else {
+              item = generateAccessory(goblinTierBoost);
+            }
+            // Force minimum rare rarity
+            const rarityIdx = rarityOrder.indexOf(item.rarity);
+            if (rarityIdx < 2) {
+              item.rarity = 'rare';
+              item.rarityColor = RARITIES.rare.color;
+              const prefix = PREFIXES.rare[Math.floor(Math.random() * PREFIXES.rare.length)];
+              const nameParts = item.name.split(' ');
+              const baseName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0];
+              const category = item.type === 'weapon' ? 'weapon' : (item.type === 'accessory' ? 'accessory' : 'armor');
+              item.name = buildItemName(prefix, baseName, 'rare', item.bonuses, category, item.subType);
+            }
+            goblinLoot.push(item);
+          }
+
+          // 200-500 gold
+          const goblinGold = 200 + Math.floor(Math.random() * 301);
+          goblinLoot.push(generateConsumable('gold', goblinGold));
+
+          // 50% chance for a gem
+          if (Math.random() < 0.5) {
+            const tier = world.currentFloor >= 20 ? 3 : world.currentFloor >= 10 ? 2 : 1;
+            const gemType = GEM_TYPES[Math.floor(Math.random() * GEM_TYPES.length)];
+            const gem = generateGem(gemType, tier);
+            if (gem) goblinLoot.push(gem);
+          }
+
+          // Drop all goblin loot as ground items
+          for (const loot of goblinLoot) {
+            const lx = deadMonster.x + (Math.random() - 0.5) * 60;
+            const ly = deadMonster.y + (Math.random() - 0.5) * 60;
+            world.addGroundItem(loot, lx, ly);
+          }
+
+          // Emit goblin:killed to all sockets
+          gameNs.emit('goblin:killed', {
+            monsterId: deadMonster.id,
+            killedBy: event.killedByName,
+            x: Math.round(deadMonster.x),
+            y: Math.round(deadMonster.y),
+            lootCount: goblinLoot.length,
+          });
+          controllerNs.emit('goblin:killed', {
+            monsterId: deadMonster.id,
+            killedBy: event.killedByName,
+          });
+          controllerNs.emit('notification', { text: 'Treasure Goblin slain! Loot everywhere!', type: 'quest' });
+        }
+
         // Boss loot chest
         if (deadMonster.isBoss || deadMonster.type === 'boss_knight') {
           const chest = {
@@ -883,6 +1134,7 @@ function gameLoop() {
           setTimeout(() => {
             if (world.riftActive) return; // A new rift was opened during the delay
             world.generateFloor(0, gameDifficulty);
+            world.cursedEvent = null;
             story.placeNpcs(world.storyNpcs || []);
             let ridx = 0;
             for (const [sid, p] of players) {
@@ -1157,6 +1409,7 @@ function gameLoop() {
 
           const nextFloor = world.currentFloor + 1;
           world.generateFloor(nextFloor, gameDifficulty);
+          world.cursedEvent = null;
           story.placeNpcs(world.storyNpcs || []);
 
           // Save all players on floor transition

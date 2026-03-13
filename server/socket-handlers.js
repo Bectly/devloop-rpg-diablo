@@ -4,7 +4,7 @@
  */
 
 const { Inventory } = require('./game/inventory');
-const { generateConsumable, generateWeapon, generateArmor } = require('./game/items');
+const { generateConsumable, generateWeapon, generateArmor, generateAccessory, WEAPONS, ARMORS, ACCESSORIES, RARITIES, BONUS_POOL, RESIST_BONUS_POOL } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
 const { TILE_SIZE } = require('./game/world');
 const { pendingReforges } = require('./socket-handlers-craft');
@@ -550,6 +550,25 @@ exports.handleInteract = (socket, data, { players, world, story, gameNs, invento
       }
 
       socket.emit('enchant:open', { items: enchantableItems, playerGold: player.gold });
+      return;
+    }
+  }
+
+  // Check cursed event (Phase 21.2) — interact to activate
+  if (world.cursedEvent && !world.cursedEvent.active && !world.cursedEvent.completed && !world.cursedEvent.failed) {
+    const ce = world.cursedEvent;
+    const eventDist = Math.hypot(player.x - ce.x, player.y - ce.y);
+    if (eventDist < 80) {
+      ce.start();
+      console.log(`[Event] ${player.name} activated ${ce.name}!`);
+      gameNs.emit('event:start', {
+        type: ce.type,
+        name: ce.name,
+        timer: ce.timer,
+        totalDuration: ce.totalDuration,
+        totalWaves: ce.totalWaves,
+      });
+      socket.emit('notification', { text: `${ce.name} activated! Survive the onslaught!`, type: 'warning' });
       return;
     }
   }
@@ -1107,6 +1126,7 @@ function _enterRift(ctx) {
   pendingRift = null;
 
   ctx.world.generateRiftFloor(riftConfig);
+  ctx.world.cursedEvent = null;
 
   // Apply cursed modifier heal reduction
   const hasCursed = riftConfig.modifiers.some(m => m.effect === 'heal_reduce');
@@ -1584,8 +1604,6 @@ exports.handleLootFilter = (socket, data, { players }) => {
 
 // ── Enchanting ──
 
-const { BONUS_POOL, RESIST_BONUS_POOL, RARITIES } = require('./game/items');
-
 exports.handleEnchantPreview = (socket, data, { players, inventories }) => {
   const player = players.get(socket.id);
   if (!player) return;
@@ -1731,6 +1749,131 @@ exports.handleEnchantExecute = (socket, data, { players, inventories }) => {
     text: `✧ ${data.bonusKey}: ${oldValue} → ${newValue} (−${cost}g)`,
     type: newValue > oldValue ? 'info' : 'warning',
   });
+};
+
+// ── Gambling (Kadala-style mystery items) ──
+exports.handleGamble = (socket, data, { players, inventories, world, gameNs }) => {
+  const player = players.get(socket.id);
+  if (!player || !player.alive || player.isDying) return;
+
+  // Validate slot
+  const validSlots = ['weapon', 'helmet', 'chest', 'gloves', 'boots', 'ring', 'amulet', 'shield'];
+  if (!data || !validSlots.includes(data.slot)) {
+    socket.emit('notification', { text: 'Invalid gamble slot', type: 'error' });
+    return;
+  }
+
+  // Must be near shop NPC
+  const shopNpc = world.getShopNpc();
+  if (!shopNpc) return;
+  const dist = Math.hypot(player.x - shopNpc.x, player.y - shopNpc.y);
+  if (dist > 120) {
+    socket.emit('notification', { text: 'Too far from merchant!', type: 'error' });
+    return;
+  }
+
+  // Cost: 50 × current floor (minimum floor 1)
+  const floor = world.currentFloor || 1;
+  const cost = 50 * Math.max(1, floor);
+
+  if (player.gold < cost) {
+    socket.emit('notification', { text: `Not enough gold! Need ${cost}g`, type: 'error' });
+    return;
+  }
+
+  const inv = inventories.get(player.id);
+  if (!inv) return;
+
+  // Generate item for the requested slot
+  let item = null;
+  const slot = data.slot;
+
+  if (slot === 'weapon') {
+    // Generate weapons until we get one (all weapons have slot 'weapon', so any will do)
+    item = generateWeapon(Math.floor(floor / 2));
+  } else if (slot === 'ring') {
+    item = generateAccessory(Math.floor(floor / 2));
+    // Force ring slot — re-roll until ring, or just override
+    const ringBase = ACCESSORIES.ring;
+    item.slot = ringBase.slot; // 'ring1'
+    item.subType = 'ring';
+    item.type = 'accessory';
+  } else if (slot === 'amulet') {
+    item = generateAccessory(Math.floor(floor / 2));
+    const amuletBase = ACCESSORIES.amulet;
+    item.slot = amuletBase.slot; // 'amulet'
+    item.subType = 'amulet';
+    item.type = 'accessory';
+  } else if (slot === 'shield') {
+    item = generateAccessory(Math.floor(floor / 2));
+    const shieldBase = ACCESSORIES.shield;
+    item.slot = shieldBase.slot; // 'shield'
+    item.subType = 'shield';
+    item.type = 'armor';
+    if (!item.armor) {
+      const baseArmor = shieldBase.baseArmor;
+      const mult = RARITIES[item.rarity] ? RARITIES[item.rarity].multiplier : 1.0;
+      item.armor = Math.ceil((Math.floor(Math.random() * (baseArmor[1] - baseArmor[0] + 1)) + baseArmor[0]) * mult);
+    }
+    item.gridW = shieldBase.gridW;
+    item.gridH = shieldBase.gridH;
+  } else {
+    // Armor slots: helmet, chest, gloves, boots — generate armor and filter by slot
+    // Re-roll up to 20 times to get the right slot, then force it
+    for (let i = 0; i < 20; i++) {
+      item = generateArmor(Math.floor(floor / 2));
+      if (item.slot === slot) break;
+    }
+    // If still wrong slot, force it by picking a matching base
+    if (item.slot !== slot) {
+      const matchingKeys = Object.keys(ARMORS).filter(k => ARMORS[k].slot === slot);
+      if (matchingKeys.length > 0) {
+        const baseKey = matchingKeys[Math.floor(Math.random() * matchingKeys.length)];
+        const base = ARMORS[baseKey];
+        item.slot = base.slot;
+        item.subType = base.subType;
+        item.gridW = base.gridW;
+        item.gridH = base.gridH;
+        const mult = RARITIES[item.rarity] ? RARITIES[item.rarity].multiplier : 1.0;
+        item.armor = Math.ceil((Math.floor(Math.random() * (base.baseArmor[1] - base.baseArmor[0] + 1)) + base.baseArmor[0]) * mult);
+      }
+    }
+  }
+
+  if (!item) {
+    socket.emit('notification', { text: 'Gamble failed — try again', type: 'error' });
+    return;
+  }
+
+  // Check inventory space
+  const result = inv.addItem(item);
+  if (!result.success) {
+    socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    return;
+  }
+
+  // Deduct gold
+  player.gold -= cost;
+
+  // Emit results
+  const rarityName = (item.rarity || 'common').toUpperCase();
+  socket.emit('gamble:result', {
+    item,
+    cost,
+    rarity: item.rarity,
+    rarityColor: item.rarityColor,
+  });
+  socket.emit('inventory:update', inv.serialize());
+  socket.emit('stats:update', player.serializeForPhone());
+  socket.emit('notification', {
+    text: `Gambled: ${item.name} [${rarityName}] for ${cost}g`,
+    type: item.rarity || 'common',
+  });
+
+  // Re-send shop inventory if still relevant
+  if (shopNpc) {
+    socket.emit('shop:inventory', { items: shopNpc.inventory, playerGold: player.gold });
+  }
 };
 
 // ── Exports for external access ──

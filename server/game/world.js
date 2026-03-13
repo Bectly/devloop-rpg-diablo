@@ -1066,6 +1066,7 @@ class World {
         y: Math.round(npc.y),
       })),
       traps: (this.traps || []).map(t => t.serialize()),
+      cursedEvent: this.cursedEvent ? this.cursedEvent.serialize() : null,
     };
   }
 }

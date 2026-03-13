@@ -3731,3 +3731,101 @@ html, body {
 #enchant-preview button:active {
   transform: scale(0.95);
 }
+
+/* ===== Gambling (Kadala-style) ===== */
+.gamble-info {
+  text-align: center;
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+}
+
+.gamble-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+.gamble-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gamble-slot:active {
+  background: rgba(255, 136, 0, 0.15);
+  border-color: var(--accent);
+  transform: scale(0.95);
+}
+
+.gamble-slot.disabled {
+  opacity: 0.35;
+  filter: grayscale(0.8);
+  pointer-events: none;
+}
+
+.gamble-slot.gamble-rolling {
+  animation: gambleRoll 0.6s ease;
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.3);
+}
+
+@keyframes gambleRoll {
+  0%   { transform: scale(1); border-color: var(--border); }
+  30%  { transform: scale(0.9); border-color: var(--gold); box-shadow: 0 0 16px rgba(255, 204, 0, 0.5); }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); border-color: var(--gold); }
+}
+
+.gamble-slot-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.gamble-slot-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gamble-slot-cost {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.gamble-result-display {
+  margin: 8px 12px;
+  padding: 10px 14px;
+  background: rgba(255, 204, 0, 0.06);
+  border: 1px solid rgba(255, 204, 0, 0.2);
+  border-radius: 8px;
+  text-align: center;
+  animation: gambleReveal 0.4s ease-out;
+}
+
+@keyframes gambleReveal {
+  0%   { opacity: 0; transform: scale(0.9); }
+  60%  { transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.gamble-result-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}

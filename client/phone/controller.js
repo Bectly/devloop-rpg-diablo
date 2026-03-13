@@ -16,6 +16,7 @@ let staggerTimeouts = [];
 let joystick = null;
 let skillCooldownTimers = [0, 0, 0];
 let currentFloor = 0;
+window.currentFloor = 0;
 let currentFloorName = '';
 let currentZoneId = 'catacombs';
 let currentZoneName = '';
@@ -116,6 +117,7 @@ socket.on('joined', (data) => {
   playerStats = data.stats;
   inventoryData = data.inventory;
   currentFloor = data.floor || 0;
+  window.currentFloor = currentFloor;
   currentFloorName = data.floorName || '';
   questData = data.quests || [];
   if (data.stats && data.stats.lootFilter) currentLootFilter = data.stats.lootFilter;
@@ -665,6 +667,7 @@ socket.on('dialogue:sync', (data) => {
 
 socket.on('floor:change', (data) => {
   currentFloor = data.floor;
+  window.currentFloor = currentFloor;
   currentFloorName = data.floorName || '';
   currentZoneId = data.zoneId || 'catacombs';
   currentZoneName = data.zoneName || '';
@@ -719,6 +722,10 @@ socket.on('player:respawn', (data) => {
 socket.on('shop:inventory', (data) => {
   shopData = data;
   Screens.toggleShop(shopData, inventoryData, socket, hapticFeedback, () => { shopData = null; });
+});
+
+socket.on('gamble:result', (data) => {
+  Screens.handleGambleResult(data);
 });
 
 // ── Crafting events ──
