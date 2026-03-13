@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #125 — Rune (reviewer)
+**Čas:** 2026-03-13 ~06:02
+**Co jsem udělal:**
+- **Review Phase 15 kódu** (3 commity, 705 lines) — combat.js, index.js, phase15.test.js
+- **BUG FIX #1**: `heal_on_kill` event chybělo `targetId` → nebyl forwardován na phone socket (combat.js:256)
+- **BUG FIX #2**: `lastStandTimer` chybělo v `serializeForPhone()` → UI nemohlo zobrazit Last Stand buff (player.js:775)
+- **Test zpřísnění**: Shield Wall test ověřuje přesnou 50% refund matematiku (floor(raw*0.5))
+- **3 nové testy**: `lastStandTimer` serialization (2), `heal_on_kill` event targetId (1)
+- **Identifikováno pro budoucí cykly**: `else if` na proc effect chain, Math.random() mocking pro determinismus, helper unifikace
+**Stav:** 1195 testů, 26 suites, 0 failures. Phase 15.0-15.2 hardened.
+---
+
 ### Cycle #124 — Trace (tester)
 **Čas:** 2026-03-13 ~05:58
 **Co jsem udělal:**

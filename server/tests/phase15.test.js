@@ -52,13 +52,17 @@ describe('Phase 15.0 — Defensive Talent Procs', () => {
 
       combat.processMonsterAttack(event, [player], monster);
 
-      // Player took damage but got 50% refunded
-      const dealt = hpBefore - player.hp;
-      // dealt should be roughly half of what it would be without block
-      // Block proc emits combat:proc event
+      // Block proc emits combat:proc event with refunded value
       const blockEvents = combat.events.filter(e => e.type === 'combat:proc' && e.effect === 'block');
       expect(blockEvents).toHaveLength(1);
-      expect(blockEvents[0].value).toBeGreaterThan(0);
+      const refunded = blockEvents[0].value;
+      expect(refunded).toBeGreaterThan(0);
+      // Player took raw damage, then got 50% refunded → net damage = raw - refund
+      // Refund = floor(raw * 0.5), so player.hp should be hpBefore - raw + refund
+      const rawDamage = combat.events.find(e => e.type === 'combat:hit' && e.targetId === player.id)?.damage || 0;
+      if (rawDamage > 0) {
+        expect(refunded).toBe(Math.floor(rawDamage * 0.5));
+      }
       expect(player.hp).toBeGreaterThan(hpBefore - 100); // took less than full damage
     });
 
@@ -457,5 +461,53 @@ describe('Player.lastStandTimer', () => {
   it('new player has lastStandTimer = 0', () => {
     const p = new Player('TimerTest', 'warrior');
     expect(p.lastStandTimer).toBe(0);
+  });
+
+  it('lastStandTimer included in serializeForPhone()', () => {
+    const p = new Player('SerializeTest', 'warrior');
+    p.lastStandTimer = 3500;
+    const data = p.serializeForPhone();
+    expect(data.lastStandTimer).toBe(3500);
+  });
+
+  it('lastStandTimer defaults to 0 in serializeForPhone()', () => {
+    const p = new Player('SerializeTest2', 'warrior');
+    const data = p.serializeForPhone();
+    expect(data.lastStandTimer).toBe(0);
+  });
+});
+
+// ── heal_on_kill event has targetId ─────────────────────────────
+
+describe('heal_on_kill event structure', () => {
+  it('includes targetId for phone forwarding', () => {
+    const combat = new CombatSystem();
+    const player = {
+      id: 'heal-kill-test', name: 'Healer', alive: true,
+      attackPower: 200, spellPower: 0, critChance: 0,
+      x: 90, y: 90, attackRange: 120, attackCooldown: 0, attackSpeed: 1000,
+      canAttack() { return this.attackCooldown <= 0; },
+      startAttackCooldown() { this.attackCooldown = this.attackSpeed; },
+      equipment: {}, setBonuses: {}, buffs: [], hp: 80, maxHp: 200,
+      kills: 0, gold: 0, difficulty: 'normal',
+      gainXp() { return null; },
+      questManager: { notifyKill() {} },
+      talentBonuses: {
+        passives: {},
+        procs: [
+          { trigger: 'on_kill', chance: 1.0, effect: 'heal_percent', value: 15 },
+        ],
+        auras: [],
+      },
+    };
+    const monster = new Monster('skeleton', 100, 100, 0);
+    monster.maxHp = 100;
+    monster.hp = 1; // will die from hit
+
+    combat.playerAttack(player, [monster]);
+
+    const healEvent = combat.events.find(e => e.type === 'combat:proc' && e.effect === 'heal_on_kill');
+    expect(healEvent).toBeDefined();
+    expect(healEvent.targetId).toBe(player.id);
   });
 });

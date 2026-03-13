@@ -253,7 +253,7 @@ class CombatSystem {
             if (proc.effect === 'heal_percent') {
               const heal = Math.floor(player.maxHp * (proc.value || 15) / 100);
               player.hp = Math.min(player.maxHp, player.hp + heal);
-              this.events.push({ type: 'combat:proc', attackerId: player.id, effect: 'heal_on_kill', heal });
+              this.events.push({ type: 'combat:proc', targetId: player.id, attackerId: player.id, effect: 'heal_on_kill', heal });
             }
           }
         }
