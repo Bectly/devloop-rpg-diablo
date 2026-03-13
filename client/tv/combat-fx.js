@@ -176,10 +176,10 @@ const CombatFX = (() => {
         if (ev.skillName) {
           const attacker = state.players?.find(p => p.id === ev.attackerId);
           switch (ev.skillName) {
-            case 'Cleave': {
+            case 'Whirlwind': {
               const ax = attacker ? attacker.x : (target ? target.x : 0);
               const ay = attacker ? attacker.y : (target ? target.y : 0);
-              spawnAoeEffect(scene, ax, ay, 60, 0xff8833, 500);
+              spawnAoeEffect(scene, ax, ay, 70, 0xff8833, 500);
               break;
             }
             case 'Fireball': {
@@ -207,9 +207,9 @@ const CombatFX = (() => {
               }
               break;
             }
-            case 'Shield Bash': {
+            case 'Charging Strike': {
               if (target) {
-                spawnAoeEffect(scene, target.x, target.y, 24, 0xffcc44, 300);
+                spawnAoeEffect(scene, target.x, target.y, 30, 0xffcc44, 400);
               }
               break;
             }
@@ -275,7 +275,7 @@ const CombatFX = (() => {
         const p = state.players?.find(p => p.id === ev.playerId);
         if (p) {
           HUD.spawnDamageText(scene, p.x, p.y - 40, ev.skillName, false, false, '#44ccff');
-          if (ev.skillName === 'War Cry') {
+          if (ev.skillName === 'Battle Shout') {
             spawnBuffEffect(scene, p.x, p.y, 0xffcc00);
           } else if (ev.skillName === 'Evasion') {
             spawnBuffEffect(scene, p.x, p.y, 0x44cc44);

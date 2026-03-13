@@ -346,9 +346,9 @@ window.Screens = (() => {
   // ─── Skill Tooltip System ──────────────────────────────────
   const SKILL_DESCRIPTIONS = {
     warrior: [
-      { name: 'Cleave', desc: 'Swing weapon in wide arc. Deals 1.8x damage to all enemies within 60px.', type: 'AoE' },
-      { name: 'Shield Bash', desc: 'Bash enemy with shield. Deals 1.2x damage and stuns for 2 seconds.', type: 'Single' },
-      { name: 'War Cry', desc: 'Rally allies! All party members gain +30% attack power for 8 seconds.', type: 'Buff' },
+      { name: 'Whirlwind', desc: 'Spin attack dealing 3 hits to all nearby enemies within 70px. 0.6x per hit.', type: 'Spin' },
+      { name: 'Charging Strike', desc: 'Dash to nearest enemy. 2x damage + stun 2s. Trail damages enemies in path.', type: 'Charge' },
+      { name: 'Battle Shout', desc: 'Party gains +30% attack 8s. Terrorizes nearby enemies (flee 1.5s).', type: 'Buff+Fear' },
     ],
     ranger: [
       { name: 'Multi-Shot', desc: 'Fire 3 arrows at once. Each deals 0.8x damage to nearby targets.', type: 'Multi' },

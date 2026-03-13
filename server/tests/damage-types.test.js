@@ -76,10 +76,10 @@ describe('DamageTypes', () => {
       expect(Object.keys(SKILL_DAMAGE_TYPES).length).toBe(9);
     });
 
-    it('warrior skills: Cleave=physical, Shield Bash=physical, War Cry=physical', () => {
-      expect(SKILL_DAMAGE_TYPES['Cleave']).toBe('physical');
-      expect(SKILL_DAMAGE_TYPES['Shield Bash']).toBe('physical');
-      expect(SKILL_DAMAGE_TYPES['War Cry']).toBe('physical');
+    it('warrior skills: Whirlwind=physical, Charging Strike=physical, Battle Shout=physical', () => {
+      expect(SKILL_DAMAGE_TYPES['Whirlwind']).toBe('physical');
+      expect(SKILL_DAMAGE_TYPES['Charging Strike']).toBe('physical');
+      expect(SKILL_DAMAGE_TYPES['Battle Shout']).toBe('physical');
     });
 
     it('mage skills: Fireball=fire, Frost Nova=cold, Teleport=physical', () => {
@@ -200,7 +200,7 @@ describe('DamageTypes', () => {
       expect(getSkillDamageType('Fireball')).toBe('fire');
       expect(getSkillDamageType('Frost Nova')).toBe('cold');
       expect(getSkillDamageType('Poison Arrow')).toBe('poison');
-      expect(getSkillDamageType('Cleave')).toBe('physical');
+      expect(getSkillDamageType('Whirlwind')).toBe('physical');
     });
 
     it('returns physical for unknown skills', () => {

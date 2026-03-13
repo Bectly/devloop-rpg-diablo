@@ -130,7 +130,7 @@ window.Reconnect = {
     container.innerHTML = '';
     const items = [];
 
-    // Active buffs from buff system (War Cry, Evasion, etc.)
+    // Active buffs from buff system (Battle Shout, Evasion, etc.)
     if (stats.buffs) {
       for (const b of stats.buffs) {
         const secs = Math.ceil((b.remaining || 0) / 1000);

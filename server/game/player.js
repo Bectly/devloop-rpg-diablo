@@ -12,9 +12,9 @@ const CLASS_BONUSES = {
 
 const CLASS_SKILLS = {
   warrior: [
-    { name: 'Cleave',      shortName: 'CLV', mpCost: 15, cooldown: 3000, damage: 1.8, type: 'aoe',    radius: 60, description: 'Wide slash hitting all nearby enemies' },
-    { name: 'Shield Bash',  shortName: 'BSH', mpCost: 20, cooldown: 5000, damage: 1.2, type: 'single', effect: 'stun', duration: 2000, description: 'Stun an enemy for 2 seconds' },
-    { name: 'War Cry',      shortName: 'CRY', mpCost: 25, cooldown: 15000, damage: 0, type: 'buff',    effect: 'attack_up', duration: 8000, description: 'Boost party attack by 30%' },
+    { name: 'Whirlwind',       shortName: 'WHL', mpCost: 20, cooldown: 4000, damage: 0.6, type: 'spin',       radius: 70, hits: 3, spinDuration: 500, description: 'Spin attack dealing 3 hits to all nearby enemies' },
+    { name: 'Charging Strike',  shortName: 'CHG', mpCost: 22, cooldown: 6000, damage: 2.0, type: 'charge',     range: 200, effect: 'stun', duration: 2000, trailDamage: 0.5, description: 'Dash forward dealing heavy damage + stun' },
+    { name: 'Battle Shout',     shortName: 'SHT', mpCost: 25, cooldown: 15000, damage: 0, type: 'buff_debuff', effect: 'attack_up', duration: 8000, fearRadius: 150, fearDuration: 1500, description: 'Boost party attack 30% + terrorize nearby enemies' },
   ],
   ranger: [
     { name: 'Multi-Shot',   shortName: 'MLT', mpCost: 18, cooldown: 4000, damage: 0.8, type: 'multi',  count: 3, description: 'Fire 3 arrows in a spread' },

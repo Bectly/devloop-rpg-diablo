@@ -46,7 +46,7 @@ describe('Player', () => {
       const warrior = new Player('W', 'warrior');
       const ranger = new Player('R', 'ranger');
       const mage = new Player('M', 'mage');
-      expect(warrior.skills[0].name).toBe('Cleave');
+      expect(warrior.skills[0].name).toBe('Whirlwind');
       expect(ranger.skills[0].name).toBe('Multi-Shot');
       expect(mage.skills[0].name).toBe('Fireball');
     });
@@ -418,11 +418,11 @@ describe('Player', () => {
     it('useSkill deducts MP and sets cooldown', () => {
       const p = new Player('T', 'warrior');
       const initialMp = p.mp;
-      const skill = p.useSkill(0); // Cleave: mpCost 15, cooldown 3000
+      const skill = p.useSkill(0); // Whirlwind: mpCost 20, cooldown 4000
       expect(skill).not.toBeNull();
-      expect(skill.name).toBe('Cleave');
-      expect(p.mp).toBe(initialMp - 15);
-      expect(p.skillCooldowns[0]).toBe(3000);
+      expect(skill.name).toBe('Whirlwind');
+      expect(p.mp).toBe(initialMp - 20);
+      expect(p.skillCooldowns[0]).toBe(4000);
     });
 
     it('useSkill returns null if cannot use', () => {
@@ -618,9 +618,9 @@ describe('Player', () => {
 
     it('cooldownRemaining > 0 right after skill use', () => {
       const p = new Player('TestHero', 'warrior');
-      p.useSkill(0); // Cleave: cooldown 3000
+      p.useSkill(0); // Whirlwind: cooldown 4000
       const s = p.serializeForPhone();
-      expect(s.skills[0].cooldownRemaining).toBe(3000);
+      expect(s.skills[0].cooldownRemaining).toBe(4000);
       // Other skills should still be 0
       expect(s.skills[1].cooldownRemaining).toBe(0);
       expect(s.skills[2].cooldownRemaining).toBe(0);
@@ -628,12 +628,12 @@ describe('Player', () => {
 
     it('cooldownRemaining decreases over time and never goes negative', () => {
       const p = new Player('TestHero', 'warrior');
-      p.useSkill(0); // Cleave: cooldown 3000
+      p.useSkill(0); // Whirlwind: cooldown 4000
       p.update(2000); // 2 seconds pass
       const s1 = p.serializeForPhone();
-      expect(s1.skills[0].cooldownRemaining).toBe(1000);
+      expect(s1.skills[0].cooldownRemaining).toBe(2000);
 
-      p.update(2000); // 2 more seconds (1 extra past cooldown)
+      p.update(3000); // 3 more seconds (1 extra past cooldown)
       const s2 = p.serializeForPhone();
       expect(s2.skills[0].cooldownRemaining).toBe(0); // clamped by Math.max(0, ...)
     });
@@ -641,9 +641,9 @@ describe('Player', () => {
     it('warrior skills have correct shortNames', () => {
       const p = new Player('W', 'warrior');
       const s = p.serializeForPhone();
-      expect(s.skills[0].shortName).toBe('CLV');
-      expect(s.skills[1].shortName).toBe('BSH');
-      expect(s.skills[2].shortName).toBe('CRY');
+      expect(s.skills[0].shortName).toBe('WHL');
+      expect(s.skills[1].shortName).toBe('CHG');
+      expect(s.skills[2].shortName).toBe('SHT');
     });
 
     it('ranger skills have correct shortNames', () => {

@@ -15,9 +15,9 @@ const MAX_RESISTANCE = 75; // hard cap at 75%
 
 const SKILL_DAMAGE_TYPES = {
   // Warrior
-  'Cleave':       'physical',
-  'Shield Bash':  'physical',
-  'War Cry':      'physical',
+  'Whirlwind':       'physical',
+  'Charging Strike':  'physical',
+  'Battle Shout':     'physical',
   // Mage
   'Fireball':     'fire',
   'Frost Nova':   'cold',

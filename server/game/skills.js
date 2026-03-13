@@ -401,6 +401,220 @@ function executeMovement(player, skill) {
   return results;
 }
 
+/**
+ * Spin attack: instant multi-hit AOE. All monsters within radius take
+ * skill.hits ticks of damage. Each hit is skill.damage * attackPower.
+ */
+function executeSpin(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'whirlwind',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    radius: skill.radius,
+    duration: skill.spinDuration,
+  });
+
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dx = monster.x - player.x;
+    const dy = monster.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > skill.radius) continue;
+
+    for (let hit = 0; hit < skill.hits; hit++) {
+      if (!monster.alive) break;
+      let baseDmg = Math.floor(player.attackPower * skill.damage);
+      baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+      const dealt = monster.takeDamage(baseDmg);
+      applyLifesteal(player, dealt);
+
+      results.push({
+        type: 'combat:hit',
+        attackerId: player.id,
+        targetId: monster.id,
+        targetName: monster.name,
+        damage: dealt,
+        damageType: skillDamageType,
+        isCrit: false,
+        skillName: skill.name,
+        hitIndex: hit,
+        targetHp: monster.hp,
+        targetMaxHp: monster.maxHp,
+      });
+
+      if (!monster.alive) {
+        handleSkillKill(player, monster, results, partyBuffs);
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Charging Strike: dash toward nearest monster (or forward if none).
+ * Trail damage to monsters along the path, main damage + stun on target.
+ */
+function executeCharge(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+  const startX = player.x;
+  const startY = player.y;
+
+  let target = null;
+  let targetDist = Infinity;
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
+    if (dist <= skill.range && dist < targetDist) {
+      target = monster;
+      targetDist = dist;
+    }
+  }
+
+  let endX, endY;
+  if (target) {
+    endX = target.x;
+    endY = target.y;
+  } else {
+    const dirMap = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+    const dir = dirMap[player.facing] || [0, 1];
+    endX = player.x + dir[0] * skill.range;
+    endY = player.y + dir[1] * skill.range;
+  }
+
+  endX = Math.max(16, Math.min(1904, endX));
+  endY = Math.max(16, Math.min(1264, endY));
+  player.x = endX;
+  player.y = endY;
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'charge_dash',
+    playerId: player.id,
+    fromX: startX,
+    fromY: startY,
+    toX: endX,
+    toY: endY,
+  });
+
+  // Trail damage: sample 10 points along path
+  const trailHitIds = new Set();
+  const trailRadius = 40;
+  for (let s = 0; s <= 10; s++) {
+    const t = s / 10;
+    const sx = startX + (endX - startX) * t;
+    const sy = startY + (endY - startY) * t;
+
+    for (const monster of monsters) {
+      if (!monster.alive || monster === target) continue;
+      if (trailHitIds.has(monster.id)) continue;
+      const dx = monster.x - sx;
+      const dy = monster.y - sy;
+      if (Math.sqrt(dx * dx + dy * dy) <= trailRadius) {
+        trailHitIds.add(monster.id);
+        let baseDmg = Math.floor(player.attackPower * skill.trailDamage);
+        baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+        const dealt = monster.takeDamage(baseDmg);
+        applyLifesteal(player, dealt);
+        results.push({
+          type: 'combat:hit',
+          attackerId: player.id,
+          targetId: monster.id,
+          targetName: monster.name,
+          damage: dealt,
+          damageType: skillDamageType,
+          skillName: skill.name,
+          isTrail: true,
+          targetHp: monster.hp,
+          targetMaxHp: monster.maxHp,
+        });
+        if (!monster.alive) handleSkillKill(player, monster, results, partyBuffs);
+      }
+    }
+  }
+
+  // Primary target: full damage + stun
+  if (target && target.alive) {
+    let baseDmg = Math.floor(player.attackPower * skill.damage);
+    baseDmg = calcSkillDamage(player, skill, baseDmg, target);
+    const dealt = target.takeDamage(baseDmg);
+    if (skill.effect === 'stun') target.applyStun(skill.duration);
+    applyLifesteal(player, dealt);
+    results.push({
+      type: 'combat:hit',
+      attackerId: player.id,
+      targetId: target.id,
+      targetName: target.name,
+      damage: dealt,
+      damageType: skillDamageType,
+      skillName: skill.name,
+      targetHp: target.hp,
+      targetMaxHp: target.maxHp,
+    });
+    if (!target.alive) handleSkillKill(player, target, results, partyBuffs);
+  }
+
+  return results;
+}
+
+/**
+ * Buff+Debuff hybrid (Battle Shout): party buff + fear nearby monsters.
+ */
+function executeBuffDebuff(player, skill, monsters, allPlayers) {
+  const results = [];
+
+  const targets = allPlayers || [player];
+  for (const target of targets) {
+    if (!target.alive) continue;
+    target.buffs.push({
+      effect: skill.effect,
+      duration: skill.duration,
+      remaining: skill.duration,
+    });
+    results.push({
+      type: 'buff:apply',
+      playerId: target.id,
+      effect: skill.effect,
+      duration: skill.duration,
+      skillName: skill.name,
+    });
+  }
+
+  if (skill.fearRadius && skill.fearDuration) {
+    for (const monster of monsters) {
+      if (!monster.alive) continue;
+      const dx = monster.x - player.x;
+      const dy = monster.y - player.y;
+      if (Math.sqrt(dx * dx + dy * dy) <= skill.fearRadius) {
+        monster.applyFear(skill.fearDuration);
+        results.push({
+          type: 'debuff:apply',
+          targetId: monster.id,
+          targetName: monster.name,
+          effect: 'fear',
+          duration: skill.fearDuration,
+          skillName: skill.name,
+        });
+      }
+    }
+  }
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'battle_shout',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    radius: skill.fearRadius,
+  });
+
+  return results;
+}
+
 // ── Main entry ──────────────────────────────────────────────────────
 
 /**
@@ -440,6 +654,15 @@ function executeSkill(combat, player, skillIndex, monsters, allPlayers) {
       break;
     case 'movement':
       results = executeMovement(player, skill);
+      break;
+    case 'spin':
+      results = executeSpin(player, skill, monsters, partyBuffs, skillDamageType);
+      break;
+    case 'charge':
+      results = executeCharge(player, skill, monsters, partyBuffs, skillDamageType);
+      break;
+    case 'buff_debuff':
+      results = executeBuffDebuff(player, skill, monsters, allPlayers);
       break;
     default:
       results = [];

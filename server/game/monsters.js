@@ -394,6 +394,7 @@ class Monster {
     // Effects
     this.stunned = 0;
     this.slowed = 0;
+    this.feared = 0;
     this.poisonTick = 0;
     this.poisonDamage = 0;
     this.bleedTick = 0;
@@ -862,7 +863,14 @@ class Monster {
         if (closest) {
           this.moveAwayFrom(closest.x, closest.y, dt);
         }
-        if (this.hp > this.maxHp * 0.3 || !closest || closestDist > this.aggroRadius * 2) {
+        // Fear timer takes priority over HP-based exit
+        if (this.feared > 0) {
+          this.feared -= dt;
+          if (this.feared <= 0) {
+            this.feared = 0;
+            this.aiState = AI_STATES.ALERT;
+          }
+        } else if (this.hp > this.maxHp * 0.3 || !closest || closestDist > this.aggroRadius * 2) {
           this.aiState = AI_STATES.ALERT;
         }
         break;
@@ -912,6 +920,13 @@ class Monster {
     this.slowed = Math.max(this.slowed, duration);
   }
 
+  applyFear(duration) {
+    this.feared = Math.max(this.feared || 0, duration);
+    if (this.aiState !== AI_STATES.DEAD) {
+      this.aiState = AI_STATES.FLEE;
+    }
+  }
+
   // Returns split monsters array if this monster splits on death (slime)
   getSplitMonsters() {
     if (!this.splitType || !this.splitCount || this.type === 'slime_small') return [];
@@ -943,6 +958,7 @@ class Monster {
       size: this.size,
       stunned: this.stunned > 0,
       slowed: this.slowed > 0,
+      feared: this.feared || 0,
       behavior: this.behavior,
       damageType: this.damageType,
       // New behavior state

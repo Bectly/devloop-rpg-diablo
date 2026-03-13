@@ -288,13 +288,15 @@ describe('skills.js extraction — behavioral parity', () => {
     monster.hp = 5000;
 
     const results = combat.playerSkill(player, 0, [monster], [player]);
-    // Whirlwind is AOE — should produce hit events
+    // Whirlwind is spin — should produce effect:spawn + hit events
     expect(results).not.toBeNull();
     expect(results.length).toBeGreaterThan(0);
-    expect(results[0].type).toBe('combat:hit');
+    expect(results[0].type).toBe('effect:spawn');
+    const hits = results.filter(e => e.type === 'combat:hit');
+    expect(hits.length).toBeGreaterThan(0);
   });
 
-  it('buff skill applies to all players for War Cry', () => {
+  it('buff_debuff skill applies to all players for Battle Shout', () => {
     const combat = new CombatSystem();
     const p1 = new Player('Warrior', 'warrior');
     p1.recalcStats();
@@ -302,7 +304,7 @@ describe('skills.js extraction — behavioral parity', () => {
     const p2 = new Player('Ally', 'ranger');
     p2.recalcStats();
 
-    // War Cry is skill index 2 for warrior (0=Cleave, 1=Shield Bash, 2=War Cry)
+    // Battle Shout is skill index 2 for warrior (0=Whirlwind, 1=Charging Strike, 2=Battle Shout)
     const results = combat.playerSkill(p1, 2, [], [p1, p2]);
     expect(results).not.toBeNull();
     const buffEvents = results.filter(e => e.type === 'buff:apply');

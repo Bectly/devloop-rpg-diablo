@@ -183,15 +183,17 @@ describe('CombatSystem', () => {
 
   // ── Skill Usage ─────────────────────────────────────────────────
   describe('playerSkill', () => {
-    it('AOE skill (Cleave) hits all monsters in radius', () => {
+    it('Spin skill (Whirlwind) hits all monsters in radius with multiple hits', () => {
       const m1 = createMonster('skeleton', player.x + 20, player.y);
       const m2 = createMonster('skeleton', player.x + 40, player.y);
       const m3 = createMonster('skeleton', player.x + 500, player.y); // out of range
+      m1.maxHp = 5000; m1.hp = 5000;
+      m2.maxHp = 5000; m2.hp = 5000;
 
       const results = combat.playerSkill(player, 0, [m1, m2, m3], [player]);
-      // Cleave radius = 60, so m1 and m2 should be hit, not m3
+      // Whirlwind radius = 70, hits = 3, so m1 and m2 each get 3 hits, not m3
       const hits = results.filter(e => e.type === 'combat:hit');
-      expect(hits.length).toBe(2);
+      expect(hits.length).toBe(6); // 2 monsters × 3 hits
       expect(hits.map(h => h.targetId)).toContain(m1.id);
       expect(hits.map(h => h.targetId)).toContain(m2.id);
     });
@@ -208,15 +210,15 @@ describe('CombatSystem', () => {
       expect(m.hp).toBeLessThan(initialHp);
     });
 
-    it('single target skill (Shield Bash) applies stun', () => {
+    it('single target skill (Charging Strike) applies stun', () => {
       const m = createMonster('skeleton', player.x + 30, player.y);
-      combat.playerSkill(player, 1, [m], [player]); // Shield Bash
+      combat.playerSkill(player, 1, [m], [player]); // Charging Strike
       expect(m.stunned).toBeGreaterThan(0);
     });
 
-    it('buff skill (War Cry) applies to all players', () => {
+    it('buff_debuff skill (Battle Shout) applies to all players', () => {
       const p2 = new Player('Ally', 'ranger');
-      combat.playerSkill(player, 2, [], [player, p2]); // War Cry
+      combat.playerSkill(player, 2, [], [player, p2]); // Battle Shout
       expect(player.buffs.length).toBe(1);
       expect(player.buffs[0].effect).toBe('attack_up');
       expect(p2.buffs.length).toBe(1);
@@ -254,8 +256,8 @@ describe('CombatSystem', () => {
 
     it('skill deducts MP', () => {
       const mpBefore = player.mp;
-      combat.playerSkill(player, 0, [], [player]); // Cleave, mpCost 15
-      expect(player.mp).toBe(mpBefore - 15);
+      combat.playerSkill(player, 0, [], [player]); // Whirlwind, mpCost 20
+      expect(player.mp).toBe(mpBefore - 20);
     });
 
     it('skill returns null if player cannot use it', () => {

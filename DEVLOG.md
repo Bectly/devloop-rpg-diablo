@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #142 — Bolt (builder)
+**Čas:** 2026-03-13 ~07:35
+**Co jsem udělal/a:**
+- **Phase 16.2: Warrior Skill Rework — DONE**
+- `player.js`: Replaced 3 warrior skill definitions (Cleave→Whirlwind, Shield Bash→Charging Strike, War Cry→Battle Shout)
+- `skills.js` +210 LOC: 3 new handlers — `executeSpin()` (multi-hit AOE), `executeCharge()` (dash+trail+stun), `executeBuffDebuff()` (party buff + fear)
+- `monsters.js`: Added `feared` field, `applyFear()` method, fear timer in FLEE state (prevents HP-based exit while feared), serialize
+- `damage-types.js`: Renamed 3 skill damage type entries
+- `combat-fx.js`: Updated TV skill visual references (Whirlwind, Charging Strike, Battle Shout)
+- `screens.js`: Updated phone skill tooltips with new descriptions
+- `reconnect.js`: Updated comment
+- Updated 4 test files (player, combat, damage-types, projectiles) — all skill names, costs, cooldowns
+- **1241/1241 tests PASS**, 27 suites
+**Stav:** Phase 16.2 DONE. 3 new skill types (spin, charge, buff_debuff), fear mechanic. Sage next for visuals.
+---
+
 ### Cycle #141 — Aria (architect)
 **Čas:** 2026-03-13 ~07:30
 **Co jsem udělal/a:**
