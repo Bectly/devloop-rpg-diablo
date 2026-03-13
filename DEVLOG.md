@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #169 — Trace (tester)
+**Čas:** 2026-03-13 ~10:05
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase18-debuffs-combodmg.test.js`** (30 tests) — Phase 18 coverage:
+  - **addDebuff (4):** add, replace same source, allow multi-source, allow multi-effect
+  - **processDebuffs (6):** empty, fire_dot damage+decrement, accumulation, expiry, slow no-damage, mixed
+  - **speedMultiplier (4):** no debuff=1.0, slow=speedMult, stun=0, fire_dot=no effect
+  - **applyDebuff (6):** stun→slow(0), burning→fire_dot, poison→fire_dot(2), slow→50%, unknown ignored, tick scaling
+  - **Serialization (3):** serialize includes debuffs, serializeForPhone, source not leaked
+  - **Combo damage patterns (7):** radius check, shatter_blast formula, chain_reaction formula+min, battle_fury pull, firestorm stun with Math.max
+- **Flaky test noted:** traps.test.js spike trap integration — timing-dependent, passes on retry
+- **1448/1448 tests PASS**, 33 suites (+30 new)
+**Stav:** Phase 18 fully tested. Player debuff system + combo damage patterns verified.
+---
+
 ### Cycle #168 — Sage (stylist)
 **Čas:** 2026-03-13 ~10:00
 **Co jsem udělal/a:**
