@@ -338,7 +338,9 @@ function _spawnCursedEventWave(cursedEvent) {
   cursedEvent.wavesSpawned++;
 
   const waveNum = cursedEvent.currentWave + 1;
-  gameNs.emit('event:wave', { wave: waveNum, totalWaves: cursedEvent.totalWaves, monstersCount: count });
+  const wavePayload = { wave: waveNum, totalWaves: cursedEvent.totalWaves, monstersCount: count };
+  gameNs.emit('event:wave', wavePayload);
+  controllerNs.emit('event:wave', wavePayload);
   controllerNs.emit('notification', { text: `${cursedEvent.name} — Wave ${waveNum}/${cursedEvent.totalWaves}! (${count} enemies)`, type: 'warning' });
   console.log(`[Event] ${cursedEvent.name} wave ${waveNum}/${cursedEvent.totalWaves}: ${count} monsters (elite: ${isElite})`);
 }
@@ -504,6 +506,7 @@ function gameLoop() {
           world.cursedEvent = cursed;
           console.log(`[Event] ${cursed.name} spawned in ${ev.roomName}!`);
           gameNs.emit('event:spawn', cursed.serialize());
+          controllerNs.emit('event:spawn', cursed.serialize());
           controllerNs.emit('notification', { text: `A ${cursed.name} appears! Interact to activate.`, type: 'warning' });
         }
       }
@@ -553,7 +556,9 @@ function gameLoop() {
             p.stats[buffStat] = (p.stats[buffStat] || 0) + ce.buffAmount;
             if (p.recalcStats) p.recalcStats();
           }
-          gameNs.emit('event:buff', { stat: buffStat, amount: ce.buffAmount });
+          const buffPayload = { stat: buffStat, amount: ce.buffAmount };
+          gameNs.emit('event:buff', buffPayload);
+          controllerNs.emit('event:buff', buffPayload);
           controllerNs.emit('notification', { text: `Cursed Shrine conquered! +${ce.buffAmount} ${buffStat.toUpperCase()} for all!`, type: 'quest' });
           // Update phone stats for all players
           for (const [sid, p] of players) {
@@ -562,7 +567,9 @@ function gameLoop() {
           }
         }
 
-        gameNs.emit('event:complete', { type: ce.type, reward: ce.rewardType });
+        const completePayload = { type: ce.type, reward: ce.rewardType };
+        gameNs.emit('event:complete', completePayload);
+        controllerNs.emit('event:complete', completePayload);
         controllerNs.emit('notification', { text: `${ce.name} conquered!`, type: 'quest' });
         console.log(`[Event] ${ce.name} completed!`);
         world.cursedEvent = null;
@@ -573,6 +580,7 @@ function gameLoop() {
     // Check for failure (timer expired)
     if (ce && ce.failed) {
       gameNs.emit('event:failed', { type: ce.type });
+      controllerNs.emit('event:failed', { type: ce.type });
       controllerNs.emit('notification', { text: `${ce.name} failed! Time expired.`, type: 'error' });
       console.log(`[Event] ${ce.name} failed — timer expired.`);
       // Kill remaining event monsters

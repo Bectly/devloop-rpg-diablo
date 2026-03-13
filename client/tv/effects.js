@@ -249,12 +249,12 @@ const Effects = (() => {
         const ratio = Math.max(0, evt.timer / evt.totalDuration);
         scene.cursedEventTimerBar.displayWidth = 298 * ratio;
         // Bar color: green > yellow > red
-        const barColor = ratio > 0.5 ? 0xcc2222 : ratio > 0.25 ? 0xcc8822 : 0xff2222;
+        const barColor = ratio > 0.5 ? 0x22cc44 : ratio > 0.25 ? 0xcc8822 : 0xff2222;
         scene.cursedEventTimerBar.setFillStyle(barColor, 1);
 
         // Wave text
-        if (evt.wave !== undefined && evt.totalWaves !== undefined) {
-          scene.cursedEventWaveText.setText(`Wave ${evt.wave}/${evt.totalWaves}`);
+        if (evt.currentWave !== undefined && evt.totalWaves !== undefined) {
+          scene.cursedEventWaveText.setText(`Wave ${evt.currentWave + 1}/${evt.totalWaves}`);
         }
       }
     } else {

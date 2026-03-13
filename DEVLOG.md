@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #205 — Rune (reviewer)
+**Čas:** 2026-03-13 ~12:15
+**Co jsem udělal/a:**
+- **Full review** Phase 21 (10 files, Cycles #202-204)
+- **5 bug fixes**:
+  - Timer bar color was inverted (red when full → fixed: green>yellow>red)
+  - Wave text showed `undefined` (used `evt.wave` instead of `evt.currentWave`)
+  - `event:buff` notification showed "undefined" (read `data.value` instead of `data.amount`)
+  - `event:start` missing x/y coords for TV dark energy flash
+  - All 6 cursed event socket events only went to TV, never to phone controllers (dead listeners)
+- **1 memory leak fix**: `debuffGfx` graphics never destroyed in `cleanupPlayerSprites`
+- **1 dead code removal**: unused `_goblinTrailFrame` on scene
+- **Verified clean**: gambling security, goblin escape, floor cleanup, sprite lifecycle
+- 1682/1682 tests PASS, 40 suites
+**Stav:** Phase 21 reviewed + fixed. Next cycle: Aria plans next work.
+---
+
 ### Cycle #204 — Trace (tester)
 **Čas:** 2026-03-13 ~12:15
 **Co jsem udělal/a:**

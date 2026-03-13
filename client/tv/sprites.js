@@ -180,6 +180,7 @@ window.Sprites = {
         if (sprite.dcLabel) sprite.dcLabel.destroy();
         if (sprite.hcBadge) { sprite.hcBadge.destroy(); sprite.hcBadge = null; }
         if (sprite.auraGlow) sprite.auraGlow.destroy();
+        if (sprite.debuffGfx) sprite.debuffGfx.destroy();
         sprite.destroy();
       }
       scene.playerSprites.clear();
@@ -192,6 +193,7 @@ window.Sprites = {
         if (sprite.dcLabel) sprite.dcLabel.destroy();
         if (sprite.hcBadge) { sprite.hcBadge.destroy(); sprite.hcBadge = null; }
         if (sprite.auraGlow) sprite.auraGlow.destroy();
+        if (sprite.debuffGfx) sprite.debuffGfx.destroy();
         sprite.destroy();
         scene.playerSprites.delete(id);
       }

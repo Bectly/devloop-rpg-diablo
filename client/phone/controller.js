@@ -852,7 +852,7 @@ socket.on('event:failed', () => {
 });
 socket.on('event:buff', (data) => {
   if (data && data.stat) {
-    showNotification(`Buff: ${data.stat} +${data.value || ''}`, 'quest');
+    showNotification(`Buff: ${data.stat} +${data.amount || ''}`, 'quest');
   }
 });
 

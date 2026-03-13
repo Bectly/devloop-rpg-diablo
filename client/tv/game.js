@@ -387,9 +387,6 @@ class GameScene extends Phaser.Scene {
     this.cursedEventTimerBg = null;
     this.cursedEventWaveText = null;
 
-    // Goblin trail particles
-    this._goblinTrailFrame = 0;
-
     this.discoveredRooms = new Set();
 
     // Smooth camera tracking position

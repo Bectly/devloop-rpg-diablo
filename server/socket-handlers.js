@@ -500,7 +500,7 @@ exports.handleInventoryDrop = (socket, data, { players, inventories, world }) =>
 };
 
 // ── Interact (NPC / Shop / Shrine) ──
-exports.handleInteract = (socket, data, { players, world, story, gameNs, inventories }) => {
+exports.handleInteract = (socket, data, { players, world, story, gameNs, controllerNs, inventories }) => {
   const player = players.get(socket.id);
   if (!player || !player.alive || player.isDying) return;
 
@@ -563,13 +563,17 @@ exports.handleInteract = (socket, data, { players, world, story, gameNs, invento
     if (eventDist < 80) {
       ce.start();
       console.log(`[Event] ${player.name} activated ${ce.name}!`);
-      gameNs.emit('event:start', {
+      const startPayload = {
         type: ce.type,
         name: ce.name,
         timer: ce.timer,
         totalDuration: ce.totalDuration,
         totalWaves: ce.totalWaves,
-      });
+        x: ce.x,
+        y: ce.y,
+      };
+      gameNs.emit('event:start', startPayload);
+      if (controllerNs) controllerNs.emit('event:start', startPayload);
       socket.emit('notification', { text: `${ce.name} activated! Survive the onslaught!`, type: 'warning' });
       return;
     }
