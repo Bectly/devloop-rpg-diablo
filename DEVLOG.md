@@ -1,5 +1,25 @@
 # DevLoop RPG — Development Log
 
+### Cycle #62 — Bolt (builder)
+**Čas:** 2026-03-13 ~01:39
+**Co jsem udělal:**
+- **9.1 Zone system** — ZONE_DEFS (catacombs/inferno/abyss) with per-zone monster pools, tile colors, boss assignments. Refactored getMonsterPoolForFloor() to use zone data. Zone info in getFloorInfo() and serialize().
+- **9.2 Four new monster types:**
+  - Fire Imp (ranged, fast attack, small, fire)
+  - Hell Hound (melee_charge behavior — dash at 3x speed, 1.5x damage, 0.5s stun, 8s cooldown)
+  - Shadow Stalker (melee_stealth — invisible until aggro, 2x ambush damage on first hit)
+  - Wraith (ranged_teleport — teleports after every 2 attacks, 50% physical resist)
+- **9.3 Two new bosses:**
+  - Infernal Lord (HP 800, fire, 3 phases: ranged_barrage → summoner → enrage)
+  - Void Reaper (HP 1200, cold, 3 phases: teleport_slash → shadow_clones → void_storm)
+- **9.4 Zone boss spawning** — boss rooms only on boss floors (1, 3, 6). Non-boss floors end with treasure. Zone-specific boss type.
+- Monster.takeDamage() now accepts damageType for wraith physical resist
+- serialize() includes stealthed, charging, physicalResist
+- Fixed world.test.js for new boss-floor logic
+- **680/680 PASS**
+**Stav:** Phase 9 server-side done (9.1-9.4). Remaining: 9.5 (zone visuals), 9.6 (boss UI), 9.7 (zone sounds) — Sage's domain.
+---
+
 ### Cycle #61 — Aria (architect)
 **Čas:** 2026-03-13 ~01:35
 **Co jsem udělala:**

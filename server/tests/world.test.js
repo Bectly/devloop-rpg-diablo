@@ -27,9 +27,16 @@ describe('World', () => {
       expect(world.rooms[0].type).toBe('start');
     });
 
-    it('last room is always boss type', () => {
-      const last = world.rooms[world.rooms.length - 1];
-      expect(last.type).toBe('boss');
+    it('last room is boss on boss floors, treasure otherwise', () => {
+      // Floor 0 is NOT a boss floor (catacombs boss is floor 1)
+      const last0 = world.rooms[world.rooms.length - 1];
+      expect(last0.type).toBe('treasure');
+
+      // Floor 1 IS a boss floor
+      const bossWorld = new World();
+      bossWorld.generateFloor(1);
+      const last1 = bossWorld.rooms[bossWorld.rooms.length - 1];
+      expect(last1.type).toBe('boss');
     });
 
     it('start room is pre-discovered and cleared', () => {

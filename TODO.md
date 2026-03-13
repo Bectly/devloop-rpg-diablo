@@ -232,7 +232,7 @@ Diablo-style item sets — wear multiple pieces for escalating bonuses.
 
 **Goal:** Transform 7 same-feel floors into 3 distinct dungeon zones with unique bosses. This is the single highest-impact change for replayability and gameplay variety.
 
-### 9.1 Zone Definitions — Server
+### 9.1 Zone Definitions — Server [DONE — Bolt, Cycle #62]
 **File:** `server/game/world.js` (modify `FLOOR_NAMES`, `getMonsterPoolForFloor()`, add `ZONE_DEFS`)
 
 Define 3 zones, each spanning 2-3 floors:
@@ -275,7 +275,7 @@ const ZONE_DEFS = {
 
 **Key change:** `getMonsterPoolForFloor(floor)` reads from `ZONE_DEFS` instead of hardcoded if-else chain.
 
-### 9.2 New Monster Types — Server
+### 9.2 New Monster Types — Server [DONE — Bolt, Cycle #62]
 **File:** `server/game/monsters.js` (add to MONSTER_DEFS)
 
 4 new monster types (1 existing behavior + 3 new):
@@ -292,7 +292,7 @@ const ZONE_DEFS = {
 - `melee_stealth`: Invisible (alpha 0.1) until player within aggroRadius 80. First attack deals 2× damage. After first attack, visible permanently for that encounter.
 - `ranged_teleport`: Ranged attack. After every 2nd attack, teleport to random position 100-200 units away. 50% physical resistance built-in.
 
-### 9.3 Zone Bosses — Server
+### 9.3 Zone Bosses — Server [DONE — Bolt, Cycle #62]
 **File:** `server/game/monsters.js` (add boss defs) + `server/game/combat.js` (boss AI)
 
 Currently only `boss_knight` exists (3-phase melee AI). Add 2 new bosses:
@@ -313,7 +313,7 @@ Currently only `boss_knight` exists (3-phase melee AI). Add 2 new bosses:
 
 **Floor 2 boss remains `boss_knight`** — Bolt already implements the 3-phase knight, it serves as the "tutorial boss" for Zone 1.
 
-### 9.4 Zone Boss Spawning — Server
+### 9.4 Zone Boss Spawning — Server [DONE — Bolt, Cycle #62]
 **File:** `server/game/world.js` (modify `generateWaveMonsters`)
 
 Currently boss spawning is: `roomData.type === 'boss' → 'boss_knight'`. Change to:

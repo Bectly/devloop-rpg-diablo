@@ -32,12 +32,53 @@ const ROOM_TYPES = {
 const FLOOR_NAMES = [
   'Dusty Catacombs',
   'Sunken Crypts',
-  'Bone Gallery',
   'Burning Depths',
-  'Shadow Halls',
+  'Infernal Halls',
+  'Shadow Abyss',
   'Abyssal Core',
   'Throne of Ruin',
 ];
+
+// ── Zone Definitions ─────────────────────────────────────────────
+const ZONE_DEFS = {
+  catacombs: {
+    id: 'catacombs',
+    name: 'The Catacombs',
+    floors: [0, 1],
+    tileColor: 0x8a7a6a,
+    wallColor: 0x5a4a3a,
+    monsterPool: ['skeleton', 'skeleton', 'slime', 'archer'],
+    boss: 'boss_knight',
+    bossFloor: 1,
+  },
+  inferno: {
+    id: 'inferno',
+    name: 'The Inferno',
+    floors: [2, 3],
+    tileColor: 0x6a2a1a,
+    wallColor: 0x4a1a0a,
+    monsterPool: ['demon', 'fire_imp', 'hell_hound', 'archer'],
+    boss: 'boss_infernal',
+    bossFloor: 3,
+  },
+  abyss: {
+    id: 'abyss',
+    name: 'The Abyss',
+    floors: [4, 5, 6],
+    tileColor: 0x2a1a3a,
+    wallColor: 0x1a0a2a,
+    monsterPool: ['shadow_stalker', 'demon', 'wraith', 'zombie'],
+    boss: 'boss_void',
+    bossFloor: 6,
+  },
+};
+
+function getZoneForFloor(floor) {
+  for (const zone of Object.values(ZONE_DEFS)) {
+    if (zone.floors.includes(floor)) return zone;
+  }
+  return ZONE_DEFS.abyss; // fallback for any floor beyond 6
+}
 
 // ─── BSP Node ────────────────────────────────────────────────────
 class BSPNode {
@@ -286,11 +327,15 @@ function placeDoors(tiles) {
 }
 
 function assignRoomTypes(rooms, floor) {
+  const zone = getZoneForFloor(floor);
+  const isBossFloor = floor === zone.bossFloor;
+
   const roomData = [];
   for (let i = 0; i < rooms.length; i++) {
     let type;
     if (i === 0) type = 'start';
-    else if (i === rooms.length - 1) type = 'boss';
+    else if (i === rooms.length - 1 && isBossFloor) type = 'boss';
+    else if (i === rooms.length - 1) type = 'treasure'; // non-boss floors end with treasure
     else if (Math.random() < 0.3) type = 'treasure';
     else type = 'monster';
 
@@ -336,9 +381,11 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
   const count = Math.min(6, Math.ceil(baseCount * countScale));
   const monsterPool = getMonsterPoolForFloor(floor);
 
+  const zone = getZoneForFloor(floor);
+
   for (let i = 0; i < count; i++) {
     const type = roomData.type === 'boss' && waveIndex === 0 && i === 0
-      ? 'boss_knight'
+      ? zone.boss
       : monsterPool[Math.floor(Math.random() * monsterPool.length)];
 
     const mx = (room.x + 1 + Math.random() * (room.w - 2)) * TILE_SIZE;
@@ -366,11 +413,8 @@ function generateWaveMonsters(roomData, waveIndex, floor) {
 }
 
 function getMonsterPoolForFloor(floor) {
-  if (floor <= 1) return ['skeleton', 'skeleton', 'slime'];
-  if (floor <= 2) return ['skeleton', 'zombie', 'slime', 'archer'];
-  if (floor <= 3) return ['zombie', 'demon', 'archer', 'slime'];
-  if (floor <= 4) return ['demon', 'archer', 'zombie', 'skeleton'];
-  return ['demon', 'demon', 'archer', 'zombie'];
+  const zone = getZoneForFloor(floor);
+  return zone.monsterPool;
 }
 
 // ─── World Class ────────────────────────────────────────────────
@@ -399,11 +443,15 @@ class World {
 
     // Story NPCs placed in rooms
     this.storyNpcs = [];
+
+    // Zone
+    this.zone = null;
   }
 
   generateFloor(floorNum) {
     this.currentFloor = floorNum;
     this.floorName = FLOOR_NAMES[floorNum % FLOOR_NAMES.length];
+    this.zone = getZoneForFloor(floorNum);
     const roomCount = 5 + Math.min(3, Math.floor(floorNum / 2));
     const result = generateBSPDungeon(floorNum, roomCount);
 
@@ -435,6 +483,10 @@ class World {
       name: this.roomName,
       floor: this.currentFloor,
       floorName: this.floorName,
+      zoneId: this.zone ? this.zone.id : 'catacombs',
+      zoneName: this.zone ? this.zone.name : 'The Catacombs',
+      tileColor: this.zone ? this.zone.tileColor : 0x8a7a6a,
+      wallColor: this.zone ? this.zone.wallColor : 0x5a4a3a,
       tiles: this.tiles,
       tileSize: TILE_SIZE,
       width: GRID_W,
@@ -694,6 +746,10 @@ class World {
       roomName: this.roomName,
       floorName: this.floorName,
       currentFloor: this.currentFloor,
+      zoneId: this.zone ? this.zone.id : 'catacombs',
+      zoneName: this.zone ? this.zone.name : 'The Catacombs',
+      tileColor: this.zone ? this.zone.tileColor : 0x8a7a6a,
+      wallColor: this.zone ? this.zone.wallColor : 0x5a4a3a,
       exitLocked: this.exitLocked,
       tiles: this.tiles,
       tileSize: TILE_SIZE,
@@ -747,4 +803,4 @@ class World {
   }
 }
 
-module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES };
+module.exports = { World, TILE_SIZE, TILE, GRID_W, GRID_H, FLOOR_NAMES, ZONE_DEFS, getZoneForFloor };
