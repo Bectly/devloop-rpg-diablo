@@ -143,18 +143,9 @@ const StatsUI = (() => {
         }
       }
     }
-    // Socket display
+    // Socket display (interactive buttons added below via DOM)
     if (item.sockets && item.sockets.length > 0) {
-      html += '<div class="tt-sockets">';
-      for (let i = 0; i < item.sockets.length; i++) {
-        const gem = item.sockets[i];
-        if (gem) {
-          html += `<span class="tt-socket filled" style="color:${gem.color || '#aaa'}">\u25C6 ${gem.name || 'Gem'}</span>`;
-        } else {
-          html += '<span class="tt-socket empty">\u25CB Empty Socket</span>';
-        }
-      }
-      html += '</div>';
+      html += '<div class="tt-sockets" id="tt-sockets-area"></div>';
     }
 
     if (item.description) html += `<div style="color:#888;margin-top:4px;font-size:10px">${item.description}</div>`;
@@ -186,6 +177,53 @@ const StatsUI = (() => {
     }
 
     tt.innerHTML = html;
+
+    // ── Socket UI (DOM-built, XSS-safe) ──
+    const socketsArea = tt.querySelector('#tt-sockets-area');
+    if (socketsArea && item.sockets) {
+      for (let i = 0; i < item.sockets.length; i++) {
+        const gem = item.sockets[i];
+        const row = document.createElement('div');
+        row.className = 'tt-socket-row';
+
+        if (gem) {
+          // Filled socket: show gem + unsocket button
+          const label = document.createElement('span');
+          label.className = 'tt-socket filled';
+          label.style.color = gem.color || '#aaa';
+          label.textContent = '\u25C6 ' + (gem.name || 'Gem');
+          row.appendChild(label);
+
+          const unsocketBtn = document.createElement('button');
+          unsocketBtn.className = 'tt-socket-btn unsocket';
+          const itemLevel = item.level || item.itemLevel || 1;
+          unsocketBtn.textContent = 'Unsocket (' + (50 * itemLevel) + 'g)';
+          unsocketBtn.addEventListener('click', ((idx) => () => {
+            if (_socket) {
+              _socket.emit('gem:unsocket', { itemId: item.id, socketIndex: idx });
+              hideTooltip();
+            }
+          })(i));
+          row.appendChild(unsocketBtn);
+        } else {
+          // Empty socket: show empty label + "Socket Gem" button
+          const label = document.createElement('span');
+          label.className = 'tt-socket empty';
+          label.textContent = '\u25CB Empty Socket';
+          row.appendChild(label);
+
+          const socketBtn = document.createElement('button');
+          socketBtn.className = 'tt-socket-btn socket';
+          socketBtn.textContent = 'Socket Gem';
+          socketBtn.addEventListener('click', ((idx) => () => {
+            _showGemPicker(item.id, idx);
+          })(i));
+          row.appendChild(socketBtn);
+        }
+
+        socketsArea.appendChild(row);
+      }
+    }
 
     // Action buttons — appended via DOM to avoid ID injection in onclick strings
     const actions = document.createElement('div');
@@ -248,5 +286,79 @@ const StatsUI = (() => {
     hideTooltip();
   }
 
-  return { renderStats, showTooltip, hideTooltip, setSocket, equipItem, unequipItem, dropItem };
+  // ── Gem Picker Overlay ──
+  let _lastInventoryData = null;
+  function setInventoryData(data) { _lastInventoryData = data; }
+
+  function _showGemPicker(itemId, socketIndex) {
+    hideTooltip();
+
+    // Get gems from inventory
+    const items = _lastInventoryData ? (_lastInventoryData.items || []) : [];
+    const gems = items.filter(i => i.type === 'gem');
+
+    if (gems.length === 0) {
+      // No gems — just show brief notification
+      return;
+    }
+
+    // Create overlay
+    let overlay = document.getElementById('gem-picker-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'gem-picker-overlay';
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '';
+    overlay.classList.remove('hidden');
+
+    const title = document.createElement('div');
+    title.className = 'gem-picker-title';
+    title.textContent = 'Select a Gem';
+    overlay.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'gem-picker-list';
+
+    for (const gem of gems) {
+      const row = document.createElement('div');
+      row.className = 'gem-picker-row';
+
+      const icon = document.createElement('span');
+      icon.className = 'gem-picker-icon';
+      icon.style.color = gem.color || '#aaa';
+      icon.textContent = '\u25C6';
+      row.appendChild(icon);
+
+      const name = document.createElement('span');
+      name.className = 'gem-picker-name';
+      name.textContent = gem.name;
+      row.appendChild(name);
+
+      const bonus = document.createElement('span');
+      bonus.className = 'gem-picker-bonus';
+      if (gem.bonuses) {
+        bonus.textContent = Object.entries(gem.bonuses).map(([k, v]) => '+' + v + ' ' + k.toUpperCase()).join(', ');
+      }
+      row.appendChild(bonus);
+
+      row.addEventListener('click', () => {
+        if (_socket) {
+          _socket.emit('gem:socket', { itemId: itemId, gemId: gem.id });
+        }
+        overlay.classList.add('hidden');
+      });
+
+      list.appendChild(row);
+    }
+    overlay.appendChild(list);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'gem-picker-cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.classList.add('hidden'));
+    overlay.appendChild(cancelBtn);
+  }
+
+  return { renderStats, showTooltip, hideTooltip, setSocket, setInventoryData, equipItem, unequipItem, dropItem };
 })();

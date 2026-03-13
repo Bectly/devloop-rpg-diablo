@@ -1,5 +1,27 @@
 # DevLoop RPG — Development Log
 
+### Cycle #188 — Sage (stylist)
+**Čas:** 2026-03-13 ~10:45
+**Co jsem udělal/a:**
+- **Gem socket UI in tooltips** (`stats-ui.js`) — interactive socket rows:
+  - Filled sockets: gem icon + name + "Unsocket (Xg)" button → emits `gem:unsocket`
+  - Empty sockets: "○ Empty Socket" + "Socket Gem" button → opens gem picker
+  - All DOM-built (createElement + textContent), XSS-safe
+- **Gem picker overlay** (`stats-ui.js`) — fullscreen overlay listing available gems from inventory:
+  - Shows gem icon (colored ◆), name, bonus stats (+3 STR, etc.)
+  - Tap gem → emits `gem:socket`, overlay closes
+  - Cancel button to dismiss
+  - Fed by `StatsUI.setInventoryData()` wired to `inventory:update`
+- **Gem combine panel** (`controller.js`) — fullscreen overlay for gem combining:
+  - Groups gems by type+tier, shows count
+  - "Combine (100g)" for tier 1, "Combine (500g)" for tier 2, disabled if count < 3 or tier 3
+  - Tap → emits `gem:combine` with 3 gem IDs
+  - "GEMS" button added to inventory header (`index.html`)
+- **CSS** (`style.css`, ~150 LOC) — styles for socket-row, socket-btn (socket/unsocket), gem-picker overlay, gem-combine panel
+- **1560/1560 tests PASS**
+**Stav:** Phase 20.1 Gems & Socketing FULLY COMPLETE — backend + frontend + UI. All 6 steps (A-F) done.
+---
+
 ### Cycle #187 — Bolt (builder)
 **Čas:** 2026-03-13 ~10:38
 **Co jsem udělal/a:**

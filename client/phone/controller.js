@@ -229,6 +229,8 @@ socket.on('inventory:update', (data) => {
   }
   // Update crafting screen if open
   Screens.updateCraftingInventory(data);
+  // Feed inventory to StatsUI so gem picker has access to current gems
+  StatsUI.setInventoryData(data);
 });
 
 // ── Stash ──────────────────────────────────────────────────────
@@ -324,6 +326,94 @@ function _renderStashInvPanel() {
     row.appendChild(storeBtn);
     listEl.appendChild(row);
   });
+}
+
+// ── Gem Combine Panel ──────────────────────────────────────────
+function showGemCombinePanel() {
+  let panel = document.getElementById('gem-combine-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'gem-combine-panel';
+    panel.classList.add('hidden');
+    document.body.appendChild(panel);
+  }
+  panel.innerHTML = '';
+  panel.classList.remove('hidden');
+
+  const title = document.createElement('div');
+  title.className = 'combine-title';
+  title.textContent = 'Combine Gems (3 \u2192 1)';
+  panel.appendChild(title);
+
+  // Gather gems from inventory, group by gemType + gemTier
+  const items = inventoryData ? (inventoryData.items || []) : [];
+  const gems = items.filter(i => i.type === 'gem');
+  const groups = {};
+  for (const gem of gems) {
+    const key = gem.gemType + ':' + gem.gemTier;
+    if (!groups[key]) {
+      groups[key] = { gemType: gem.gemType, gemTier: gem.gemTier, name: gem.name, color: gem.color || '#aaa', ids: [] };
+    }
+    groups[key].ids.push(gem.id);
+  }
+
+  const groupArr = Object.values(groups);
+  if (groupArr.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.color = '#888';
+    empty.style.fontSize = '12px';
+    empty.style.marginBottom = '12px';
+    empty.textContent = 'No gems in inventory.';
+    panel.appendChild(empty);
+  }
+
+  for (const g of groupArr) {
+    const row = document.createElement('div');
+    row.className = 'combine-group';
+
+    const info = document.createElement('div');
+    info.className = 'combine-group-info';
+
+    const icon = document.createElement('span');
+    icon.className = 'combine-group-icon';
+    icon.style.color = g.color;
+    icon.textContent = '\u25C6';
+    info.appendChild(icon);
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'combine-group-name';
+    nameEl.textContent = g.name;
+    info.appendChild(nameEl);
+
+    const count = document.createElement('span');
+    count.className = 'combine-group-count';
+    count.textContent = ' x' + g.ids.length;
+    info.appendChild(count);
+
+    row.appendChild(info);
+
+    const cost = g.gemTier === 1 ? 100 : 500;
+    const canCombine = g.ids.length >= 3 && g.gemTier < 3;
+    const btn = document.createElement('button');
+    btn.className = 'combine-btn';
+    btn.textContent = canCombine ? 'Combine (' + cost + 'g)' : (g.gemTier >= 3 ? 'Max tier' : 'Need 3');
+    btn.disabled = !canCombine;
+    if (canCombine) {
+      btn.addEventListener('click', () => {
+        const threeIds = g.ids.slice(0, 3);
+        socket.emit('gem:combine', { gemIds: threeIds });
+        panel.classList.add('hidden');
+      });
+    }
+    row.appendChild(btn);
+    panel.appendChild(row);
+  }
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'combine-close';
+  closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+  panel.appendChild(closeBtn);
 }
 
 socket.on('notification', (data) => {
@@ -893,6 +983,13 @@ function initButtons() {
     };
     stashClose.addEventListener('touchstart', (e) => { e.preventDefault(); closeStash(); });
     stashClose.addEventListener('click', closeStash);
+  }
+
+  // Gem Combine — accessible from inventory header tab
+  const gemsBtn = document.getElementById('btn-gems');
+  if (gemsBtn) {
+    gemsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showGemCombinePanel(); });
+    gemsBtn.addEventListener('click', () => showGemCombinePanel());
   }
 }
 
