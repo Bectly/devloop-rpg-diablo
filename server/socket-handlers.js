@@ -498,7 +498,7 @@ exports.handleInventoryDrop = (socket, data, { players, inventories, world }) =>
 };
 
 // ── Interact (NPC / Shop / Shrine) ──
-exports.handleInteract = (socket, data, { players, world, story, gameNs }) => {
+exports.handleInteract = (socket, data, { players, world, story, gameNs, inventories }) => {
   const player = players.get(socket.id);
   if (!player || !player.alive || player.isDying) return;
 
@@ -511,6 +511,45 @@ exports.handleInteract = (socket, data, { players, world, story, gameNs }) => {
         items: shopNpc.inventory,
         playerGold: player.gold,
       });
+      return;
+    }
+  }
+
+  // Check enchant NPC
+  if (world.enchantNpc) {
+    const enchDist = Math.hypot(player.x - world.enchantNpc.x, player.y - world.enchantNpc.y);
+    if (enchDist < 80) {
+      // Collect enchantable items (equipped + inventory, with bonuses)
+      const enchantableItems = [];
+      const inv = inventories ? inventories.get(player.id) : null;
+
+      // Equipped items
+      for (const slot of Object.keys(player.equipment)) {
+        const item = player.equipment[slot];
+        if (item && item.bonuses && Object.keys(item.bonuses).length > 0) {
+          enchantableItems.push({
+            id: item.id, name: item.name, rarity: item.rarity,
+            bonuses: item.bonuses, level: item.level || 1,
+            enchantCount: item.enchantCount || 0, equipped: true, slot,
+          });
+        }
+      }
+
+      // Inventory items
+      if (inv) {
+        for (const item of inv.getAllItems()) {
+          if (item.type === 'gem' || item.type === 'currency' || item.stackable) continue;
+          if (item.bonuses && Object.keys(item.bonuses).length > 0) {
+            enchantableItems.push({
+              id: item.id, name: item.name, rarity: item.rarity,
+              bonuses: item.bonuses, level: item.level || 1,
+              enchantCount: item.enchantCount || 0, equipped: false,
+            });
+          }
+        }
+      }
+
+      socket.emit('enchant:open', { items: enchantableItems, playerGold: player.gold });
       return;
     }
   }
@@ -1541,6 +1580,157 @@ exports.handleLootFilter = (socket, data, { players }) => {
   player.lootFilter = data.mode;
   socket.emit('player:stats', player.serializeForPhone());
   socket.emit('notification', { text: `Loot filter: ${data.mode.toUpperCase()}`, type: 'info' });
+};
+
+// ── Enchanting ──
+
+const { BONUS_POOL, RESIST_BONUS_POOL, RARITIES } = require('./game/items');
+
+exports.handleEnchantPreview = (socket, data, { players, inventories }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+
+  if (!data || !data.itemId || !data.bonusKey) {
+    socket.emit('notification', { text: 'Invalid enchant request', type: 'error' });
+    return;
+  }
+
+  // Find item in equipment or inventory
+  const inv = inventories.get(player.id);
+  let item = null;
+  let isEquipped = false;
+
+  for (const slot of Object.keys(player.equipment)) {
+    if (player.equipment[slot] && player.equipment[slot].id === data.itemId) {
+      item = player.equipment[slot];
+      isEquipped = true;
+      break;
+    }
+  }
+  if (!item && inv) {
+    item = inv.getItem(data.itemId);
+  }
+
+  if (!item || !item.bonuses || item.bonuses[data.bonusKey] === undefined) {
+    socket.emit('notification', { text: 'Item or stat not found', type: 'error' });
+    return;
+  }
+
+  // Calculate cost: 100 × itemLevel × (1 + enchantCount × 0.5)
+  const itemLevel = item.level || item.itemLevel || 1;
+  const enchantCount = item.enchantCount || 0;
+  const cost = Math.floor(100 * itemLevel * (1 + enchantCount * 0.5));
+
+  // Get possible replacement stats from appropriate pool
+  const isArmor = item.slot === 'helmet' || item.slot === 'chest' || item.slot === 'gloves' || item.slot === 'boots' || item.slot === 'shield';
+  const pool = isArmor ? [...BONUS_POOL, ...RESIST_BONUS_POOL] : [...BONUS_POOL];
+
+  socket.emit('enchant:preview', {
+    itemId: item.id,
+    bonusKey: data.bonusKey,
+    currentValue: item.bonuses[data.bonusKey],
+    cost,
+    pool: pool.map(b => ({ stat: b.stat, label: b.label, min: b.min, max: b.max })),
+  });
+};
+
+exports.handleEnchantExecute = (socket, data, { players, inventories }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+
+  if (!data || !data.itemId || !data.bonusKey) {
+    socket.emit('notification', { text: 'Invalid enchant request', type: 'error' });
+    return;
+  }
+
+  // Find item
+  const inv = inventories.get(player.id);
+  let item = null;
+  let isEquipped = false;
+
+  for (const slot of Object.keys(player.equipment)) {
+    if (player.equipment[slot] && player.equipment[slot].id === data.itemId) {
+      item = player.equipment[slot];
+      isEquipped = true;
+      break;
+    }
+  }
+  if (!item && inv) {
+    item = inv.getItem(data.itemId);
+  }
+
+  if (!item || !item.bonuses || item.bonuses[data.bonusKey] === undefined) {
+    socket.emit('notification', { text: 'Item or stat not found', type: 'error' });
+    return;
+  }
+
+  // Calculate and check cost
+  const itemLevel = item.level || item.itemLevel || 1;
+  const enchantCount = item.enchantCount || 0;
+  const cost = Math.floor(100 * itemLevel * (1 + enchantCount * 0.5));
+
+  if (player.gold < cost) {
+    socket.emit('notification', { text: `Need ${cost} gold to enchant`, type: 'error' });
+    return;
+  }
+
+  // Get pool
+  const isArmor = item.slot === 'helmet' || item.slot === 'chest' || item.slot === 'gloves' || item.slot === 'boots' || item.slot === 'shield';
+  const pool = isArmor ? [...BONUS_POOL, ...RESIST_BONUS_POOL] : [...BONUS_POOL];
+
+  // Find the bonus definition for this stat
+  const bonusDef = pool.find(b => b.stat === data.bonusKey);
+  if (!bonusDef) {
+    socket.emit('notification', { text: 'Unknown stat type', type: 'error' });
+    return;
+  }
+
+  const oldValue = item.bonuses[data.bonusKey];
+  const rarity = RARITIES[item.rarity] || RARITIES.common;
+
+  // Roll new value
+  let newValue = Math.ceil((bonusDef.min + Math.random() * (bonusDef.max - bonusDef.min)) * rarity.multiplier);
+
+  // Bad luck protection: if same stat rerolled 3+ times, guarantee different value
+  if (!item._enchantHistory) item._enchantHistory = [];
+  item._enchantHistory.push(data.bonusKey);
+  // Keep only last 5
+  if (item._enchantHistory.length > 5) item._enchantHistory.shift();
+
+  const consecutiveSame = item._enchantHistory.filter(k => k === data.bonusKey).length;
+  if (consecutiveSame >= 3 && newValue === oldValue) {
+    // Force different: add 1 or subtract 1
+    newValue = newValue + (Math.random() > 0.5 ? 1 : -1);
+    if (newValue < 1) newValue = oldValue + 1;
+  }
+
+  // Apply
+  player.gold -= cost;
+  item.bonuses[data.bonusKey] = newValue;
+  item.enchantCount = enchantCount + 1;
+  item.enchanted = true;
+
+  // Recalc if equipped
+  if (isEquipped) {
+    player.recalcEquipBonuses();
+    player.recalcStats();
+  }
+
+  socket.emit('enchant:result', {
+    itemId: item.id,
+    bonusKey: data.bonusKey,
+    oldValue,
+    newValue,
+    cost,
+    enchantCount: item.enchantCount,
+  });
+
+  socket.emit('player:stats', player.serializeForPhone());
+  if (inv) socket.emit('inventory:update', inv.serialize());
+  socket.emit('notification', {
+    text: `✧ ${data.bonusKey}: ${oldValue} → ${newValue} (−${cost}g)`,
+    type: newValue > oldValue ? 'info' : 'warning',
+  });
 };
 
 // ── Exports for external access ──

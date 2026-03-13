@@ -423,6 +423,174 @@ function showGemCombinePanel() {
   panel.appendChild(closeBtn);
 }
 
+// ── Enchant Panel ─────────────────────────────────────────────
+function showEnchantPanel(items, gold) {
+  // Remove any existing panel
+  const existing = document.getElementById('enchant-panel');
+  if (existing) existing.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'enchant-panel';
+  panel.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;overflow-y:auto;padding:12px;box-sizing:border-box;';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
+
+  const title = document.createElement('div');
+  title.textContent = '✧ Mystic Enchanting';
+  title.style.cssText = 'color:#cc44ff;font-size:18px;font-weight:bold;font-family:Courier New;';
+
+  const goldText = document.createElement('div');
+  goldText.id = 'enchant-gold';
+  goldText.textContent = gold + 'g';
+  goldText.style.cssText = 'color:#ffdd44;font-size:14px;font-family:Courier New;';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'X';
+  closeBtn.style.cssText = 'background:#333;color:#fff;border:1px solid #666;padding:6px 12px;font-size:14px;border-radius:4px;';
+  closeBtn.onclick = () => panel.remove();
+
+  header.appendChild(title);
+  header.appendChild(goldText);
+  header.appendChild(closeBtn);
+  panel.appendChild(header);
+
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.textContent = 'No enchantable items';
+    empty.style.cssText = 'color:#888;text-align:center;margin-top:40px;font-family:Courier New;';
+    panel.appendChild(empty);
+  }
+
+  const RARITY_COLORS = {
+    common: '#aaaaaa', uncommon: '#44cc44', rare: '#4488ff',
+    epic: '#bb44ff', legendary: '#ff8800', set: '#00cc66',
+  };
+
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.style.cssText = 'background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:10px;margin-bottom:8px;cursor:pointer;';
+
+    const nameEl = document.createElement('div');
+    const prefix = item.enchantCount > 0 ? '✧ ' : '';
+    nameEl.textContent = prefix + item.name + (item.equipped ? ' [E]' : '');
+    nameEl.style.cssText = 'color:' + (RARITY_COLORS[item.rarity] || '#aaa') + ';font-size:14px;font-weight:bold;font-family:Courier New;margin-bottom:6px;';
+    row.appendChild(nameEl);
+
+    // Show bonuses as selectable rows
+    for (const [key, value] of Object.entries(item.bonuses)) {
+      const statRow = document.createElement('div');
+      statRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;margin:2px 0;background:#252540;border-radius:4px;cursor:pointer;';
+
+      const statName = document.createElement('span');
+      statName.textContent = key;
+      statName.style.cssText = 'color:#ddd;font-size:12px;font-family:Courier New;';
+
+      const statVal = document.createElement('span');
+      statVal.textContent = '+' + value;
+      statVal.style.cssText = 'color:#88ff88;font-size:12px;font-family:Courier New;';
+
+      statRow.appendChild(statName);
+      statRow.appendChild(statVal);
+
+      statRow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        socket.emit('enchant:preview', { itemId: item.id, bonusKey: key });
+      });
+
+      row.appendChild(statRow);
+    }
+
+    panel.appendChild(row);
+  }
+
+  document.body.appendChild(panel);
+}
+
+function showEnchantPreview(data) {
+  // Remove existing preview
+  const existing = document.getElementById('enchant-preview');
+  if (existing) existing.remove();
+
+  const preview = document.createElement('div');
+  preview.id = 'enchant-preview';
+  preview.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#1a1a2e;border-top:2px solid #cc44ff;padding:16px;box-sizing:border-box;z-index:10001;';
+
+  const info = document.createElement('div');
+  info.style.cssText = 'color:#ddd;font-size:13px;font-family:Courier New;margin-bottom:8px;';
+  info.textContent = data.bonusKey + ': ' + data.currentValue + ' → ???';
+  preview.appendChild(info);
+
+  const costEl = document.createElement('div');
+  costEl.style.cssText = 'color:#ffdd44;font-size:12px;font-family:Courier New;margin-bottom:10px;';
+  costEl.textContent = 'Cost: ' + data.cost + ' gold';
+  preview.appendChild(costEl);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;';
+
+  const enchantBtn = document.createElement('button');
+  enchantBtn.textContent = '✧ ENCHANT';
+  enchantBtn.style.cssText = 'flex:1;background:#6a2a8a;color:#fff;border:1px solid #cc44ff;padding:10px;font-size:14px;font-weight:bold;border-radius:6px;font-family:Courier New;';
+  enchantBtn.onclick = () => {
+    socket.emit('enchant:execute', { itemId: data.itemId, bonusKey: data.bonusKey });
+    enchantBtn.disabled = true;
+    enchantBtn.textContent = '...';
+  };
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'CANCEL';
+  cancelBtn.style.cssText = 'flex:1;background:#333;color:#aaa;border:1px solid #555;padding:10px;font-size:14px;border-radius:6px;font-family:Courier New;';
+  cancelBtn.onclick = () => preview.remove();
+
+  btnRow.appendChild(enchantBtn);
+  btnRow.appendChild(cancelBtn);
+  preview.appendChild(btnRow);
+
+  document.body.appendChild(preview);
+}
+
+function showEnchantResult(data) {
+  const preview = document.getElementById('enchant-preview');
+  if (!preview) return;
+
+  preview.innerHTML = '';
+
+  const result = document.createElement('div');
+  result.style.cssText = 'text-align:center;padding:10px;';
+
+  const statLine = document.createElement('div');
+  statLine.style.cssText = 'font-size:16px;font-family:Courier New;margin-bottom:8px;';
+  const better = data.newValue > data.oldValue;
+  const same = data.newValue === data.oldValue;
+  statLine.style.color = better ? '#44ff44' : same ? '#ffdd44' : '#ff4444';
+  statLine.textContent = data.bonusKey + ': ' + data.oldValue + ' → ' + data.newValue + (better ? ' ▲' : same ? ' =' : ' ▼');
+  result.appendChild(statLine);
+
+  const costLine = document.createElement('div');
+  costLine.textContent = '−' + data.cost + 'g';
+  costLine.style.cssText = 'color:#ffdd44;font-size:12px;font-family:Courier New;margin-bottom:10px;';
+  result.appendChild(costLine);
+
+  const okBtn = document.createElement('button');
+  okBtn.textContent = 'OK';
+  okBtn.style.cssText = 'background:#333;color:#fff;border:1px solid #666;padding:8px 24px;font-size:14px;border-radius:6px;font-family:Courier New;';
+  okBtn.onclick = () => {
+    preview.remove();
+    // Refresh the enchant panel by re-requesting interact
+    socket.emit('interact', {});
+  };
+  result.appendChild(okBtn);
+
+  preview.appendChild(result);
+
+  // Update gold display
+  const goldEl = document.getElementById('enchant-gold');
+  if (goldEl && playerStats) {
+    goldEl.textContent = (playerStats.gold || 0) + 'g';
+  }
+}
+
 socket.on('notification', (data) => {
   if (data.type === 'save') {
     showSaveToast(data.text);
@@ -555,6 +723,19 @@ socket.on('shop:inventory', (data) => {
 // ── Crafting events ──
 socket.on('craft:reforge_result', (data) => {
   Screens.handleReforgeResult(data);
+});
+
+// ── Enchant events ──
+socket.on('enchant:open', (data) => {
+  showEnchantPanel(data.items, data.playerGold);
+});
+
+socket.on('enchant:preview', (data) => {
+  showEnchantPreview(data);
+});
+
+socket.on('enchant:result', (data) => {
+  showEnchantResult(data);
 });
 
 socket.on('quest:update', (quests) => {

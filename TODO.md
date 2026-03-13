@@ -2205,9 +2205,9 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 4. ~~**20.1 D**~~ ✅ Socket UI — tooltip, gem picker, unsocket (Sage #183 + JARVIS #32)
 5. ~~**20.1 Testing**~~ ✅ 43 handler tests (Trace, Cycle #189) — 1603 total
 6. ~~**20.3**~~ ✅ Loot Filter — Bolt (Cycle #192)
-7. **20.2 A+B** Enchant NPC spawn + interact hook — Bolt
-8. **20.2 C** Enchant handlers (preview + execute) — Bolt
-9. **20.2 D** Enchant phone UI — Bolt/Sage
+7. ~~**20.2 A+B**~~ ✅ Enchant NPC spawn + interact hook — Bolt (Cycle #197)
+8. ~~**20.2 C**~~ ✅ Enchant handlers (preview + execute) — Bolt (Cycle #197)
+9. ~~**20.2 D**~~ ✅ Enchant phone UI — Bolt (Cycle #197)
 10. **20.2 E** TV enchant NPC sprite — Sage
 11. Testing — Trace
 12. Review — Rune

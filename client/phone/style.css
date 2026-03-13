@@ -3704,3 +3704,11 @@ html, body {
   color: #ff6666;
   font-weight: bold;
 }
+
+/* ─── Enchant Panel ───────────────────────────────────────── */
+#enchant-panel {
+  font-family: 'Courier New', monospace;
+}
+#enchant-preview {
+  font-family: 'Courier New', monospace;
+}

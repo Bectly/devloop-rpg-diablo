@@ -461,6 +461,9 @@ class World {
     // Shop NPC
     this.shopNpc = null;
 
+    // Enchant NPC
+    this.enchantNpc = null;
+
     // Story NPCs placed in rooms
     this.storyNpcs = [];
 
@@ -565,8 +568,9 @@ class World {
     this.activeRoom = null;
     this._advancing = false;
 
-    // No shop NPC or story NPCs in rifts
+    // No shop NPC, enchant NPC, or story NPCs in rifts
     this.shopNpc = null;
+    this.enchantNpc = null;
     this.storyNpcs = [];
 
     // Generate environmental traps in monster/treasure rooms (not start/boss)
@@ -900,6 +904,23 @@ class World {
     };
   }
 
+  spawnEnchantNpc(bossRoom) {
+    if (!bossRoom || !bossRoom.room) {
+      this.enchantNpc = null;
+      return;
+    }
+    const r = bossRoom.room;
+    const cx = (r.x + 1 + Math.floor((r.w - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+    const cy = (r.y + 1 + Math.floor((r.h - 2) / 2)) * TILE_SIZE + TILE_SIZE / 2;
+    this.enchantNpc = {
+      id: 'enchant_npc',
+      name: 'Mystic',
+      x: cx - 40,
+      y: cy + 30,
+      type: 'enchanter',
+    };
+  }
+
   placeStoryNpcs(floor) {
     this.storyNpcs = [];
 
@@ -1028,6 +1049,12 @@ class World {
         name: this.shopNpc.name,
         x: Math.round(this.shopNpc.x),
         y: Math.round(this.shopNpc.y),
+      } : null,
+      enchantNpc: this.enchantNpc ? {
+        id: this.enchantNpc.id,
+        name: this.enchantNpc.name,
+        x: Math.round(this.enchantNpc.x),
+        y: Math.round(this.enchantNpc.y),
       } : null,
       storyNpcs: (this.storyNpcs || []).map(npc => ({
         id: npc.id,

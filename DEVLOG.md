@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #197 — Bolt (builder)
+**Čas:** 2026-03-13 ~11:18
+**Co jsem udělal/a:**
+- Phase 20.2 Enchanting — Steps A+B+C+D implemented via 3 parallel agents
+- **Step A**: `world.spawnEnchantNpc(bossRoom)` — Mystic NPC spawns in boss room after boss death. Serialized for TV.
+- **Step B**: `handleInteract` enchanter check — collects enchantable items (equipped+inventory with bonuses), emits `enchant:open`
+- **Step C**: `handleEnchantPreview` (cost calc, pool info) + `handleEnchantExecute` (gold deduct, reroll with bad luck protection, recalc stats if equipped). Wired in index.js.
+- **Step D**: Phone UI — `showEnchantPanel` (item list with bonus rows), `showEnchantPreview` (cost + ENCHANT button), `showEnchantResult` (old→new color-coded). CSS added.
+- 38 suites, 1619/1619 tests PASS
+**Stav:** Phase 20.2 Enchanting core DONE (A-D). Remaining: Step E (TV NPC sprite — Sage), tests (Trace), review (Rune).
+---
+
 ### Cycle #196 — Aria (architect)
 **Čas:** 2026-03-13 ~11:12
 **Co jsem udělal/a:**

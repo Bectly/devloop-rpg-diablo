@@ -168,6 +168,8 @@ controllerNs.on('connection', (socket) => {
   socket.on('gem:unsocket', (data) => handlers.handleGemUnsocket(socket, data, ctx));
   socket.on('gem:combine', (data) => handlers.handleGemCombine(socket, data, ctx));
   socket.on('loot:filter', (data) => handlers.handleLootFilter(socket, data, ctx));
+  socket.on('enchant:preview', (data) => handlers.handleEnchantPreview(socket, data, ctx));
+  socket.on('enchant:execute', (data) => handlers.handleEnchantExecute(socket, data, ctx));
 
   // ── New Game (restart after victory) ──
   socket.on('game:restart', (data) => {
@@ -824,6 +826,12 @@ function gameLoop() {
             gold: chest.gold,
             itemCount: chest.items.length,
           });
+
+          // Spawn Enchant NPC in boss room
+          const bossRoom = world.rooms.find(rm => rm.type === 'boss');
+          if (bossRoom) {
+            world.spawnEnchantNpc(bossRoom);
+          }
         }
 
         // ── Rift Guardian kill: complete the rift ──
