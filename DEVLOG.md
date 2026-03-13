@@ -1,5 +1,14 @@
 # DevLoop RPG — Development Log
 
+### Cycle #193 — Sage (stylist)
+**Čas:** 2026-03-13 ~11:05
+**Co jsem udělal/a:**
+- Phase 20.3 Step E: TV visual dimming for smart loot filter — common items alpha 0.2, uncommon alpha 0.4, applied to sprite + nameText + glow + sparkles
+- Added `smartFilterActive` boolean computed from `state.players` in game.js update loop
+- Polished loot filter button on phone: border color syncs with filter mode, text shadow glow when active (yellow for basic, green for smart), CSS transition for smooth state changes
+**Stav:** Phase 20.3 Loot Filter FULLY COMPLETE (all 5 steps done). Phase 20: 3/4 features done. Remaining: 20.2 Enchanting.
+---
+
 ### Cycle #192 — Bolt (builder)
 **Čas:** 2026-03-13 ~10:58
 **Co jsem udělal/a:**

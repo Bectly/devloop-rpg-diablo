@@ -375,13 +375,14 @@ class GameScene extends Phaser.Scene {
     HUD.updateBossBar(this, state);
 
     // ── Render ground items (sprites.js) ──
+    const smartFilterActive = state.players && state.players.some(p => p.lootFilter === 'smart');
     const seenItems = new Set();
     if (state.world.groundItems) {
       for (const gi of state.world.groundItems) {
         seenItems.add(gi.id);
         let sprite = this.itemSprites.get(gi.id);
         if (!sprite) sprite = Sprites.createItemSprite(this, gi);
-        Sprites.updateItemSprite(this, sprite, gi);
+        Sprites.updateItemSprite(this, sprite, gi, smartFilterActive);
       }
     }
     Sprites.cleanupItemSprites(this, seenItems);

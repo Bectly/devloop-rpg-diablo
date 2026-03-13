@@ -3478,6 +3478,9 @@ html, body {
 .inv-tab-btn:active {
   background: rgba(255, 204, 0, 0.25);
 }
+#loot-filter-btn {
+  transition: color 0.2s, border-color 0.2s, text-shadow 0.2s;
+}
 
 /* ─── Socket Display in Tooltip ───────────────────────────── */
 .tt-sockets {

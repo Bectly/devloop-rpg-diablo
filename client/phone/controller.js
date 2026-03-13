@@ -1007,8 +1007,11 @@ function initButtons() {
     const FILTER_LABELS = { off: 'FILTER', basic: 'BASIC', smart: 'SMART' };
 
     window.updateFilterButton = function updateFilterButton() {
+      const color = FILTER_COLORS[currentLootFilter] || '#666';
       filterBtn.textContent = FILTER_LABELS[currentLootFilter] || 'FILTER';
-      filterBtn.style.color = FILTER_COLORS[currentLootFilter] || '#666';
+      filterBtn.style.color = color;
+      filterBtn.style.borderColor = color;
+      filterBtn.style.textShadow = currentLootFilter !== 'off' ? `0 0 6px ${color}` : 'none';
     };
 
     function cycleLootFilter() {

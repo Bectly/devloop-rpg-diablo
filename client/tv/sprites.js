@@ -721,20 +721,30 @@ window.Sprites = {
     return sprite;
   },
 
-  /** Per-frame update: bobbing, pulsing glow, legendary sparkle rotation. */
-  updateItemSprite(scene, sprite, gi) {
+  /** Per-frame update: bobbing, pulsing glow, legendary sparkle rotation, smart-filter dimming. */
+  updateItemSprite(scene, sprite, gi, smartFilterActive) {
     const now = Date.now();
     const idHash = typeof gi.id === 'number' ? gi.id : [...String(gi.id)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
     const bobOffset = Math.sin((now + idHash * 1.7) / 400) * 2;
     sprite.y = sprite._baseY + bobOffset;
     if (sprite.nameText) sprite.nameText.setPosition(sprite.x, sprite.y - 18);
 
+    // Smart loot filter dimming: common/uncommon items fade when any player has smart filter
+    let dimAlpha = 1.0;
+    if (smartFilterActive) {
+      const r = (gi.rarity || '').toLowerCase();
+      if (r === 'common') dimAlpha = 0.2;
+      else if (r === 'uncommon') dimAlpha = 0.4;
+    }
+    sprite.setAlpha(dimAlpha);
+    if (sprite.nameText) sprite.nameText.setAlpha(dimAlpha);
+
     // Pulsing glow (0.5 to 0.9 alpha)
     const glowAlpha = 0.5 + Math.sin(now / 300 + idHash * 2.3) * 0.2;
     sprite.glow.clear();
-    sprite.glow.fillStyle(sprite._glowColor, glowAlpha * 0.4);
+    sprite.glow.fillStyle(sprite._glowColor, glowAlpha * 0.4 * dimAlpha);
     sprite.glow.fillCircle(sprite._glowX, sprite._baseY + bobOffset, 18);
-    sprite.glow.lineStyle(1, sprite._glowColor, glowAlpha);
+    sprite.glow.lineStyle(1, sprite._glowColor, glowAlpha * dimAlpha);
     sprite.glow.strokeCircle(sprite._glowX, sprite._baseY + bobOffset, 18);
 
     // Legendary / Set rotating sparkles
@@ -747,7 +757,7 @@ window.Sprites = {
         const sx = sprite._glowX + Math.cos(a) * sparkle._radius;
         const sy = sprite._baseY + bobOffset + Math.sin(a) * sparkle._radius;
         const sparkAlpha = 0.5 + Math.sin(time * 3 + sparkle._angle) * 0.5;
-        sparkle.fillStyle(sparkColor, sparkAlpha);
+        sparkle.fillStyle(sparkColor, sparkAlpha * dimAlpha);
         sparkle.fillRect(sx - 1, sy - 3, 2, 6);
         sparkle.fillRect(sx - 3, sy - 1, 6, 2);
       }
