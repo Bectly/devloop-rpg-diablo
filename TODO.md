@@ -2063,11 +2063,11 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - Validation: item exists in equipped/inventory, has empty sockets, gem exists in inventory
 - Wire both events in `server/index.js` controller bindings
 
-**Step D: Phone socket UI** ✅ PARTIALLY DONE (Cycle #183 — tooltip display)
-- ✅ Socket display in tooltips: `○ Empty Socket` / `◆ Gem Name` (done by Sage, Cycle #183)
-- [ ] "Socket Gem" button in tooltip when item has empty sockets + player has gems
-- [ ] Gem selection popup: list available gems from inventory, tap to socket
-- [ ] "Unsocket" button on filled sockets (shows gold cost)
+**Step D: Phone socket UI** ✅ DONE (Cycle #183 — Sage + JARVIS Cycle #32)
+- ✅ Socket display in tooltips: `○ Empty Socket` / `◆ Gem Name` (Sage, Cycle #183)
+- ✅ "Socket Gem" button in tooltip + gem selection popup (Sage, Cycle #183)
+- ✅ "Unsocket" button on filled sockets with gold cost (Sage, Cycle #183)
+- ✅ No-gems toast notification (JARVIS Cycle #32)
 
 **Step E: Gem drops in combat** ✅ DONE (Cycle #187) (`server/game/combat.js`, `server/game/skills.js`)
 - After monster kill: call `rollGemDrop(floorNumber)`, if gem → add to loot drops

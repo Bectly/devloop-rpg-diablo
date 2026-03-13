@@ -298,7 +298,7 @@ const StatsUI = (() => {
     const gems = items.filter(i => i.type === 'gem');
 
     if (gems.length === 0) {
-      // No gems — just show brief notification
+      if (typeof showNotification === 'function') showNotification('No gems in inventory', 'info');
       return;
     }
 
