@@ -884,4 +884,88 @@ window.HUD = {
   setWaveTextColor(color) {
     if (this.waveText) this.waveText.setColor(color);
   },
+
+  // ── Chat System ──
+  _chatBubbles: [],
+  _chatLog: [],
+
+  showChatBubble(scene, playerId, name, text) {
+    // Remove old bubble from same player
+    this._chatBubbles = this._chatBubbles.filter(b => {
+      if (b.playerId === playerId) {
+        if (b.bg) b.bg.destroy();
+        if (b.text) b.text.destroy();
+        return false;
+      }
+      return true;
+    });
+
+    // Create speech bubble text (will be positioned in updateChatBubbles)
+    const textObj = scene.add.text(0, 0, text, {
+      fontSize: '10px',
+      fill: '#ffffff',
+      fontFamily: 'Courier New',
+      backgroundColor: '#000000aa',
+      padding: { x: 6, y: 3 },
+      wordWrap: { width: 150 },
+    }).setOrigin(0.5, 1).setDepth(50);
+
+    this._chatBubbles.push({
+      playerId,
+      text: textObj,
+      created: Date.now(),
+      duration: 4000,
+    });
+
+    // Add to log
+    this._chatLog.push({ name, text, time: Date.now() });
+    if (this._chatLog.length > 5) this._chatLog.shift();
+    this._updateChatLog(scene);
+  },
+
+  updateChatBubbles(scene, state) {
+    const now = Date.now();
+    this._chatBubbles = this._chatBubbles.filter(b => {
+      if (now - b.created > b.duration) {
+        if (b.text) b.text.destroy();
+        if (b.bg) b.bg.destroy();
+        return false;
+      }
+      // Position above player
+      const player = state.players?.find(p => p.id === b.playerId);
+      if (player && b.text) {
+        b.text.setPosition(player.x, player.y - 40);
+        const alpha = Math.max(0, 1 - (now - b.created) / b.duration);
+        b.text.setAlpha(alpha);
+      }
+      return true;
+    });
+  },
+
+  _chatLogTexts: [],
+  _updateChatLog(scene) {
+    // Destroy old log texts
+    for (const t of this._chatLogTexts) t.destroy();
+    this._chatLogTexts = [];
+
+    const cam = scene.cameras.main;
+    const baseX = cam.scrollX + 10;
+    const baseY = cam.scrollY + cam.height - 20;
+
+    for (let i = this._chatLog.length - 1; i >= 0; i--) {
+      const entry = this._chatLog[i];
+      const age = Date.now() - entry.time;
+      if (age > 15000) continue; // Fade out after 15s
+      const alpha = Math.max(0.3, 1 - age / 15000);
+      const idx = this._chatLog.length - 1 - i;
+      const t = scene.add.text(baseX, baseY - idx * 14, `${entry.name}: ${entry.text}`, {
+        fontSize: '10px',
+        fill: '#cccccc',
+        fontFamily: 'Courier New',
+        backgroundColor: '#00000066',
+        padding: { x: 3, y: 1 },
+      }).setDepth(100).setScrollFactor(0).setAlpha(alpha);
+      this._chatLogTexts.push(t);
+    }
+  },
 };

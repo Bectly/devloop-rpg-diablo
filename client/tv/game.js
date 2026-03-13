@@ -425,6 +425,9 @@ class GameScene extends Phaser.Scene {
     // ── Update damage texts (delegated to hud.js) ──
     HUD.updateDamageTexts();
 
+    // ── Chat bubbles (hud.js) ──
+    HUD.updateChatBubbles(this, state);
+
     // ── Camera follow with lerp ──
     if (state.players.length > 0) {
       let cx = 0, cy = 0;
@@ -643,6 +646,13 @@ socket.on('dungeon:enter', (data) => {
       scene.discoveredRooms.clear();
       HUD.hideBossBar();
 
+      // Clear chat bubbles on floor change
+      for (const b of HUD._chatBubbles) {
+        if (b.text) b.text.destroy();
+        if (b.bg) b.bg.destroy();
+      }
+      HUD._chatBubbles = [];
+
       // Room discovery flash
       HUD.showRoomDiscovery(scene);
 
@@ -820,6 +830,15 @@ socket.on('player:respawn', (data) => {
         duration: 400,
         onComplete: () => flash.destroy(),
       });
+    }
+  }
+});
+
+socket.on('chat:message', (data) => {
+  if (window.gameInstance) {
+    const scene = window.gameInstance.scene.getScene('Game');
+    if (scene && scene.scene.isActive()) {
+      HUD.showChatBubble(scene, data.playerId, data.name, data.text);
     }
   }
 });

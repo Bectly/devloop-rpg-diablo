@@ -882,5 +882,22 @@ exports.handleDisconnect = (socket, data, { players, inventories, controllerSock
   console.log(`[Phone] Disconnected: ${socket.id}`);
 };
 
+// ── Chat ──
+exports.handleChat = function(socket, data, ctx) {
+  const player = ctx.players.get(socket.id);
+  if (!player) return;
+
+  if (typeof data.text !== 'string') return;
+  const trimmedText = data.text.trim();
+  if (!trimmedText || trimmedText.length > 100) return;
+
+  const now = Date.now();
+  if (player._lastChatTime && now - player._lastChatTime < 1000) return;
+  player._lastChatTime = now;
+
+  ctx.gameNs.emit('chat:message', { name: player.name, text: trimmedText, timestamp: Date.now(), playerId: player.id });
+  ctx.controllerNs.emit('chat:message', { name: player.name, text: trimmedText, timestamp: Date.now() });
+};
+
 // ── Exports for external access ──
 exports.disconnectedPlayers = disconnectedPlayers;

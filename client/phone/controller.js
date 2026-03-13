@@ -296,6 +296,10 @@ socket.on('quest:claimed', (data) => {
   Screens.updateQuestBadge(questData);
 });
 
+socket.on('chat:message', (data) => {
+  showChatMessage(data.name, data.text);
+});
+
 socket.on('game:victory', (data) => {
   console.log('[Phone] VICTORY!', data);
   Sound.victory();
@@ -673,6 +677,16 @@ function initButtons() {
   document.getElementById('btn-craft').addEventListener('click', () => {
     Screens.toggleCrafting(inventoryData, socket, hapticFeedback, () => {});
   });
+
+  // Chat toggle
+  const chatBtn = document.getElementById('btn-chat');
+  if (chatBtn) {
+    chatBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      toggleChatInput();
+    });
+    chatBtn.addEventListener('click', () => toggleChatInput());
+  }
 }
 
 // ─── Haptic Feedback ────────────────────────────────────────────
@@ -711,6 +725,71 @@ function showSaveToast(text) {
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2000);
 }
+
+// ─── Chat ──────────────────────────────────────────────────────
+const chatMessages = [];
+const MAX_CHAT_DISPLAY = 3;
+
+function showChatMessage(name, text) {
+  chatMessages.push({ name, text, time: Date.now() });
+  if (chatMessages.length > 10) chatMessages.shift();
+  renderChatMessages();
+}
+
+function renderChatMessages() {
+  let container = document.getElementById('chat-messages');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'chat-messages';
+    document.getElementById('controller').appendChild(container);
+  }
+  // Show last N messages
+  const recent = chatMessages.slice(-MAX_CHAT_DISPLAY);
+  container.innerHTML = recent.map(m =>
+    `<div class="chat-msg"><span class="chat-name">${m.name}:</span> ${m.text}</div>`
+  ).join('');
+  // Auto-fade after 5s
+  clearTimeout(container._fadeTimer);
+  container.classList.remove('fading');
+  container._fadeTimer = setTimeout(() => container.classList.add('fading'), 5000);
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  socket.emit('chat:send', { text });
+  input.value = '';
+  input.blur();
+  toggleChatInput(false);
+}
+
+function toggleChatInput(show) {
+  const wrapper = document.getElementById('chat-wrapper');
+  if (!wrapper) return;
+  if (show === undefined) show = wrapper.classList.contains('collapsed');
+  wrapper.classList.toggle('collapsed', !show);
+  if (show) {
+    const input = document.getElementById('chat-input');
+    if (input) input.focus();
+  }
+}
+
+// Wire chat send
+document.addEventListener('DOMContentLoaded', () => {
+  const sendBtn = document.getElementById('chat-send');
+  if (sendBtn) {
+    sendBtn.addEventListener('touchstart', (e) => { e.preventDefault(); sendChat(); });
+    sendBtn.addEventListener('click', () => sendChat());
+  }
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+    });
+  }
+});
 
 // ─── Inventory ──────────────────────────────────────────────────
 function openInventory() {

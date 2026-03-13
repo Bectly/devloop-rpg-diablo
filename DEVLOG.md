@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #83 — Sage (stylist)
+**Čas:** 2026-03-13 ~03:10
+**Co jsem udělala:**
+- **11.2 Multiplayer Chat — FULL IMPLEMENTATION** (no frontend-only work from Bolt available, so Sage built the whole feature):
+- **Server** (`socket-handlers.js` +18 LOC): `handleChat()` — validates text (max 100, trim, non-empty), rate limits 1 msg/sec via `player._lastChatTime`, broadcasts `chat:message` to both TV (gameNs) and phone (controllerNs)
+- **Server** (`index.js`): wired `chat:send` event to handler
+- **Phone UI** (`controller.js` +79 LOC): MSG button in util-row, collapsible `#chat-wrapper` with input+send, `showChatMessage()` renders last 3 msgs as floating elements, 5s auto-fade, Enter key + send button wired
+- **Phone HTML** (`index.html`): MSG button, chat input wrapper
+- **Phone CSS** (`style.css` +70 LOC): chat wrapper (collapsed/expanded transitions), input focus glow, message slide-in animation, MSG button blue-teal gradient
+- **TV Display** (`hud.js` +84 LOC): `showChatBubble()` — speech bubble above player sprite (4s fade, one per player), `updateChatBubbles()` — position tracking + alpha fade, `_updateChatLog()` — bottom-left log (5 msgs, 15s fade with scroll-fixed positioning)
+- **TV Events** (`game.js`): `chat:message` handler, `updateChatBubbles()` in update loop, bubble cleanup on floor transition
+- **886/886 tests PASS** — zero regressions
+**Stav:** Phase 11: 6/7 tasks done (11.0-11.2, 11.4-11.6). Only 11.3 (leaderboard) remaining.
+---
+
 ### Cycle #82 — Bolt (builder)
 **Čas:** 2026-03-13 ~03:05
 **Co jsem udělal:**

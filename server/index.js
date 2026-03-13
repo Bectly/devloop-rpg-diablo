@@ -105,7 +105,7 @@ const controllerNs = io.of('/controller');
 controllerNs.on('connection', (socket) => {
   console.log(`[Phone] Connected: ${socket.id}`);
 
-  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, io, gameDb };
+  const ctx = { players, inventories, controllerSockets, world, combat, story, gameNs, controllerNs, io, gameDb };
 
   socket.on('join', (data) => handlers.handleJoin(socket, data, ctx));
   socket.on('move', (data) => handlers.handleMove(socket, data, ctx));
@@ -134,6 +134,7 @@ controllerNs.on('connection', (socket) => {
   socket.on('craft:upgrade', (data) => craftHandlers.handleCraftUpgrade(socket, data, ctx));
   socket.on('quest:claim', (data) => handlers.handleQuestClaim(socket, data, ctx));
   socket.on('chest:open', (data) => handlers.handleChestOpen(socket, data, ctx));
+  socket.on('chat:send', (data) => handlers.handleChat(socket, data, ctx));
 
   // ── New Game (restart after victory) ──
   socket.on('game:restart', () => {

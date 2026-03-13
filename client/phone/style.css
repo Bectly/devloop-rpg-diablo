@@ -2134,3 +2134,89 @@ html, body {
   border-left: 3px solid #8844dd;
   background: rgba(136, 68, 221, 0.15);
 }
+
+/* ─── Chat System ─────────────────────────────────────────── */
+#chat-wrapper {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  right: 120px;
+  display: flex;
+  gap: 4px;
+  z-index: 60;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+#chat-wrapper.collapsed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+#chat-input {
+  flex: 1;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-accent);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  padding: 6px 10px;
+  outline: none;
+}
+
+#chat-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+#chat-send {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  font-size: 16px;
+  width: 36px;
+  cursor: pointer;
+}
+
+#chat-messages {
+  position: fixed;
+  bottom: 44px;
+  left: 8px;
+  right: 120px;
+  z-index: 55;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+#chat-messages.fading {
+  opacity: 0.3;
+}
+
+.chat-msg {
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 3px 8px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  animation: chatSlideIn 0.2s ease-out;
+}
+
+.chat-name {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+@keyframes chatSlideIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.action-btn.chat-btn {
+  background: linear-gradient(135deg, #335577, #224466);
+  border-color: #4488aa;
+  color: #88ccee;
+}

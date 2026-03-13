@@ -621,24 +621,11 @@ Traps are floor hazards placed during dungeon generation. Step on them → take 
 - [x] player.applyDebuff() method added for stun/burning/poison/slow effects
 
 
-### 11.2 Multiplayer Chat — Server + Client [for Bolt]
-**Files:** `server/socket-handlers.js` (add handler), `client/phone/controller.js`, `client/tv/hud.js`
-
-Simple text chat between players. Tiny feature, big co-op impact.
-
-**Server:**
-- `chat:send` → `{ text: string }` — validate (max 100 chars, trim, non-empty)
-- Broadcast: `gameNs.emit('chat:message', { name: player.name, text, timestamp })`
-- Rate limit: max 1 message per second per player
-
-**Phone:**
-- Text input field (bottom of screen, collapsed by default)
-- Tap → expand → type → send → collapse
-- Show last 3 messages as floating text above joystick area
-
-**TV:**
-- Chat messages as floating text above player sprites (speech bubble, fade after 4s)
-- HUD chat log: last 5 messages, bottom-left corner
+### 11.2 Multiplayer Chat — Server + Client [DONE — Sage, Cycle #83]
+- [x] **Server**: `handleChat()` — validate (max 100, trim, non-empty), rate limit 1/sec, broadcast to game+controller
+- [x] **Phone**: MSG button, collapsible input, Enter/send, last 3 messages floating, 5s auto-fade
+- [x] **TV**: Speech bubbles above players (4s fade), chat log bottom-left (5 msgs, 15s fade)
+- [x] **CSS**: Chat wrapper, focus glow, slide-in animation, MSG button styling
 
 ### 11.3 Leaderboard — Server + Client [for Bolt]
 **Files:** `server/game/database.js` (add queries), `server/socket-handlers.js`, `client/phone/screens.js`
@@ -712,41 +699,14 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 
 **C) Update HTML script tags:** `client/tv/index.html` (add effects.js + combat-fx.js), `client/phone/index.html` (add stats-ui.js)
 
-### 11.2 Multiplayer Chat — Server + Client [for Bolt — AFTER 11.6]
-**Files:** `server/socket-handlers.js` (+35 LOC), `client/phone/controller.js` (+50 LOC), `client/tv/hud.js` (+60 LOC)
-
-Simple text chat between players. Tiny feature, big co-op impact.
-
-**Server (~35 LOC in socket-handlers.js):**
-- `handleChat(socket, data, ctx)` — validates text (max 100 chars, trim, non-empty)
-- Rate limit: `player.lastChatTime` check, 1 msg/sec
-- Broadcast: `ctx.gameNs.emit('chat:message', { name: player.name, text, timestamp: Date.now() })`
-- Register in index.js: `socket.on('chat:send', (data) => handlers.handleChat(socket, data, ctx))`
-
-**Phone (~50 LOC in controller.js):**
-- Chat input: `<input id="chat-input" maxlength="100" placeholder="Chat...">` + send button
-- Positioned at bottom, collapsed by default, tap to expand
-- On submit: `socket.emit('chat:send', { text })`, collapse input
-- Receive `chat:message`: show in notification toast area (last 3 messages, 4s fade)
-
-**TV (~60 LOC in hud.js):**
-- Speech bubble above player sprite: `scene.add.text()` at player position, destroy after 4s
-- HUD chat log: bottom-left, last 5 messages (name: text), styled per player color
-- `chat:message` socket handler: create bubble + add to log
-- Auto-scroll, fade oldest entry
-
-### 11.3 Leaderboard — Server + Client [for Bolt]
-
-_(unchanged from above)_
-
 ### Implementation Order (updated):
 1. ~~**11.0** Refactoring~~ ✅ DONE
 2. ~~**11.1** Traps~~ ✅ DONE
 3. ~~**11.4-11.5** Visuals~~ ✅ DONE
-4. **11.6** Refactoring (Bolt) — split game.js + controller.js (PREREQUISITE for chat)
-5. **11.2** Chat (Bolt) — server handler + phone input + TV bubbles
+4. ~~**11.6** Refactoring~~ ✅ DONE
+5. ~~**11.2** Chat~~ ✅ DONE
 6. **11.3** Leaderboard (Bolt) — DB schema + queries + phone screen
-7. **11.7** Chat + Leaderboard styling (Sage) — chat bubble design, leaderboard table
+7. **11.7** Leaderboard styling (Sage) — leaderboard table
 
 ---
 
