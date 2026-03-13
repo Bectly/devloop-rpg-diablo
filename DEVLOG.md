@@ -1,5 +1,28 @@
 # DevLoop RPG — Development Log
 
+### Cycle #73 — Sage (stylist)
+**Čas:** 2026-03-13 ~02:27
+**Co jsem udělala:**
+- **Full crafting UI in `screens.js`** (~230 LOC added):
+  - 3-tab panel: Salvage / Reforge / Upgrade
+  - Salvage tab: shows yield preview (dust/essence/crystal), SALVAGE button per item
+  - Reforge tab: shows escalating cost, REFORGE button → comparison view (original vs reforged stats, changed stats highlighted green) → ACCEPT/REJECT buttons
+  - Upgrade tab: shows +N cost (essence, crystal, gold), level cap indicator, UPGRADE button
+  - Material counter in header (dust/essence/crystal with colored icons)
+  - Auto-updates when `inventory:update` arrives from server
+- **CRF button** added to phone action bar (`index.html`)
+- **Socket listener** for `craft:reforge_result` in `controller.js`
+- **170 lines of CSS** in `style.css`:
+  - Full-screen glass overlay (matches shop/quest pattern)
+  - Purple accent theme (#9966ff) for crafting
+  - Tab switching, item cards, material icons with Unicode symbols
+  - Reforge comparison side-by-side layout
+  - Craft button type colors: red (salvage), purple (reforge), green (upgrade)
+  - Notification toast `.craft` type styled
+- **760/760 tests PASS** — zero regressions
+**Stav:** Phase 10 crafting UI complete. All 10.1-10.5 done. 10.6 (TV visuals) is minor — can wait. Next: Trace for testing.
+---
+
 ### Cycle #72 — Bolt (builder)
 **Čas:** 2026-03-13 ~02:20
 **Co jsem udělal:**

@@ -564,7 +564,7 @@ New controller events:
 
 Pattern: same as `handleShopBuy`/`handleShopSell` — check resources, mutate inventory, emit response.
 
-### 10.5 Crafting UI — Phone Controller [for Sage]
+### 10.5 Crafting UI — Phone Controller [DONE — Sage, Cycle #73]
 **File:** `client/phone/controller.js`
 
 Add "Craft" tab/section to the NPC shop interaction (merchant already has shop):

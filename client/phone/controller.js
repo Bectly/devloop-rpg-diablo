@@ -147,6 +147,8 @@ socket.on('inventory:update', (data) => {
   if (!inventoryScreen.classList.contains('hidden')) {
     renderInventory();
   }
+  // Update crafting screen if open
+  Screens.updateCraftingInventory(data);
 });
 
 socket.on('notification', (data) => {
@@ -256,6 +258,11 @@ socket.on('player:respawn', (data) => {
 socket.on('shop:inventory', (data) => {
   shopData = data;
   Screens.toggleShop(shopData, inventoryData, socket, hapticFeedback, () => { shopData = null; });
+});
+
+// ── Crafting events ──
+socket.on('craft:reforge_result', (data) => {
+  Screens.handleReforgeResult(data);
 });
 
 socket.on('quest:update', (quests) => {
@@ -656,6 +663,15 @@ function initButtons() {
   document.getElementById('btn-quests').addEventListener('click', (e) => {
     e.preventDefault();
     Screens.toggleQuestLog();
+  });
+
+  // Crafting
+  document.getElementById('btn-craft').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    Screens.toggleCrafting(inventoryData, socket, hapticFeedback, () => {});
+  });
+  document.getElementById('btn-craft').addEventListener('click', () => {
+    Screens.toggleCrafting(inventoryData, socket, hapticFeedback, () => {});
   });
 }
 

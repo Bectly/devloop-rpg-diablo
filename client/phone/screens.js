@@ -409,6 +409,336 @@ window.Screens = (() => {
     if (existing) existing.remove();
   }
 
+  // ─── Crafting Screen ──────────────────────────────────────
+  let craftTab = 'salvage';
+  let _craftSocket = null;
+  let _craftInvData = null;
+  let _craftHaptic = null;
+  let _craftOnClose = null;
+  let _pendingReforge = null; // { original, reforged, itemId }
+
+  function createCraftingScreen() {
+    if (document.getElementById('craft-screen')) return;
+
+    const el = document.createElement('div');
+    el.id = 'craft-screen';
+    el.className = 'hidden';
+    el.innerHTML = `
+      <div class="craft-header">
+        <span class="craft-title">CRAFTING</span>
+        <span class="craft-materials" id="craft-mats"></span>
+        <button class="craft-close" id="craft-close">&times;</button>
+      </div>
+      <div class="craft-tabs">
+        <button class="craft-tab active" data-tab="salvage">Salvage</button>
+        <button class="craft-tab" data-tab="reforge">Reforge</button>
+        <button class="craft-tab" data-tab="upgrade">Upgrade</button>
+      </div>
+      <div class="craft-items" id="craft-items"></div>
+    `;
+    document.body.appendChild(el);
+
+    // Tab handlers
+    el.querySelectorAll('.craft-tab').forEach(tab => {
+      const handler = () => {
+        craftTab = tab.dataset.tab;
+        el.querySelectorAll('.craft-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        _pendingReforge = null;
+        if (el._renderCallback) el._renderCallback();
+      };
+      tab.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+      tab.addEventListener('click', handler);
+    });
+
+    // Close handler
+    const closeHandler = () => {
+      el.classList.add('hidden');
+      _pendingReforge = null;
+      if (_craftOnClose) _craftOnClose();
+    };
+    document.getElementById('craft-close').addEventListener('touchstart', (e) => { e.preventDefault(); closeHandler(); });
+    document.getElementById('craft-close').addEventListener('click', closeHandler);
+  }
+
+  function toggleCrafting(inventoryData, socket, hapticFeedback, onClose) {
+    createCraftingScreen();
+    const el = document.getElementById('craft-screen');
+    el.classList.remove('hidden');
+    craftTab = 'salvage';
+    _craftSocket = socket;
+    _craftInvData = inventoryData;
+    _craftHaptic = hapticFeedback;
+    _craftOnClose = onClose;
+    _pendingReforge = null;
+    // Reset tab UI
+    el.querySelectorAll('.craft-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === 'salvage');
+    });
+    el._renderCallback = () => renderCraftingItems();
+    renderCraftingItems();
+  }
+
+  function updateCraftingInventory(inventoryData) {
+    _craftInvData = inventoryData;
+    const el = document.getElementById('craft-screen');
+    if (el && !el.classList.contains('hidden')) {
+      renderCraftingItems();
+    }
+  }
+
+  function _formatMaterials(items) {
+    let dust = 0, essence = 0, crystal = 0;
+    if (items) {
+      for (const item of items) {
+        if (item.type === 'material') {
+          if (item.subType === 'arcane_dust') dust += (item.quantity || 1);
+          else if (item.subType === 'magic_essence') essence += (item.quantity || 1);
+          else if (item.subType === 'rare_crystal') crystal += (item.quantity || 1);
+        }
+      }
+    }
+    return { dust, essence, crystal };
+  }
+
+  function renderCraftingItems() {
+    const container = document.getElementById('craft-items');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const items = _craftInvData && _craftInvData.items ? _craftInvData.items : [];
+    const mats = _formatMaterials(items);
+
+    // Update materials display
+    const matsEl = document.getElementById('craft-mats');
+    if (matsEl) {
+      matsEl.innerHTML = `<span class="mat-dust">${mats.dust}</span> <span class="mat-essence">${mats.essence}</span> <span class="mat-crystal">${mats.crystal}</span>`;
+    }
+
+    // Show pending reforge result
+    if (craftTab === 'reforge' && _pendingReforge) {
+      _renderReforgeResult(container);
+      return;
+    }
+
+    // Filter to craftable items (equipment only)
+    const equipment = items.filter(i => i.type === 'weapon' || i.type === 'armor' || i.type === 'accessory');
+
+    if (equipment.length === 0) {
+      container.innerHTML = '<div class="craft-empty">No items to craft with</div>';
+      return;
+    }
+
+    for (const item of equipment) {
+      const el = document.createElement('div');
+      el.className = 'craft-item';
+      const rarityClass = (item.rarity || 'common').toLowerCase();
+
+      // Item info
+      let statsText = '';
+      if (item.damage) statsText += `DMG:${item.damage} `;
+      if (item.armor) statsText += `ARM:${item.armor} `;
+      if (item.bonuses) {
+        for (const [stat, val] of Object.entries(item.bonuses)) {
+          statsText += `+${val} ${stat.toUpperCase()} `;
+        }
+      }
+      const upgradeTag = item.upgradeLevel ? ` [+${item.upgradeLevel}]` : '';
+
+      const infoEl = document.createElement('div');
+      infoEl.className = 'craft-item-info';
+      infoEl.innerHTML = `
+        <div class="shop-item-name ${rarityClass}">${item.name}${upgradeTag}</div>
+        <div class="shop-item-type">${(item.rarity || '').toUpperCase()} ${item.type || ''}</div>
+        ${statsText.trim() ? `<div class="shop-item-stats">${statsText.trim()}</div>` : ''}
+      `;
+
+      el.appendChild(infoEl);
+
+      if (craftTab === 'salvage') {
+        _renderSalvageAction(el, item, mats);
+      } else if (craftTab === 'reforge') {
+        _renderReforgeAction(el, item, mats);
+      } else if (craftTab === 'upgrade') {
+        _renderUpgradeAction(el, item, mats);
+      }
+
+      container.appendChild(el);
+    }
+  }
+
+  function _renderSalvageAction(el, item, mats) {
+    // Estimate yields client-side (server has final say)
+    const yields = {
+      common: { d: 1 }, uncommon: { d: 2 }, rare: { d: 3, e: 1 },
+      epic: { d: 5, e: 2 }, legendary: { d: 8, e: 3, c: 1 }, set: { d: 3, e: 2, c: 1 },
+    };
+    const y = yields[item.rarity || 'common'] || yields.common;
+    const yieldText = [
+      y.d ? `${y.d} dust` : '',
+      y.e ? `${y.e} ess.` : '',
+      y.c ? `${y.c} crys.` : '',
+    ].filter(Boolean).join(', ');
+
+    const costEl = document.createElement('div');
+    costEl.className = 'craft-cost';
+    costEl.textContent = yieldText;
+
+    const btn = document.createElement('button');
+    btn.className = 'craft-btn salvage';
+    btn.textContent = 'SALVAGE';
+
+    const handler = () => {
+      _craftSocket.emit('craft:salvage', { itemId: item.id });
+      if (_craftHaptic) _craftHaptic();
+    };
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+    btn.addEventListener('click', handler);
+
+    el.appendChild(costEl);
+    el.appendChild(btn);
+  }
+
+  function _renderReforgeAction(el, item, mats) {
+    const reforgeCount = item.reforgeCount || 0;
+    const dustCost = 3 + reforgeCount;
+    const goldCost = 50 + reforgeCount * 25;
+    const hasBonuses = item.bonuses && Object.keys(item.bonuses).length > 0;
+    const canDo = hasBonuses && mats.dust >= dustCost;
+
+    const costEl = document.createElement('div');
+    costEl.className = 'craft-cost';
+    costEl.innerHTML = `<span class="mat-dust">${dustCost}</span> + ${goldCost}g`;
+
+    const btn = document.createElement('button');
+    btn.className = 'craft-btn reforge';
+    btn.textContent = 'REFORGE';
+    if (!canDo) btn.disabled = true;
+
+    const handler = () => {
+      if (!canDo) return;
+      _craftSocket.emit('craft:reforge', { itemId: item.id });
+      if (_craftHaptic) _craftHaptic();
+    };
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+    btn.addEventListener('click', handler);
+
+    el.appendChild(costEl);
+    el.appendChild(btn);
+  }
+
+  function _renderUpgradeAction(el, item, mats) {
+    const level = item.upgradeLevel || 0;
+    const costs = {
+      1: { e: 2, gold: 100 },
+      2: { e: 4, c: 1, gold: 250 },
+      3: { e: 8, c: 3, gold: 500 },
+    };
+    const nextLevel = level + 1;
+    if (nextLevel > 3) {
+      const maxEl = document.createElement('div');
+      maxEl.className = 'craft-cost';
+      maxEl.textContent = 'MAX LEVEL';
+      el.appendChild(maxEl);
+      return;
+    }
+    const cost = costs[nextLevel];
+    const canDo = mats.essence >= (cost.e || 0) && mats.crystal >= (cost.c || 0);
+
+    const costEl = document.createElement('div');
+    costEl.className = 'craft-cost';
+    const parts = [];
+    if (cost.e) parts.push(`<span class="mat-essence">${cost.e}</span>`);
+    if (cost.c) parts.push(`<span class="mat-crystal">${cost.c}</span>`);
+    parts.push(`${cost.gold}g`);
+    costEl.innerHTML = parts.join(' + ');
+
+    const btn = document.createElement('button');
+    btn.className = 'craft-btn upgrade';
+    btn.textContent = `+${nextLevel}`;
+    if (!canDo) btn.disabled = true;
+
+    const handler = () => {
+      if (!canDo) return;
+      _craftSocket.emit('craft:upgrade', { itemId: item.id });
+      if (_craftHaptic) _craftHaptic();
+    };
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+    btn.addEventListener('click', handler);
+
+    el.appendChild(costEl);
+    el.appendChild(btn);
+  }
+
+  function _renderReforgeResult(container) {
+    const data = _pendingReforge;
+    container.innerHTML = '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'reforge-result';
+
+    // Original bonuses
+    const origEl = document.createElement('div');
+    origEl.className = 'reforge-side';
+    origEl.innerHTML = '<div class="reforge-label">ORIGINAL</div>';
+    for (const [stat, val] of Object.entries(data.original.bonuses)) {
+      origEl.innerHTML += `<div class="reforge-stat">+${val} ${stat.toUpperCase()}</div>`;
+    }
+
+    // Reforged bonuses
+    const newEl = document.createElement('div');
+    newEl.className = 'reforge-side reforged';
+    newEl.innerHTML = '<div class="reforge-label">REFORGED</div>';
+    for (const [stat, val] of Object.entries(data.reforged.bonuses)) {
+      const changed = !data.original.bonuses[stat] || data.original.bonuses[stat] !== val;
+      const cls = changed ? 'reforge-stat changed' : 'reforge-stat';
+      newEl.innerHTML += `<div class="${cls}">+${val} ${stat.toUpperCase()}</div>`;
+    }
+
+    wrapper.appendChild(origEl);
+    wrapper.appendChild(newEl);
+    container.appendChild(wrapper);
+
+    // Accept / Reject buttons
+    const btnRow = document.createElement('div');
+    btnRow.className = 'reforge-buttons';
+
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'craft-btn upgrade';
+    acceptBtn.textContent = 'ACCEPT';
+    const acceptHandler = () => {
+      _craftSocket.emit('craft:reforge_accept', { itemId: data.itemId, accept: true });
+      _pendingReforge = null;
+      if (_craftHaptic) _craftHaptic();
+    };
+    acceptBtn.addEventListener('touchstart', (e) => { e.preventDefault(); acceptHandler(); });
+    acceptBtn.addEventListener('click', acceptHandler);
+
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'craft-btn salvage';
+    rejectBtn.textContent = 'REJECT';
+    const rejectHandler = () => {
+      _craftSocket.emit('craft:reforge_accept', { itemId: data.itemId, accept: false });
+      _pendingReforge = null;
+      if (_craftHaptic) _craftHaptic();
+      renderCraftingItems(); // Re-render item list
+    };
+    rejectBtn.addEventListener('touchstart', (e) => { e.preventDefault(); rejectHandler(); });
+    rejectBtn.addEventListener('click', rejectHandler);
+
+    btnRow.appendChild(acceptBtn);
+    btnRow.appendChild(rejectBtn);
+    container.appendChild(btnRow);
+  }
+
+  function handleReforgeResult(data) {
+    _pendingReforge = data;
+    const el = document.getElementById('craft-screen');
+    if (el && !el.classList.contains('hidden') && craftTab === 'reforge') {
+      renderCraftingItems();
+    }
+  }
+
   // ─── Public API ─────────────────────────────────────────────
   return {
     // Quest
@@ -424,6 +754,12 @@ window.Screens = (() => {
     toggleShop,
     renderShopItems,
     estimateSellPrice,
+
+    // Crafting
+    createCraftingScreen,
+    toggleCrafting,
+    updateCraftingInventory,
+    handleReforgeResult,
 
     // Skill tooltips
     SKILL_DESCRIPTIONS,
