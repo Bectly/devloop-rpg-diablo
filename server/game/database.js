@@ -91,6 +91,12 @@ class GameDatabase {
 
       CREATE INDEX IF NOT EXISTS idx_rift_tier ON rift_records(tier, time_seconds);
       CREATE INDEX IF NOT EXISTS idx_rift_player1 ON rift_records(player1);
+
+      CREATE TABLE IF NOT EXISTS stash (
+        slot INTEGER PRIMARY KEY CHECK(slot >= 0 AND slot < 20),
+        item_json TEXT NOT NULL,
+        stored_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
     `);
 
     // Schema migration — add columns that may be missing from older DB files
@@ -170,6 +176,35 @@ class GameDatabase {
     this._stmtRiftPersonal = this.db.prepare(`
       SELECT tier, MIN(time_seconds) as best_time, COUNT(*) as clears
       FROM rift_records WHERE player1 = ? OR player2 = ? GROUP BY tier ORDER BY tier ASC
+    `);
+
+    this._stmtStashInsert = this.db.prepare(`
+      INSERT OR REPLACE INTO stash (slot, item_json, stored_at) VALUES (?, ?, datetime('now'))
+    `);
+
+    this._stmtStashGet = this.db.prepare(`
+      SELECT slot, item_json FROM stash WHERE slot = ?
+    `);
+
+    this._stmtStashDelete = this.db.prepare(`
+      DELETE FROM stash WHERE slot = ?
+    `);
+
+    this._stmtStashAll = this.db.prepare(`
+      SELECT slot, item_json FROM stash ORDER BY slot ASC
+    `);
+
+    this._stmtStashCount = this.db.prepare(`
+      SELECT COUNT(*) as count FROM stash
+    `);
+
+    this._stmtStashNextSlot = this.db.prepare(`
+      SELECT MIN(t.slot) as slot FROM (
+        SELECT 0 as slot UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+        UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+        UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13 UNION SELECT 14
+        UNION SELECT 15 UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
+      ) t LEFT JOIN stash s ON t.slot = s.slot WHERE s.slot IS NULL
     `);
   }
 
@@ -365,6 +400,70 @@ class GameDatabase {
    */
   getPersonalRiftRecords(playerName) {
     return this._stmtRiftPersonal.all(playerName, playerName);
+  }
+
+  // ── Shared Stash ──────────────────────────────────────────────
+
+  /**
+   * Store an item in stash at the next available slot.
+   * @param {object} item
+   * @returns {number|null} slot number used, or null if stash full
+   */
+  stashItem(item) {
+    const row = this._stmtStashNextSlot.get();
+    if (!row || row.slot === null) return null; // stash full
+    this._stmtStashInsert.run(row.slot, JSON.stringify(item));
+    return row.slot;
+  }
+
+  /**
+   * Store an item in a specific stash slot.
+   * @param {number} slot 0-19
+   * @param {object} item
+   */
+  stashItemAt(slot, item) {
+    if (slot < 0 || slot >= 20) return false;
+    this._stmtStashInsert.run(slot, JSON.stringify(item));
+    return true;
+  }
+
+  /**
+   * Retrieve and remove an item from stash.
+   * @param {number} slot
+   * @returns {object|null} parsed item or null
+   */
+  unstashItem(slot) {
+    const row = this._stmtStashGet.get(slot);
+    if (!row) return null;
+    this._stmtStashDelete.run(slot);
+    try {
+      return JSON.parse(row.item_json);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Get all stash contents.
+   * @returns {Array<{slot: number, item: object}>}
+   */
+  getStash() {
+    const rows = this._stmtStashAll.all();
+    return rows.map(r => {
+      try {
+        return { slot: r.slot, item: JSON.parse(r.item_json) };
+      } catch (_) {
+        return { slot: r.slot, item: null };
+      }
+    }).filter(r => r.item !== null);
+  }
+
+  /**
+   * Get stash item count.
+   * @returns {number}
+   */
+  getStashCount() {
+    return this._stmtStashCount.get().count;
   }
 
   close() {

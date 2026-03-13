@@ -1972,7 +1972,7 @@ Extraction candidates noted for future refactoring if needed.
 **Files changed:** `server/game/player.js`, `server/game/database.js`, `server/index.js`, `server/socket-handlers.js`, `server/game/combat.js`, `server/game/skills.js`
 **Remaining for Sage:** Phone join screen HC toggle, TV HC skull badge, HC death animation, leaderboard tabs
 
-### 19.2 Shared Stash [TOP PRIORITY — for Bolt]
+### 19.2 Shared Stash — BACKEND DONE (Cycle #177 — Bolt), UI pending (Sage)
 **Persistent storage shared across all characters. 20 flat slots (no grid), items survive character death.**
 
 **Step A: Database table + methods** (`server/game/database.js`)

@@ -158,6 +158,11 @@ controllerNs.on('connection', (socket) => {
   socket.on('rift:cancel', () => handlers.handleRiftCancel(socket, null, ctx));
   socket.on('rift:leaderboard', (data) => handlers.handleRiftLeaderboard(socket, data, ctx));
 
+  // ── Stash System ──
+  socket.on('stash:list', () => handlers.handleStashList(socket, null, ctx));
+  socket.on('stash:store', (data) => handlers.handleStashStore(socket, data, ctx));
+  socket.on('stash:retrieve', (data) => handlers.handleStashRetrieve(socket, data, ctx));
+
   // ── New Game (restart after victory) ──
   socket.on('game:restart', (data) => {
     const requestedDiff = (data && data.difficulty) || 'normal';

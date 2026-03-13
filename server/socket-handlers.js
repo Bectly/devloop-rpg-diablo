@@ -1217,5 +1217,82 @@ exports.handleRiftLeaderboard = (socket, data, ctx) => {
 
 exports.clearPendingRift = () => { pendingRift = null; };
 
+// ── Stash ──
+exports.handleStashList = (socket, data, { players, gameDb }) => {
+  const player = players.get(socket.id);
+  if (!player || !gameDb) return;
+  const stash = gameDb.getStash();
+  socket.emit('stash:update', { items: stash });
+};
+
+exports.handleStashStore = (socket, data, { players, inventories, gameDb }) => {
+  const player = players.get(socket.id);
+  if (!player || !gameDb) return;
+  const inv = inventories.get(player.id);
+  if (!inv) return;
+
+  // Validate inventory index
+  const items = inv.getAllItems();
+  const item = items[data.inventoryIndex];
+  if (!item) {
+    socket.emit('notification', { text: 'Invalid item', type: 'error' });
+    return;
+  }
+
+  // Check stash capacity
+  if (gameDb.getStashCount() >= 20) {
+    socket.emit('notification', { text: 'Stash is full! (20/20)', type: 'error' });
+    return;
+  }
+
+  // Store in stash
+  const slot = gameDb.stashItem(item);
+  if (slot === null) {
+    socket.emit('notification', { text: 'Stash is full!', type: 'error' });
+    return;
+  }
+
+  // Remove from inventory
+  inv.removeItem(item.id);
+
+  socket.emit('inventory:update', inv.serialize());
+  socket.emit('stash:update', { items: gameDb.getStash() });
+  socket.emit('notification', { text: `Stored in stash (slot ${slot + 1})`, type: 'info' });
+};
+
+exports.handleStashRetrieve = (socket, data, { players, inventories, gameDb }) => {
+  const player = players.get(socket.id);
+  if (!player || !gameDb) return;
+  const inv = inventories.get(player.id);
+  if (!inv) return;
+
+  // Validate slot
+  const slot = data.slot;
+  if (typeof slot !== 'number' || slot < 0 || slot >= 20) {
+    socket.emit('notification', { text: 'Invalid stash slot', type: 'error' });
+    return;
+  }
+
+  // Check inventory space
+  if (!inv.findSpace(1, 1)) {
+    socket.emit('notification', { text: 'Inventory full!', type: 'error' });
+    return;
+  }
+
+  // Retrieve from stash
+  const item = gameDb.unstashItem(slot);
+  if (!item) {
+    socket.emit('notification', { text: 'Stash slot is empty', type: 'error' });
+    return;
+  }
+
+  // Add to inventory
+  inv.addItem(item);
+
+  socket.emit('inventory:update', inv.serialize());
+  socket.emit('stash:update', { items: gameDb.getStash() });
+  socket.emit('notification', { text: 'Retrieved from stash', type: 'info' });
+};
+
 // ── Exports for external access ──
 exports.disconnectedPlayers = disconnectedPlayers;

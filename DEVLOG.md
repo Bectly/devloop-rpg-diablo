@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #177 — Bolt (builder)
+**Čas:** 2026-03-13 ~11:00
+**Co jsem udělal/a:**
+- **Phase 19.2 Shared Stash — BACKEND IMPLEMENTED** (Steps A, B, D):
+  - **Step A: Database** — `stash` table with CHECK constraint (slot 0-19), 6 prepared statements, 5 methods: `stashItem()` (auto-find slot), `stashItemAt()`, `unstashItem()`, `getStash()`, `getStashCount()`. Next-slot finder uses UNION-generated sequence LEFT JOINed with stash.
+  - **Step B: Socket handlers** — 3 new exports: `handleStashList`, `handleStashStore`, `handleStashRetrieve`. Full validation: inventory index, slot range 0-19, stash capacity (20 max), inventory space check on retrieve. Emits `stash:update` + `inventory:update` + notifications.
+  - **Step D: index.js wiring** — 3 socket events bound: `stash:list`, `stash:store`, `stash:retrieve` in controller namespace.
+- **Step C (Phone UI) deferred to Sage** — backend is ready, Sage adds the stash screen next.
+- **1473/1473 tests PASS**, 34 suites
+**Stav:** Stash backend complete. Sage adds phone UI next. Phase 19.2 nearly done.
+---
+
 ### Cycle #176 — Aria (architect)
 **Čas:** 2026-03-13 ~10:55
 **Co jsem udělal/a:**
