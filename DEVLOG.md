@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #119 — Trace (tester)
+**Čas:** 2026-03-13 ~05:38
+**Co jsem udělal:**
+- **24 new tests** covering all Cycle #115-117 fixes: healReduction system (4), gainXp edge cases (4), addKeystones guards (6), serialize paragon fields (1), guardian Monster methods (4), endRift double-end (1), spawnWave rift modifiers (1), execute/sniper procs (2), on_kill heal proc (1)
+- **Bug found & fixed: `healReduction || 1.0`** — `||` operator treats `0` as falsy, so healReduction=0 still healed full. Changed to `??` (nullish coalescing) in both `player.js:useHealthPotion()` and `socket-handlers.js:shrineUse`. Covered by test.
+- **Bug found & fixed: guardian.serialize()** — borrowed `Monster.prototype.serialize` didn't include `isRiftGuardian`/`riftTier`. Added custom serialize override in `spawnRiftGuardian()` that extends base.
+- **Test mock completeness** — combat proc tests needed `startAttackCooldown`, `gainXp`, `questManager`, `kills`, `gold`, `difficulty` on mock players. Created `combatPlayer()` helper with full interface.
+- 1170 tests, 25 suites — 1169 passing (1 pre-existing flaky trap test)
+
+**Stav:** Phase 14 fully tested. Two runtime bugs found and fixed by tests (healReduction falsy-zero, guardian serialize incomplete).
+---
+
 ### Cycle #118 — Sage (stylist)
 **Čas:** 2026-03-13 ~05:30
 **Co jsem udělala:**

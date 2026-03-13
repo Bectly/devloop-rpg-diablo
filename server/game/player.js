@@ -377,7 +377,7 @@ class Player {
     if (this.healthPotions <= 0) return false;
     if (this.hp >= this.maxHp) return false;
     this.healthPotions -= 1;
-    const healAmount = Math.floor(Math.floor(this.maxHp * 0.35) * (this.healReduction || 1.0));
+    const healAmount = Math.floor(Math.floor(this.maxHp * 0.35) * (this.healReduction ?? 1.0));
     this.hp = Math.min(this.maxHp, this.hp + healAmount);
     return true;
   }

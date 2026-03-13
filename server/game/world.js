@@ -676,7 +676,13 @@ class World {
     guardian.applyStun = Monster.prototype.applyStun;
     guardian.applySlow = Monster.prototype.applySlow;
     guardian.getSplitMonsters = function () { return []; };
-    guardian.serialize = Monster.prototype.serialize;
+    const baseSerialize = Monster.prototype.serialize;
+    guardian.serialize = function () {
+      const data = baseSerialize.call(this);
+      data.isRiftGuardian = true;
+      data.riftTier = this.riftTier;
+      return data;
+    };
 
     this.monsters.push(guardian);
     return guardian;

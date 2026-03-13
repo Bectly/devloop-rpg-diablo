@@ -806,7 +806,7 @@ exports.handleShrineUse = (socket, data, { players, world, gameNs }) => {
   const room = world.getRoomAtPosition(player.x, player.y);
   if (!room || !room.hasShrine || room.shrineUsed) return;
   room.shrineUsed = true;
-  const healReduction = player.healReduction || 1.0;
+  const healReduction = player.healReduction ?? 1.0;
   const hpHeal = Math.floor((player.maxHp - player.hp) * healReduction);
   player.hp = Math.min(player.maxHp, player.hp + hpHeal);
   player.mp = player.maxMp;

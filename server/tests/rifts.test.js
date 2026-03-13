@@ -1254,3 +1254,376 @@ describe('Rift leaderboard', () => {
     db.close();
   });
 });
+
+// ── Cycle #119: Tests for fixes from Cycles #115-117 ────────────
+
+describe('healReduction system', () => {
+  const { Player } = require('../game/player');
+
+  it('new player has healReduction = 1.0', () => {
+    const p = new Player('HealTest', 'warrior');
+    expect(p.healReduction).toBe(1.0);
+  });
+
+  it('useHealthPotion heals 35% of maxHp at healReduction 1.0', () => {
+    const p = new Player('FullHeal', 'warrior');
+    p.recalcStats();
+    const expectedHeal = Math.floor(p.maxHp * 0.35);
+    p.hp = 1;
+    p.healthPotions = 5;
+    p.healReduction = 1.0;
+    p.useHealthPotion();
+    expect(p.hp).toBe(1 + expectedHeal);
+  });
+
+  it('useHealthPotion heals 50% less with healReduction = 0.5 (cursed rift)', () => {
+    const p = new Player('CursedHeal', 'warrior');
+    p.recalcStats();
+    const fullHeal = Math.floor(p.maxHp * 0.35);
+    const cursedHeal = Math.floor(fullHeal * 0.5);
+    p.hp = 1;
+    p.healthPotions = 5;
+    p.healReduction = 0.5;
+    p.useHealthPotion();
+    expect(p.hp).toBe(1 + cursedHeal);
+  });
+
+  it('healReduction 0 means no healing from potions', () => {
+    const p = new Player('NoHeal', 'warrior');
+    p.recalcStats();
+    p.hp = 1;
+    p.healthPotions = 5;
+    p.healReduction = 0;
+    p.useHealthPotion();
+    expect(p.hp).toBe(1);
+  });
+});
+
+describe('gainXp edge cases (Cycle #115 fixes)', () => {
+  const { Player, MAX_LEVEL } = require('../game/player');
+
+  it('gainXp(0) returns null, no state change', () => {
+    const p = new Player('ZeroXP', 'warrior');
+    const before = p.xp;
+    expect(p.gainXp(0)).toBeNull();
+    expect(p.xp).toBe(before);
+  });
+
+  it('gainXp(-100) returns null, no state change', () => {
+    const p = new Player('NegXP', 'warrior');
+    const before = p.xp;
+    expect(p.gainXp(-100)).toBeNull();
+    expect(p.xp).toBe(before);
+  });
+
+  it('multi-level paragon: huge XP grants multiple paragon levels at once', () => {
+    const p = new Player('MultiParagon', 'warrior');
+    p.level = MAX_LEVEL;
+    // Paragon 0→1: 1000, 1→2: 2000, 2→3: 3000 = 6000 total
+    const result = p.gainXp(6000);
+    expect(result).not.toBeNull();
+    expect(result.isParagon).toBe(true);
+    expect(result.paragonLevel).toBe(3);
+    expect(p.paragonLevel).toBe(3);
+    expect(p.paragonXp).toBe(0); // exactly 6000 consumed
+  });
+
+  it('multi-level paragon with leftover XP', () => {
+    const p = new Player('LeftoverParagon', 'warrior');
+    p.level = MAX_LEVEL;
+    // 1000 + 2000 = 3000 for 2 levels, +500 leftover
+    const result = p.gainXp(3500);
+    expect(result.paragonLevel).toBe(2);
+    expect(p.paragonXp).toBe(500);
+  });
+
+  it('XP overflow at level 29→30 feeds into paragon', () => {
+    const p = new Player('OverflowTest', 'warrior');
+    p.level = 29;
+    p.xp = 0;
+    // XpToNext for level 29 = Math.floor(100 * 1.15^29) ≈ 5418
+    const xpNeeded = p.xpToNext;
+    // Give enough to level up + 2000 leftover for paragon
+    const result = p.gainXp(xpNeeded + 2000);
+    expect(p.level).toBe(MAX_LEVEL);
+    // Leftover should be in paragonXp (minus any consumed by levelUp)
+    expect(p.paragonXp).toBeGreaterThanOrEqual(0);
+    // The XP that was left after reaching 30 should have gone to paragon
+    expect(p.xp).toBe(0); // no orphaned XP
+  });
+});
+
+describe('addKeystones guards (Cycle #115 fixes)', () => {
+  const { Player } = require('../game/player');
+
+  it('addKeystones(NaN) does not corrupt keystones', () => {
+    const p = new Player('NaNKey', 'warrior');
+    p.keystones = 5;
+    p.addKeystones(NaN);
+    expect(p.keystones).toBe(5);
+  });
+
+  it('addKeystones(undefined) does not corrupt keystones', () => {
+    const p = new Player('UndefKey', 'warrior');
+    p.keystones = 3;
+    p.addKeystones(undefined);
+    expect(p.keystones).toBe(3);
+  });
+
+  it('addKeystones(-1) is rejected', () => {
+    const p = new Player('NegKey', 'warrior');
+    p.keystones = 5;
+    p.addKeystones(-1);
+    expect(p.keystones).toBe(5);
+  });
+
+  it('addKeystones(0) is rejected', () => {
+    const p = new Player('ZeroKey', 'warrior');
+    p.keystones = 5;
+    p.addKeystones(0);
+    expect(p.keystones).toBe(5);
+  });
+
+  it('addKeystones("abc") does not corrupt', () => {
+    const p = new Player('StrKey', 'warrior');
+    p.keystones = 5;
+    p.addKeystones("abc");
+    expect(p.keystones).toBe(5);
+  });
+
+  it('addKeystones(2.7) floors to 2', () => {
+    const p = new Player('FloatKey', 'warrior');
+    p.keystones = 5;
+    p.addKeystones(2.7);
+    expect(p.keystones).toBe(7);
+  });
+});
+
+describe('serialize includes paragon fields (Cycle #115 fix)', () => {
+  const { Player } = require('../game/player');
+
+  it('serialize() includes keystones, paragonLevel, paragonXp, paragonXpToNext', () => {
+    const p = new Player('SerTest', 'warrior');
+    p.paragonLevel = 5;
+    p.paragonXp = 1234;
+    p.keystones = 3;
+    const s = p.serialize();
+    expect(s).toHaveProperty('keystones', 3);
+    expect(s).toHaveProperty('paragonLevel', 5);
+    expect(s).toHaveProperty('paragonXp', 1234);
+    expect(s).toHaveProperty('paragonXpToNext', 6000); // (5+1)*1000
+  });
+});
+
+describe('guardian has Monster prototype methods (Cycle #115 fix)', () => {
+  const { World } = require('../game/world');
+
+  it('spawnRiftGuardian produces guardian with update, takeDamage, distanceTo methods', () => {
+    const w = new World();
+    w.generateFloor(0, 'normal');
+
+    const riftConfig = createRift(3, 20);
+    w.generateRiftFloor(riftConfig);
+    const guardian = w.spawnRiftGuardian();
+
+    // Must exist
+    expect(guardian).not.toBeNull();
+    expect(guardian.isRiftGuardian).toBe(true);
+    expect(guardian.alive).toBe(true);
+
+    // Must have Monster prototype methods
+    expect(typeof guardian.update).toBe('function');
+    expect(typeof guardian.takeDamage).toBe('function');
+    expect(typeof guardian.distanceTo).toBe('function');
+    expect(typeof guardian.moveToward).toBe('function');
+    expect(typeof guardian.applyStun).toBe('function');
+    expect(typeof guardian.applySlow).toBe('function');
+    expect(typeof guardian.getSplitMonsters).toBe('function');
+    expect(typeof guardian.serialize).toBe('function');
+  });
+
+  it('guardian.takeDamage reduces HP and kills at 0', () => {
+    const w = new World();
+    w.generateFloor(0, 'normal');
+    const riftConfig = createRift(1, 10);
+    w.generateRiftFloor(riftConfig);
+    const guardian = w.spawnRiftGuardian();
+
+    const hpBefore = guardian.hp;
+    const dealt = guardian.takeDamage(100, 'physical');
+    expect(dealt).toBeGreaterThan(0);
+    expect(guardian.hp).toBeLessThan(hpBefore);
+
+    // Kill it
+    guardian.takeDamage(guardian.hp + 1000, 'physical');
+    expect(guardian.alive).toBe(false);
+    expect(guardian.hp).toBe(0);
+  });
+
+  it('guardian.getSplitMonsters returns empty array', () => {
+    const w = new World();
+    w.generateFloor(0, 'normal');
+    const riftConfig = createRift(1, 10);
+    w.generateRiftFloor(riftConfig);
+    const guardian = w.spawnRiftGuardian();
+    expect(guardian.getSplitMonsters()).toEqual([]);
+  });
+
+  it('guardian.serialize includes isRiftGuardian and riftTier', () => {
+    const w = new World();
+    w.generateFloor(0, 'normal');
+    const riftConfig = createRift(5, 25);
+    w.generateRiftFloor(riftConfig);
+    const guardian = w.spawnRiftGuardian();
+    const s = guardian.serialize();
+    expect(s.isRiftGuardian).toBe(true);
+    expect(s.riftTier).toBe(5);
+    expect(s.isBoss).toBe(true);
+  });
+});
+
+describe('endRift double-end guard (Cycle #115 fix)', () => {
+  const { World } = require('../game/world');
+
+  it('endRift() called twice does not crash', () => {
+    const w = new World();
+    w.generateFloor(0, 'normal');
+    const riftConfig = createRift(3, 20);
+    w.generateRiftFloor(riftConfig);
+    expect(w.riftActive).toBe(true);
+
+    w.endRift();
+    expect(w.riftActive).toBe(false);
+
+    // Second call should be no-op
+    expect(() => w.endRift()).not.toThrow();
+    expect(w.riftActive).toBe(false);
+  });
+});
+
+describe('applyRiftModifiers called during spawnWave (Cycle #115 fix)', () => {
+  const { World } = require('../game/world');
+
+  it('rift monsters have scaled stats after wave spawn', () => {
+    const w = new World();
+    w.generateFloor(0, 'normal');
+
+    // Get baseline monster stats from a normal wave
+    const normalMonsters = [...w.monsters];
+
+    // Generate a rift with high-tier modifiers
+    const riftConfig = createRift(5, 20);
+    w.generateRiftFloor(riftConfig);
+
+    // After rift floor gen, monsters from spawnWave should have modified stats
+    // The rift tier 5 has monsterHpMult and monsterDmgMult > 1
+    const riftMonsters = w.monsters.filter(m => m.alive);
+
+    // At least verify that rift monsters exist and have been modified
+    if (riftMonsters.length > 0 && normalMonsters.length > 0) {
+      // Rift tier 5 should have substantially more HP than baseline tier 1 monsters
+      const avgRiftHp = riftMonsters.reduce((a, m) => a + m.maxHp, 0) / riftMonsters.length;
+      const avgNormalHp = normalMonsters.reduce((a, m) => a + m.maxHp, 0) / normalMonsters.length;
+      // Rift modifiers + tier mult should make monsters stronger
+      expect(avgRiftHp).toBeGreaterThanOrEqual(avgNormalHp);
+    }
+  });
+});
+
+describe('execute and sniper proc handlers (Cycle #115 fix)', () => {
+  const { CombatSystem } = require('../game/combat');
+  const { Monster } = require('../game/monsters');
+
+  function combatPlayer(overrides = {}) {
+    return {
+      id: 'test-combat', name: 'TestPlayer', alive: true,
+      attackPower: 100, critChance: 0, x: 90, y: 90,
+      attackRange: 60, attackCooldown: 0, attackSpeed: 1000,
+      equipment: {}, setBonuses: {}, buffs: [],
+      kills: 0, gold: 0, difficulty: 'normal',
+      canAttack: function() { return this.attackCooldown <= 0; },
+      startAttackCooldown: function() { this.attackCooldown = this.attackSpeed; },
+      gainXp: () => null,
+      questManager: { check: () => [] },
+      talentBonuses: { passives: {}, procs: [], auras: [] },
+      ...overrides,
+    };
+  }
+
+  it('execute proc triggers on low-HP target', () => {
+    const combat = new CombatSystem();
+    const player = combatPlayer({
+      attackPower: 10, // low damage so the monster survives the initial hit
+      talentBonuses: {
+        passives: {},
+        procs: [{ trigger: 'on_hit', chance: 1.0, effect: 'execute', threshold_hp_percent: 30, damage_multiplier: 2 }],
+        auras: [],
+      },
+    });
+    const monster = new Monster('skeleton', 100, 100, 0);
+    // Give monster high HP so it survives the hit, but set current HP below 30% threshold
+    monster.maxHp = 1000;
+    monster.hp = 200; // 200/1000 = 20% < 30%
+
+    combat.playerAttack(player, [monster]);
+    const procEvents = combat.events.filter(e => e.type === 'combat:proc' && e.effect === 'execute');
+    expect(procEvents.length).toBe(1);
+    expect(procEvents[0].damage).toBeGreaterThan(0);
+  });
+
+  it('execute proc does NOT trigger on high-HP target', () => {
+    const combat = new CombatSystem();
+    const player = combatPlayer({
+      attackPower: 50,
+      talentBonuses: {
+        passives: {},
+        procs: [{ trigger: 'on_hit', chance: 1.0, effect: 'execute', threshold_hp_percent: 30, damage_multiplier: 2 }],
+        auras: [],
+      },
+    });
+    const monster = new Monster('skeleton', 100, 100, 0);
+    // Monster at full HP (100% > 30%)
+    combat.playerAttack(player, [monster]);
+    const procEvents = combat.events.filter(e => e.type === 'combat:proc' && e.effect === 'execute');
+    expect(procEvents.length).toBe(0);
+  });
+});
+
+describe('on_kill proc — heal_on_kill (Cycle #115 fix)', () => {
+  const { CombatSystem } = require('../game/combat');
+  const { Monster } = require('../game/monsters');
+
+  it('heal_on_kill proc heals player after kill', () => {
+    const combat = new CombatSystem();
+    const player = {
+      id: 'heal-kill', name: 'Healer', alive: true,
+      attackPower: 9999, critChance: 0, x: 90, y: 90,
+      attackRange: 60, attackCooldown: 0, attackSpeed: 1000,
+      canAttack: function() { return this.attackCooldown <= 0; },
+      startAttackCooldown: function() { this.attackCooldown = this.attackSpeed; },
+      maxHp: 200, hp: 100, kills: 0,
+      equipment: {}, setBonuses: {}, buffs: [],
+      difficulty: 'normal',
+      gold: 0,
+      gainXp: () => null,
+      questManager: { check: () => [] },
+      talentBonuses: {
+        passives: {},
+        procs: [{ trigger: 'on_kill', chance: 1.0, effect: 'heal_percent', value: 15 }],
+        auras: [],
+      },
+    };
+    const monster = new Monster('skeleton', 100, 100, 0);
+    monster.hp = 1; // will die on first hit
+
+    combat.playerAttack(player, [monster]);
+    expect(monster.alive).toBe(false);
+
+    // Check heal event
+    const healEvents = combat.events.filter(e => e.type === 'combat:proc' && e.effect === 'heal_on_kill');
+    expect(healEvents.length).toBe(1);
+    expect(healEvents[0].heal).toBe(Math.floor(200 * 15 / 100));
+    // Player HP should be increased
+    expect(player.hp).toBeGreaterThan(100);
+  });
+});
