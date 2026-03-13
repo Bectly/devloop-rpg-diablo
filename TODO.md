@@ -1712,45 +1712,37 @@ This lets TV client differentiate friendly wolves visually.
 
 **Current state:** 3 classes × 3 skills = 9 skills. Most are instant (buff self, deal damage to nearest). No projectiles, no ground targeting, no skill synergies.
 
-### 16.0 Refactoring: Extract Skill Engine [for Bolt — TOP PRIORITY]
-**Why:** `combat.js` (872 LOC) handles all skill effects inline in `playerSkill()`. Each skill is a giant if/else chain. Need dedicated skill engine.
+### 16.0 Refactoring: Extract Skill Engine [DONE — Bolt, Cycle #137 / Rune Cycle #140]
+- [x] `server/game/skills.js` (413 LOC) — 3 shared helpers + 6 per-type handlers
+- [x] `combat.js` reduced from 872 → 433 LOC (50% reduction)
+- [x] `applyShatter()` deduplicated (skills.js exports, combat.js imports)
+- [x] 6 bugs fixed by Rune: keystone rewards, on-kill procs, death/levelup event fields
 
-**New file:** `server/game/skills.js`
-- Extract all skill effect logic from `combat.js:playerSkill()` into per-skill handler functions
-- `executeSkill(player, skillIndex, monsters, allPlayers)` → returns `{ events[], targets[] }`
-- Each skill gets its own function: `executeWhirlwind()`, `executeArrowRain()`, etc.
-- `combat.js:playerSkill()` becomes a thin wrapper that calls `executeSkill()`
+### 16.1 Projectile System [DONE — Sage, Cycle #138 / Rune Cycle #140]
+- [x] `server/game/projectiles.js` (209 LOC) — Projectile class, createProjectile, createProjectileAngled, updateProjectiles
+- [x] world.js integration: projectiles array + serialize
+- [x] index.js game loop: projectile update before clearEvents
+- [x] Bounds fixed to 1970x1330 (world 1920x1280 + 50px margin)
+- [x] damageType passed to takeDamage() for elemental projectiles
+- [x] 21 tests in projectiles.test.js
 
-**Files changed:** `server/game/combat.js`, `server/game/skills.js` (NEW)
+### 16.2 Warrior Skill Rework [for Bolt — TOP PRIORITY]
 
-### 16.1 Projectile System [for Bolt]
-**Why:** Ranger has no projectile skills. Arrow Rain and Power Shot should be actual projectiles with travel time.
+**Skill changes:**
 
-**New file:** `server/game/projectiles.js`
-- `Projectile` class: `{ id, ownerId, x, y, vx, vy, speed, damage, damageType, piercing, aoe, lifetime }`
-- `world.projectiles[]` array, updated in game loop
-- Collision detection: projectile vs monster hitbox (circle-circle)
-- Piercing: continues through first target
-- AOE: damages all monsters in radius on impact
-- Cleanup: remove when lifetime expires or hits non-piercing target
+| Old Skill | New Skill | Type | Key Change |
+|-----------|-----------|------|------------|
+| Cleave (aoe, 1.8x, r60) | **Whirlwind** (spin, 0.6x × 3 hits, r70) | NEW `spin` | Multi-hit AOE, 3 damage ticks, same total damage |
+| Shield Bash (single, 1.2x, stun) | **Charging Strike** (charge, 2.0x, dash+stun) | NEW `charge` | Dash to target, trail damage (0.5x), stun on arrival |
+| War Cry (buff, attack_up 8s) | **Battle Shout** (buff_debuff, attack_up 8s + fear) | NEW `buff_debuff` | Same party buff + Intimidate (fear r150, 1.5s) |
 
-**Server integration (`index.js` game loop):**
-```
-for (const proj of world.projectiles) {
-  proj.x += proj.vx * dt/1000;
-  proj.y += proj.vy * dt/1000;
-  proj.lifetime -= dt;
-  // collision check vs monsters
-}
-```
-
-### 16.2 Warrior Skill Rework [for Bolt]
-
-| Skill | Current | New |
-|-------|---------|-----|
-| Whirlwind | AOE damage around self | **Spin Attack** — 360° damage, player spins (0.5s channel), hits all in radius, move while spinning at 50% speed |
-| War Cry | +30% ATK buff 8s | **Battle Shout** — +30% ATK for party, also applies **Intimidate** (nearby monsters flee for 1.5s, radius 150) |
-| Shield Bash | Single target stun | **Charging Strike** — dash toward nearest monster (200px), deal 2x damage + stun 2s. If no target, dash forward. Leaves damage trail |
+**Implementation order for Bolt:**
+1. `monsters.js` — Add `feared` field, `applyFear()` method, update FLEE state to respect fear timer, update serialize
+2. `player.js:14-18` — Replace 3 warrior skill definitions (new names, types, properties)
+3. `damage-types.js` — Rename Cleave/Shield Bash/War Cry → Whirlwind/Charging Strike/Battle Shout
+4. `skills.js` — Add 3 new handlers (`executeSpin`, `executeCharge`, `executeBuffDebuff`) + 3 switch cases (~140 LOC)
+5. `client/tv/combat-fx.js` — Update 'War Cry' → 'Battle Shout' reference
+6. Update existing tests (skill names changed)
 
 ### 16.3 Ranger Skill Rework [for Bolt]
 

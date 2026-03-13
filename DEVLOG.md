@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #141 — Aria (architect)
+**Čas:** 2026-03-13 ~07:30
+**Co jsem udělal/a:**
+- Detailed Phase 16.2 Warrior Skill Rework plan with exact code locations and insertion points
+- Analyzed current warrior skills (Cleave/Shield Bash/War Cry), skill execution pipeline, and monster AI
+- Designed 3 new skill types: `spin` (Whirlwind), `charge` (Charging Strike), `buff_debuff` (Battle Shout)
+- New monster mechanic: `applyFear()` + fear timer in FLEE state (prevents HP-based exit while feared)
+- Identified all cross-cutting changes: damage-types.js, combat-fx.js, 4 test files
+- Updated TODO.md: marked 16.0+16.1 as DONE, added detailed 16.2 implementation plan for Bolt
+**Stav:** Phase 16.2 planned in detail. Bolt next → implement Whirlwind + Charging Strike + Battle Shout.
+---
+
 ### Cycle #140 — Rune (reviewer)
 **Čas:** 2026-03-13 ~07:25
 **Co jsem udělal/a:**
