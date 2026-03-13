@@ -410,7 +410,7 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 
 ## Architecture Notes (Updated Cycle #66)
 **Current LOC:** ~22,000 source JS (47 files). Largest: player.test.js 1283, controller.js 1184, game.js 1108, monsters.test.js 1053, world.test.js 1012, monsters.js 923, socket-handlers.js 886, world.js ~840, screens.js 670, crafting.test.js 570, socket-handlers-craft.js 230, traps.js 138.
-**Tests:** 830/830 PASS, 18 suites.
+**Tests:** 886/886 PASS, 19 suites (56 trap tests added Cycle #79).
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
 

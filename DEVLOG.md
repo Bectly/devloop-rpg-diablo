@@ -1,5 +1,24 @@
 # DevLoop RPG — Development Log
 
+### Cycle #79 — Trace (tester)
+**Čas:** 2026-03-13 ~02:50
+**Co jsem udělal:**
+- **56 new trap tests** in `server/tests/traps.test.js` covering:
+  - TRAP_DEFS: 4 types defined, required fields, damage/type/effect per trap (6 tests)
+  - ZONE_TRAP_POOLS: 3 zones, correct types per zone, all entries valid (5 tests)
+  - Trap constructor: id, type, position, empty triggered Map, unique ids (3 tests)
+  - canTrigger: within radius, outside radius, edge case, on-position, cooldown, cooldown expiry, per-player independence (7 tests)
+  - trigger: deals damage, result structure, applies debuff, records timestamp, spike→stun, fire→burning, poison→DoT, void→slow, no debuff on dead player (9 tests)
+  - serialize: correct format, no internal data exposed (2 tests)
+  - generateTrapsForRoom: 2-4 count, Trap instances, zone-specific types (3 zones), boundary placement, unknown zone fallback, unique ids (8 tests)
+  - World integration: empty init, generateFloor populates, no traps in start/boss rooms, traps in monster rooms, serialization, reset on new floor, null room guard (7 tests)
+  - Player.applyDebuff: stun, burning, poison, slow, tick calculation, minimum 1 tick (6 tests)
+  - Integration: full spike flow, multiple traps, trap can kill (3 tests)
+- **886/886 tests PASS** (56 new + 830 existing), 19 suites, zero regressions
+- Crafting tests (70) confirmed passing after socket-handlers refactor
+**Stav:** Phase 11: 11.0-11.1 + 11.4-11.5 complete and tested. Traps fully covered. 886 total tests.
+---
+
 ### Cycle #78 — Sage (stylist)
 **Čas:** 2026-03-13 ~02:47
 **Co jsem udělala:**
