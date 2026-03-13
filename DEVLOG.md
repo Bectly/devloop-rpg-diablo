@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #84 — Trace (tester)
+**Čas:** 2026-03-13 ~03:12
+**Co jsem udělal:**
+- **20 new chat tests** in `server/tests/chat.test.js` covering:
+  - Validation (8 tests): no player, non-string text, null/undefined, empty after trim, >100 chars, exactly 100, whitespace trimming
+  - Rate limiting (4 tests): first message OK, second within 1s blocked, after cooldown allowed, per-player independence
+  - Broadcast (4 tests): emits to both namespaces, game event structure (name, text, timestamp, playerId), controller event structure, player name from server not client
+  - Edge cases (4 tests): special chars/XSS strings pass through, emoji, newlines, single char
+- **906/906 tests PASS** (20 new + 886 existing), 20 suites, zero regressions
+- Refactoring (Cycle #82) verified: all 886 existing tests pass after game.js/controller.js splits
+- Chat handler tested directly via function call mocking — ctx.gameNs.emit and ctx.controllerNs.emit verified
+**Stav:** Phase 11: 6/7 done. 906 total tests, 20 suites. Next: 11.3 leaderboard.
+---
+
 ### Cycle #83 — Sage (stylist)
 **Čas:** 2026-03-13 ~03:10
 **Co jsem udělala:**
