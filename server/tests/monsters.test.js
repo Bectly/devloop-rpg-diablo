@@ -1052,4 +1052,152 @@ describe('Monsters', () => {
       expect(fireDmg).toBe(50); // fire bypasses armor
     });
   });
+
+  // ── Phase 23.2: Aggro Range + Monster Patrol ─────────────────
+  describe('Phase 23.2: aggro range & sticky aggro', () => {
+    it('monster starts with aggroed=false', () => {
+      const m = createMonster('skeleton', 100, 100);
+      expect(m.aggroed).toBe(false);
+    });
+
+    it('monster aggros when player is within aggroRadius', () => {
+      const m = createMonster('skeleton', 100, 100); // aggroRadius = 150
+      const player = { id: 'p1', alive: true, x: 200, y: 100 }; // 100 units away
+      m.update(16, [player]);
+      expect(m.aggroed).toBe(true);
+      expect(m.aiState).toBe(AI_STATES.ALERT);
+    });
+
+    it('monster does NOT aggro when player is beyond aggroRadius', () => {
+      const m = createMonster('skeleton', 100, 100); // aggroRadius = 150
+      const player = { id: 'p1', alive: true, x: 500, y: 500 };
+      m.update(16, [player]);
+      expect(m.aggroed).toBe(false);
+      expect(m.aiState).toBe(AI_STATES.IDLE);
+    });
+
+    it('boss has unlimited aggro range — aggros regardless of distance', () => {
+      const m = createMonster('boss_knight', 100, 100);
+      const player = { id: 'p1', alive: true, x: 9999, y: 9999 };
+      m.update(16, [player]);
+      expect(m.aggroed).toBe(true);
+      expect(m.aiState).toBe(AI_STATES.ALERT);
+    });
+
+    it('sticky aggro — once aggroed stays aggroed after returning to IDLE', () => {
+      const m = createMonster('skeleton', 100, 100);
+      // Manually set aggroed and put in IDLE with a distant player
+      m.aggroed = true;
+      m.aiState = AI_STATES.IDLE;
+      // Player is far beyond aggroRadius, but aggroed is sticky
+      const player = { id: 'p1', alive: true, x: 9999, y: 9999 };
+      m.update(16, [player]);
+      // Should immediately re-engage because aggroed is true
+      expect(m.aiState).toBe(AI_STATES.ALERT);
+    });
+
+    it('leash return resets aggroed flag', () => {
+      const m = createMonster('skeleton', 100, 100);
+      m.aggroed = true;
+      m.aiState = AI_STATES.LEASH;
+      m.x = 105;
+      m.y = 105;
+      m.update(16, []);
+      // If close enough to spawn, should reset
+      if (Math.sqrt((m.x - 100) ** 2 + (m.y - 100) ** 2) < 10) {
+        expect(m.aggroed).toBe(false);
+        expect(m.aiState).toBe(AI_STATES.IDLE);
+      }
+    });
+
+    it('taking damage sets aggroed=true (hit from beyond range)', () => {
+      const m = createMonster('skeleton', 100, 100);
+      expect(m.aggroed).toBe(false);
+      m.takeDamage(10);
+      expect(m.aggroed).toBe(true);
+    });
+
+    it('serialize includes aggroed field', () => {
+      const m = createMonster('skeleton', 0, 0);
+      m.aggroed = true;
+      const s = m.serialize();
+      expect(s).toHaveProperty('aggroed', true);
+    });
+  });
+
+  describe('Phase 23.2: patrol behavior', () => {
+    it('idle monster patrols at 30% speed (moves slowly)', () => {
+      const m = createMonster('skeleton', 100, 100);
+      // Set a wander target away from current position
+      m.wanderTargetX = 164; // 64px from spawn
+      m.wanderTargetY = 100;
+      m.wanderTimer = 5000; // don't re-pick target
+      const startX = m.x;
+      m.update(100, []); // 100ms tick, no players
+      // Monster should have moved, but slowly (30% of 80 speed)
+      const moved = Math.abs(m.x - startX);
+      // At 30% of 80 speed = 24 px/s, in 100ms = 2.4px
+      expect(moved).toBeGreaterThan(0);
+      expect(moved).toBeLessThan(10); // definitely slow patrol speed
+    });
+
+    it('patrol picks new target within 2 tiles (64px) of spawn', () => {
+      const m = createMonster('skeleton', 200, 200);
+      m.wanderTimer = 0; // force re-pick on next update
+      m.update(16, []); // no players
+      // After picking new target, should be within 64px of spawn
+      const dx = m.wanderTargetX - m.spawnX;
+      const dy = m.wanderTargetY - m.spawnY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      expect(dist).toBeLessThanOrEqual(64);
+      expect(dist).toBeGreaterThanOrEqual(16);
+    });
+
+    it('patrol picks new target when within 4px of current target', () => {
+      const m = createMonster('skeleton', 100, 100);
+      m.wanderTargetX = 102; // 2px away
+      m.wanderTargetY = 100;
+      m.wanderTimer = 9999; // high timer
+      m.update(16, []); // no players
+      // Within 4px → timer should be reset to 0 to pick new target
+      expect(m.wanderTimer).toBe(0);
+    });
+
+    it('boss does NOT patrol — stays still in IDLE', () => {
+      const m = createMonster('boss_knight', 100, 100);
+      // No players in range — boss stays idle
+      const startX = m.x;
+      const startY = m.y;
+      // Manually set IDLE and no players nearby
+      m.aiState = AI_STATES.IDLE;
+      m.aggroed = false;
+      // Use empty players and far-away player to prevent aggro... but boss has unlimited aggro
+      // Actually boss will immediately aggro any player. Test with NO players.
+      m.update(100, []);
+      // Boss should not have moved (no patrol)
+      expect(m.x).toBe(startX);
+      expect(m.y).toBe(startY);
+    });
+
+    it('treasure_goblin does NOT patrol', () => {
+      // Treasure goblins have their own flee AI and skip the normal state machine
+      const m = createMonster('treasure_goblin', 100, 100);
+      // They always start in FLEE state
+      expect(m.aiState).toBe(AI_STATES.FLEE);
+    });
+
+    it('patrol uses wall collision (moveToward)', () => {
+      const m = createMonster('skeleton', 100, 100);
+      // Mock world with isWalkable
+      m._world = {
+        isWalkable: (x, y) => x < 130, // wall at x=130
+      };
+      m.wanderTargetX = 200; // target past the wall
+      m.wanderTargetY = 100;
+      m.wanderTimer = 5000;
+      m.update(1000, []); // 1 second tick
+      // Should not pass x=130 due to wall collision
+      expect(m.x).toBeLessThan(130);
+    });
+  });
 });

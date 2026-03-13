@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-const { World, DIFFICULTY_SCALES } = require('./game/world');
+const { World, DIFFICULTY_SCALES, FLOOR_NAMES } = require('./game/world');
 const { CombatSystem } = require('./game/combat');
 const { StoryManager } = require('./game/story');
 const handlers = require('./socket-handlers');
@@ -230,6 +230,7 @@ controllerNs.on('connection', (socket) => {
       zoneId: world.zone ? world.zone.id : 'catacombs',
       zoneName: world.zone ? world.zone.name : 'The Catacombs',
       difficulty: gameDifficulty,
+      totalFloors: FLOOR_NAMES.length,
     });
     const diffLabel = gameDifficulty === 'normal' ? '' : ` [${gameDifficulty.toUpperCase()}]`;
     controllerNs.emit('notification', { text: `New Game${diffLabel}! Floor 1: ${world.floorName}`, type: 'quest' });

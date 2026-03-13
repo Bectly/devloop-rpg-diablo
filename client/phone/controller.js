@@ -18,6 +18,7 @@ let skillCooldownTimers = [0, 0, 0];
 let currentFloor = 0;
 window.currentFloor = 0;
 let currentFloorName = '';
+let totalFloors = 7; // default, updated from server
 let currentZoneId = 'catacombs';
 let currentZoneName = '';
 
@@ -125,6 +126,7 @@ socket.on('joined', (data) => {
   currentFloor = data.floor || 0;
   window.currentFloor = currentFloor;
   currentFloorName = data.floorName || '';
+  if (data.totalFloors) totalFloors = data.totalFloors;
   questData = data.quests || [];
   if (data.stats && data.stats.lootFilter) currentLootFilter = data.stats.lootFilter;
   Screens.setQuestContext(questData, socket);
@@ -675,6 +677,7 @@ socket.on('floor:change', (data) => {
   currentFloor = data.floor;
   window.currentFloor = currentFloor;
   currentFloorName = data.floorName || '';
+  if (data.totalFloors) totalFloors = data.totalFloors;
   currentZoneId = data.zoneId || 'catacombs';
   currentZoneName = data.zoneName || '';
   Reconnect.clearElites();
@@ -832,7 +835,7 @@ socket.on('disconnect', () => {
 function updateFloorDisplay() {
   const el = document.getElementById('hud-floor');
   if (el) {
-    el.textContent = `F${currentFloor + 1}`;
+    el.textContent = `F${currentFloor + 1}/${totalFloors}`;
     el.title = `${currentFloorName} — ${currentZoneName}`;
     el.style.color = ZONE_COLORS[currentZoneId] || '#aaaacc';
   }

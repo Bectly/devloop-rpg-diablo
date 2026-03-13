@@ -20,6 +20,7 @@ const { spawnCursedEventWave, trySpawnGoblin, trySpawnCursedEvent } = require('.
 const TICK_RATE = 20;
 const TICK_MS = 1000 / TICK_RATE;
 const AUTO_PICKUP_RADIUS = 72; // 1.5 tiles
+const GOLD_AUTO_PICKUP_RADIUS = 40; // ~0.8 tiles — gold always auto-picked
 const RARE_PLUS_RARITIES = new Set(['rare', 'epic', 'legendary', 'set']);
 
 /**
@@ -552,6 +553,7 @@ function createGameLoop(ctx) {
           zoneId: world.zone ? world.zone.id : 'catacombs',
           zoneName: world.zone ? world.zone.name : 'The Catacombs',
           difficulty: gameDifficulty,
+          totalFloors: FLOOR_NAMES.length,
         });
         for (const [sid, p] of players) {
           const sock = controllerNs.sockets.get(sid);
@@ -825,6 +827,7 @@ function createGameLoop(ctx) {
                 zoneId: world.zone ? world.zone.id : 'catacombs',
                 zoneName: world.zone ? world.zone.name : 'The Catacombs',
                 difficulty: gameDifficulty,
+                totalFloors: FLOOR_NAMES.length,
               });
               for (const [sid, p] of players) {
                 const sock = controllerNs.sockets.get(sid);
@@ -1117,6 +1120,7 @@ function createGameLoop(ctx) {
               zoneId: world.zone ? world.zone.id : 'catacombs',
               zoneName: world.zone ? world.zone.name : 'The Catacombs',
               difficulty: ctx.gameDifficulty,
+              totalFloors: FLOOR_NAMES.length,
             });
             const floorDiffLabel = ctx.gameDifficulty === 'normal' ? '' : ` [${ctx.gameDifficulty.toUpperCase()}]`;
             controllerNs.emit('notification', { text: `Floor ${world.currentFloor + 1}${floorDiffLabel}: ${world.floorName}`, type: 'quest' });
@@ -1154,6 +1158,35 @@ function createGameLoop(ctx) {
 
     // ── Auto-save every 60 seconds ──
     tickCount++;
+
+    // ── Gold auto-pickup (always active, no loot filter needed) ──
+    if (tickCount % 5 === 0) {
+      for (const [pid, player] of players) {
+        if (!player.alive) continue;
+        const sock = controllerNs.sockets.get(pid);
+        if (!sock) continue;
+
+        // Collect gold items within close range
+        const goldNearby = [];
+        for (const gi of world.groundItems) {
+          if (gi.item.type !== 'currency') continue;
+          const dx = gi.x - player.x;
+          const dy = gi.y - player.y;
+          if (dx * dx + dy * dy <= GOLD_AUTO_PICKUP_RADIUS * GOLD_AUTO_PICKUP_RADIUS) {
+            goldNearby.push(gi);
+          }
+        }
+
+        for (const gi of goldNearby) {
+          const picked = world.pickupItem(gi.item.id, player.x, player.y, GOLD_AUTO_PICKUP_RADIUS);
+          if (!picked) continue;
+          player.gold += picked.quantity;
+          if (player.questManager) player.questManager.check('collect_gold', { amount: picked.quantity });
+          sock.emit('notification', { text: `+${picked.quantity} gold`, type: 'gold' });
+          sock.emit('stats:update', player.serializeForPhone());
+        }
+      }
+    }
 
     // ── Loot filter: auto-pickup ──
     if (tickCount % 10 === 0) {

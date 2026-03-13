@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #217 — Bolt (builder)
+**Čas:** 2026-03-13 ~13:30
+**Co jsem udělal/a:**
+- **Monster aggro range** (monsters.js): 192px aggro radius, bosses unlimited. Sticky `aggroed` flag (Diablo-style). Reset on leash return. Damage always triggers aggro.
+- **Monster patrol** (monsters.js): Idle monsters wander within 2 tiles of spawn at 30% speed, pick new target every 2-3s. Bosses/goblins don't patrol.
+- **Auto-pickup gold** (game-loop.js): Gold within 40px auto-collected every 5 ticks, before loot filter. No LOOT button needed for gold.
+- **Floor progress indicator** (phone): "F3/7" format in status bar. `totalFloors` sent from server in `joined` and `floor:change` events.
+- 14 new monster tests, 1744/1744 PASS
+**Stav:** Phase 23.2 B+C DONE, 23.3A DONE, 23.4C DONE. Sage next → camera.
+---
+
 ### Cycle #216 — Aria (architect)
 **Čas:** 2026-03-13 ~13:25
 **Co jsem udělal/a:**

@@ -401,10 +401,15 @@ class Monster {
     this.ownerId = null;
     this.expireTimer = 0;
 
-    // Idle wandering
+    // Sticky aggro (Phase 23.2) — once aggroed, stays aggroed until leash resets
+    this.aggroed = false;
+
+    // Idle wandering / patrol
     this.wanderTimer = 0;
     this.wanderDx = 0;
     this.wanderDy = 0;
+    this.wanderTargetX = x;
+    this.wanderTargetY = y;
 
     // Boss phase tracking
     this.currentPhase = 0;
@@ -638,18 +643,47 @@ class Monster {
 
     switch (this.aiState) {
       case AI_STATES.IDLE:
-        this.wanderTimer -= dt;
-        if (this.wanderTimer <= 0) {
-          this.wanderTimer = 2000 + Math.random() * 3000;
-          const angle = Math.random() * Math.PI * 2;
-          this.wanderDx = Math.cos(angle) * 30;
-          this.wanderDy = Math.sin(angle) * 30;
+        // ── Aggro range check (Phase 23.2) ──────────────────────────
+        // Bosses have unlimited aggro — always engage immediately.
+        // Once aggroed, the flag is sticky (Diablo-style — never de-aggro).
+        if (closest) {
+          const inAggroRange = this.isBoss || this.aggroed || closestDist < this.aggroRadius;
+          if (inAggroRange) {
+            this.aggroed = true;
+            this.aiState = AI_STATES.ALERT;
+            this.targetId = closest.id;
+            break;
+          }
         }
-        this.moveToward(this.spawnX + this.wanderDx, this.spawnY + this.wanderDy, dt);
 
-        if (closest && closestDist < this.aggroRadius) {
-          this.aiState = AI_STATES.ALERT;
-          this.targetId = closest.id;
+        // ── Patrol behavior (Phase 23.2) ────────────────────────────
+        // Bosses and treasure goblins don't patrol — they stand still.
+        if (!this.isBoss && !this.isTreasureGoblin) {
+          // Pick a new wander target every 2-3 seconds, within 2 tiles (64px) of spawn
+          this.wanderTimer -= dt;
+          if (this.wanderTimer <= 0) {
+            this.wanderTimer = 2000 + Math.random() * 1000;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 16 + Math.random() * 48; // 16-64px from spawn
+            this.wanderTargetX = this.spawnX + Math.cos(angle) * dist;
+            this.wanderTargetY = this.spawnY + Math.sin(angle) * dist;
+          }
+
+          // Move toward wander target at 30% speed
+          const wtDx = this.wanderTargetX - this.x;
+          const wtDy = this.wanderTargetY - this.y;
+          const wtDist = Math.sqrt(wtDx * wtDx + wtDy * wtDy);
+
+          if (wtDist > 4) {
+            // Patrol at 30% normal speed — temporarily reduce speed
+            const origSpeed = this.speed;
+            this.speed = origSpeed * 0.3;
+            this.moveToward(this.wanderTargetX, this.wanderTargetY, dt);
+            this.speed = origSpeed;
+          } else {
+            // Reached wander target — pick a new one next tick
+            this.wanderTimer = 0;
+          }
         }
         break;
 
@@ -1030,6 +1064,7 @@ class Monster {
         if (distToSpawn < 10) {
           this.aiState = AI_STATES.IDLE;
           this.hp = this.maxHp;
+          this.aggroed = false; // Reset sticky aggro on leash return
         }
         break;
     }
@@ -1040,6 +1075,9 @@ class Monster {
   takeDamage(amount, damageType = 'physical') {
     if (!this.alive) return 0;
     if (amount <= 0) return 0;
+
+    // Taking damage always triggers aggro (Phase 23.2)
+    this.aggroed = true;
 
     let dmg = amount;
 
@@ -1108,6 +1146,8 @@ class Monster {
       feared: this.feared || 0,
       behavior: this.behavior,
       damageType: this.damageType,
+      // Aggro state (Phase 23.2)
+      aggroed: this.aggroed || false,
       // New behavior state
       stealthed: this.stealthed || false,
       charging: this.charging || false,

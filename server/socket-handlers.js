@@ -6,7 +6,7 @@
 const { Inventory } = require('./game/inventory');
 const { generateConsumable } = require('./game/items');
 const { getSellPrice } = require('./game/shop');
-const { TILE_SIZE } = require('./game/world');
+const { TILE_SIZE, FLOOR_NAMES } = require('./game/world');
 const { pendingReforges } = require('./socket-handlers-craft');
 const { createRift, getRiftRewards } = require('./game/rifts');
 const uuid = require('uuid');
@@ -125,6 +125,7 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
       zoneName: world.zone ? world.zone.name : 'The Catacombs',
       quests: player.questManager.getActiveQuests(),
       hardcore: player.hardcore,
+      totalFloors: FLOOR_NAMES.length,
     });
 
     socket.emit('stats:update', player.serializeForPhone());
@@ -222,6 +223,7 @@ exports.handleJoin = (socket, data, { players, inventories, controllerSockets, w
     zoneName: world.zone ? world.zone.name : 'The Catacombs',
     quests: player.questManager.getActiveQuests(),
     hardcore: player.hardcore,
+    totalFloors: FLOOR_NAMES.length,
   });
 
   // Notify TV
@@ -981,6 +983,7 @@ function _enterRift(ctx) {
     difficulty: ctx.gameDifficulty || 'normal',
     rift: true,
     riftTier: riftConfig.tier,
+    totalFloors: FLOOR_NAMES.length,
   });
   ctx.controllerNs.emit('rift:status', {
     state: 'active',
