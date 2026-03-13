@@ -1073,4 +1073,211 @@ describe('Player', () => {
       expect(s.debuffs[0].effect).toBe('slow');
     });
   });
+
+  // ── Equipment Sets & Set Bonuses ─────────────────────────────
+
+  describe('equipment sets', () => {
+    let player;
+
+    beforeEach(() => {
+      player = new Player('SetTester', 'warrior');
+    });
+
+    it('no set items → empty activeSets', () => {
+      player.equipment = { weapon: null, chest: null, boots: null };
+      player.recalcSetBonuses();
+      expect(player.activeSets).toEqual([]);
+      expect(player.setBonuses).toEqual({});
+    });
+
+    it('1 set piece → tracked but no bonuses active', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: null,
+        boots: null,
+      };
+      player.recalcSetBonuses();
+      expect(player.activeSets.length).toBe(1);
+      expect(player.activeSets[0].pieces).toBe(1);
+      // No 2pc bonus should apply
+      expect(player.setBonuses.armor).toBeUndefined();
+    });
+
+    it('2 ironwall pieces → 2pc bonus (armor +30, maxHpPercent +15)', () => {
+      const baseMaxHp = player.maxHp;
+      const baseArmor = player.armor;
+
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+        boots: null,
+      };
+      player.recalcSetBonuses();
+
+      expect(player.activeSets[0].pieces).toBe(2);
+      // armor bonus applied
+      expect(player.armor).toBeGreaterThan(baseArmor);
+      // maxHp percentage increase
+      expect(player.maxHp).toBeGreaterThan(baseMaxHp);
+    });
+
+    it('3 ironwall pieces → both 2pc and 3pc bonuses', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+        boots: { isSetItem: true, setId: 'ironwall', armor: 15 },
+      };
+      player.recalcSetBonuses();
+
+      expect(player.activeSets[0].pieces).toBe(3);
+      expect(player.setBonuses.damagePercent).toBe(25);
+    });
+
+    it('shadowweave 2pc gives critChance + speedPercent', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'shadowweave' },
+        gloves: { isSetItem: true, setId: 'shadowweave' },
+        boots: null,
+      };
+      player.recalcSetBonuses();
+      expect(player.critChance).toBeGreaterThan(0);
+    });
+
+    it('shadowweave 3pc gives critDamagePercent', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'shadowweave' },
+        gloves: { isSetItem: true, setId: 'shadowweave' },
+        boots: { isSetItem: true, setId: 'shadowweave' },
+      };
+      player.recalcSetBonuses();
+      expect(player.setBonuses.critDamagePercent).toBe(30);
+    });
+
+    it('arcane_codex 2pc gives spellDamagePercent + maxMana', () => {
+      player = new Player('MageTest', 'mage');
+      const baseMp = player.maxMp;
+
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'arcane_codex' },
+        helmet: { isSetItem: true, setId: 'arcane_codex' },
+        chest: null,
+      };
+      player.recalcSetBonuses();
+
+      expect(player.setBonuses.spellDamagePercent).toBe(25);
+      expect(player.maxMp).toBeGreaterThan(baseMp);
+    });
+
+    it('arcane_codex 3pc gives cooldownReduction', () => {
+      player = new Player('MageTest', 'mage');
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'arcane_codex' },
+        helmet: { isSetItem: true, setId: 'arcane_codex' },
+        chest: { isSetItem: true, setId: 'arcane_codex' },
+      };
+      player.recalcSetBonuses();
+      expect(player.setBonuses.cooldownReduction).toBe(20);
+    });
+
+    it('bones_of_fallen 2pc gives all_resist + maxHp', () => {
+      const baseMaxHp = player.maxHp;
+      player.equipment = {
+        helmet: { isSetItem: true, setId: 'bones_of_fallen' },
+        gloves: { isSetItem: true, setId: 'bones_of_fallen' },
+      };
+      player.recalcSetBonuses();
+
+      expect(player.maxHp).toBe(baseMaxHp + 100);
+      // all_resist applied to fire, cold, poison
+      expect(player.resistances.fire).toBe(10);
+      expect(player.resistances.cold).toBe(10);
+      expect(player.resistances.poison).toBe(10);
+    });
+
+    it('bones_of_fallen 3pc gives lifestealPercent + xpPercent', () => {
+      player.equipment = {
+        helmet: { isSetItem: true, setId: 'bones_of_fallen' },
+        gloves: { isSetItem: true, setId: 'bones_of_fallen' },
+        amulet: { isSetItem: true, setId: 'bones_of_fallen' },
+      };
+      player.recalcSetBonuses();
+      expect(player.setBonuses.lifestealPercent).toBe(5);
+      expect(player.setBonuses.xpPercent).toBe(50);
+    });
+
+    it('resistance cap at 75 with all_resist', () => {
+      // Set base resistances high, then add all_resist
+      player.resistances = { fire: 70, cold: 70, poison: 70 };
+      player.equipment = {
+        helmet: { isSetItem: true, setId: 'bones_of_fallen' },
+        gloves: { isSetItem: true, setId: 'bones_of_fallen' },
+      };
+      player.recalcSetBonuses();
+      // all_resist +10 would make 80, but cap is 75
+      expect(player.resistances.fire).toBeLessThanOrEqual(75);
+      expect(player.resistances.cold).toBeLessThanOrEqual(75);
+      expect(player.resistances.poison).toBeLessThanOrEqual(75);
+    });
+
+    it('activeSets appears in serialize()', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+      };
+      player.recalcSetBonuses();
+      const s = player.serialize();
+      expect(s.activeSets).toBeDefined();
+      expect(s.activeSets.length).toBe(1);
+      expect(s.activeSets[0].setId).toBe('ironwall');
+    });
+
+    it('setBonuses appears in serialize()', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+        boots: { isSetItem: true, setId: 'ironwall', armor: 15 },
+      };
+      player.recalcSetBonuses();
+      const s = player.serialize();
+      expect(s.setBonuses).toBeDefined();
+      expect(s.setBonuses.damagePercent).toBe(25);
+    });
+
+    it('activeSets appears in serializeForPhone()', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+      };
+      player.recalcSetBonuses();
+      const s = player.serializeForPhone();
+      expect(s.activeSets).toBeDefined();
+    });
+
+    it('multiple sets active simultaneously', () => {
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+        helmet: { isSetItem: true, setId: 'bones_of_fallen' },
+        gloves: { isSetItem: true, setId: 'bones_of_fallen' },
+      };
+      player.recalcSetBonuses();
+      expect(player.activeSets.length).toBe(2);
+    });
+
+    it('recalc clears previous set bonuses', () => {
+      // First: equip ironwall 2pc
+      player.equipment = {
+        weapon: { isSetItem: true, setId: 'ironwall' },
+        chest: { isSetItem: true, setId: 'ironwall', armor: 40 },
+      };
+      player.recalcSetBonuses();
+      expect(player.activeSets.length).toBe(1);
+
+      // Then: unequip all
+      player.equipment = {};
+      player.recalcSetBonuses();
+      expect(player.activeSets).toEqual([]);
+      expect(player.setBonuses).toEqual({});
+    });
+  });
 });
