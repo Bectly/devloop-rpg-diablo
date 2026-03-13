@@ -1742,13 +1742,42 @@ This lets TV client differentiate friendly wolves visually.
 - [x] 27 tests (phase16-ranger.test.js), 1298/1298 PASS
 - [x] Review: 2 critical bugs fixed (decoy despawn, dodge buff), stale refs cleaned
 
-### 16.4 Mage Skill Rework [for Bolt]
+### 16.4 Mage Skill Rework [for Bolt — TOP PRIORITY]
 
-| Skill | Current | New |
-|-------|---------|-----|
-| Fireball | Single target magic damage | **Meteor Strike** — projectile that explodes on impact (AOE radius 80). Leaves fire patch (DoT 3s). Cooldown 10s |
-| Frost Nova | AOE freeze around self | **Blizzard** — ground-targeted AOE (radius 120), deals cold damage over 3s, slows all inside by 50%. Channel (player can't move during cast) |
-| Lightning Bolt | Chain damage | **Chain Lightning** — bounces to 4 targets (50% damage falloff per bounce). Range 200px to first target, 120px chain range. Visual: arc between targets |
+| Old Skill | New Skill | Type | Key Change |
+|-----------|-----------|------|------------|
+| Fireball (aoe, 2.5x, r50) | **Meteor Strike** (meteor, 2.5x spellPower, projectile+AOE r80) | NEW `meteor` | Fires `projectile:create` with `aoeRadius: 80`, fire damage, uses spellPower |
+| Frost Nova (aoe, 1.0x, r80, slow) | **Blizzard** (blizzard, 1.2x spellPower × 3 hits, r120, slow) | NEW `blizzard` | Bigger radius, 3 damage ticks, slow 3s, uses spellPower |
+| Teleport (movement, r150) | **Chain Lightning** (chain, 2.0x spellPower, 4 bounces) | NEW `chain` | Bounces to 4 targets, 50% damage falloff per bounce, range 200, chain 120 |
+
+**Implementation order for Bolt:**
+1. `player.js` — Replace 3 mage skill definitions:
+   ```
+   Meteor Strike:    { type: 'meteor', mpCost: 25, cooldown: 5000, damage: 2.5, range: 350, speed: 350, aoeRadius: 80, description: '...' }
+   Blizzard:         { type: 'blizzard', mpCost: 22, cooldown: 7000, damage: 1.2, radius: 120, hits: 3, effect: 'slow', duration: 3000, description: '...' }
+   Chain Lightning:  { type: 'chain', mpCost: 20, cooldown: 4000, damage: 2.0, range: 200, chainRange: 120, maxBounces: 4, falloff: 0.5, description: '...' }
+   ```
+2. `damage-types.js` — Update entries: Meteor Strike→fire, Blizzard→cold, Chain Lightning→fire
+3. `skills.js` — Add 3 new handlers:
+   - `executeMeteor()` — emit `projectile:create` with `aoeRadius: 80`, aimed at nearest, uses spellPower
+   - `executeBlizzard()` — AOE around player, 3 damage ticks, slow, uses spellPower
+   - `executeChain()` — find nearest target, deal damage, chain to next nearest within chainRange, 50% falloff, up to maxBounces
+   - Fix: `isSpell` check in `calcSkillDamage` — change from hardcoded names to checking if skill uses spellPower (or add `useSpellPower: true` property)
+   - Add 3 switch cases: `'meteor'`, `'blizzard'`, `'chain'`
+4. `talents.js` — Update skill references:
+   - `mage_pyromancer_t3` Fire Mastery: `'Fireball'` → `'Meteor Strike'`
+   - `mage_pyromancer_t4` Inferno: `skill: 'Fireball'` → `skill: 'Meteor Strike'`
+   - `mage_frost_t4` Blizzard: `skill: 'Frost Nova'` → `skill: 'Blizzard'`
+5. `sets.js` — Update Arcane Codex 3pc: `'Fireball chains +1 target'` → `'Meteor Strike chains +1 target'`
+6. `client/tv/combat-fx.js` — Update mage skill visual references
+7. `client/phone/screens.js` — Update mage skill tooltips
+8. Update existing tests (skill names changed)
+
+**Key architecture notes:**
+- `isSpell` in `calcSkillDamage` must be updated to include new spell names (Meteor Strike, Blizzard, Chain Lightning)
+- Meteor Strike uses `projectile:create` events (same pattern as Arrow Volley/Sniper Shot)
+- Blizzard is server-side AOE (no projectiles), similar to Whirlwind but with spellPower + slow
+- Chain Lightning is a new mechanic: sequential bounce damage, all resolved server-side
 
 ### 16.5 Skill Leveling [for Bolt]
 **Integration with Talent System (Phase 13):**

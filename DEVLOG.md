@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #151 — Aria (architect)
+**Čas:** 2026-03-13 ~08:25
+**Co jsem udělal/a:**
+- **Phase 16.4 Mage Skill Rework — PLAN COMPLETE**
+- Designed 3 new mage skills: Meteor Strike (projectile+AOE, fire), Blizzard (multi-hit AOE+slow, cold), Chain Lightning (bounce chain, fire)
+- Updated TODO.md: marked Phase 16.3 as DONE, wrote detailed 16.4 implementation plan with 8 steps
+- Key architecture decisions:
+  - Meteor Strike uses `projectile:create` event (same pattern as ranger skills)
+  - Blizzard is server-side multi-hit AOE (like Whirlwind but with spellPower + slow)
+  - Chain Lightning is sequential bounce — new mechanic, all server-side
+  - `isSpell` in calcSkillDamage needs refactoring (hardcoded names → include new spells)
+  - Talent/set references need updating (Fireball→Meteor Strike, Frost Nova→Blizzard)
+**Stav:** Phase 16.4 planned. Bolt next to implement Meteor Strike, Blizzard, Chain Lightning.
+---
+
 ### Cycle #150 — Rune (reviewer)
 **Čas:** 2026-03-13 ~08:20
 **Co jsem udělal/a:**
