@@ -16,6 +16,14 @@ let joystick = null;
 let skillCooldownTimers = [0, 0, 0];
 let currentFloor = 0;
 let currentFloorName = '';
+let currentZoneId = 'catacombs';
+let currentZoneName = '';
+
+const ZONE_COLORS = {
+  catacombs: '#aaaacc',
+  inferno: '#ff6622',
+  abyss: '#8844dd',
+};
 let isDead = false;
 let deathCountdown = 0;
 let deathInterval = null;
@@ -215,6 +223,8 @@ socket.on('dialogue:sync', (data) => {
 socket.on('floor:change', (data) => {
   currentFloor = data.floor;
   currentFloorName = data.floorName || '';
+  currentZoneId = data.zoneId || 'catacombs';
+  currentZoneName = data.zoneName || '';
   Reconnect.clearElites();
   updateFloorDisplay();
 });
@@ -304,7 +314,8 @@ function updateFloorDisplay() {
   const el = document.getElementById('hud-floor');
   if (el) {
     el.textContent = `F${currentFloor + 1}`;
-    el.title = currentFloorName;
+    el.title = `${currentFloorName} — ${currentZoneName}`;
+    el.style.color = ZONE_COLORS[currentZoneId] || '#aaaacc';
   }
 }
 

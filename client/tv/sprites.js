@@ -219,6 +219,56 @@ window.Sprites = {
         g.fillCircle(s + 4, s - 2, 2);
         g.fillStyle(0x220000, 0.4);
         g.fillCircle(s, s + 3, s * 0.3);
+      } else if (m.type === 'fire_imp') {
+        // Small fiery creature — orange body with flame wisps
+        g.fillStyle(0xff6622, 0.8);
+        g.fillCircle(s, s, s - 1);
+        g.fillStyle(0xffaa00, 0.6);
+        g.fillTriangle(s - 2, 4, s, 0, s + 2, 4); // flame tip
+        g.fillTriangle(s - 4, 3, s - 2, 0, s, 3);  // left flame
+        g.fillStyle(0xff4400, 1);
+        g.fillCircle(s - 2, s - 1, 1.5);
+        g.fillCircle(s + 2, s - 1, 1.5);
+        g.fillStyle(0xffcc00, 1);
+        g.fillCircle(s - 2, s - 1, 0.8);
+        g.fillCircle(s + 2, s - 1, 0.8);
+      } else if (m.type === 'hell_hound') {
+        // Four-legged beast — elongated body
+        g.fillStyle(0xcc4400, 1);
+        g.fillRect(3, s - 3, d - 6, s); // body
+        g.fillStyle(0xdd5500, 1);
+        g.fillCircle(d - 5, s - 1, 4); // head
+        g.fillStyle(0xff6600, 0.6);
+        g.fillTriangle(d - 3, s - 5, d - 1, s - 3, d - 5, s - 3); // ear
+        g.fillStyle(0xff0000, 1);
+        g.fillCircle(d - 6, s - 2, 1.5); // eye
+        g.fillStyle(0xaa3300, 1);
+        g.fillRect(5, d - 5, 3, 5); // back legs
+        g.fillRect(d - 10, d - 5, 3, 5); // front legs
+      } else if (m.type === 'shadow_stalker') {
+        // Dark wispy figure — translucent
+        g.fillStyle(0x331155, 0.7);
+        g.fillTriangle(s, 1, d - 3, d - 1, 3, d - 1);
+        g.fillStyle(0x220044, 0.5);
+        g.fillTriangle(s, 4, d - 6, d - 3, 6, d - 3);
+        g.fillStyle(0xcc44ff, 0.9);
+        g.fillCircle(s - 3, s - 2, 2); // eyes glow purple
+        g.fillCircle(s + 3, s - 2, 2);
+        g.fillStyle(0xffffff, 0.5);
+        g.fillCircle(s - 3, s - 2, 0.8);
+        g.fillCircle(s + 3, s - 2, 0.8);
+      } else if (m.type === 'wraith') {
+        // Ethereal floating figure — translucent purple
+        g.fillStyle(0x6644aa, 0.5);
+        g.fillCircle(s, s - 2, s * 0.6); // head
+        g.fillStyle(0x5533aa, 0.4);
+        g.fillTriangle(s, s - 1, d - 3, d - 1, 3, d - 1); // robe
+        g.fillStyle(0x8866cc, 0.3);
+        g.fillTriangle(s - 2, s + 2, 1, d, s - 6, d); // left tatter
+        g.fillTriangle(s + 2, s + 2, d - 1, d, s + 6, d); // right tatter
+        g.fillStyle(0x88ccff, 1);
+        g.fillCircle(s - 3, s - 3, 2); // cold blue eyes
+        g.fillCircle(s + 3, s - 3, 2);
       } else {
         g.fillStyle(m.color, 1);
         g.fillRect(2, 2, d - 4, d - 4);
@@ -293,7 +343,21 @@ window.Sprites = {
     if (sprite.nameText) sprite.nameText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 16);
     if (sprite.affixText) sprite.affixText.setPosition(sprite.x, sprite.y - sprite.monsterSize - 6);
 
-    sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : 1);
+    // Stealth: near-invisible until revealed
+    if (m.stealthed) {
+      sprite.setAlpha(0.08 + Math.sin(Date.now() / 800) * 0.04);
+      if (sprite.nameText) sprite.nameText.setAlpha(0);
+      if (sprite.affixText) sprite.affixText.setAlpha(0);
+    } else if (m.charging) {
+      // Charge: bright flash during dash
+      sprite.setAlpha(1);
+      sprite.setTint(0xff8844);
+    } else {
+      sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : 1);
+      sprite.clearTint();
+      if (sprite.nameText) sprite.nameText.setAlpha(1);
+      if (sprite.affixText) sprite.affixText.setAlpha(1);
+    }
 
     // Shield dome visual (pulsing white circle)
     if (sprite.shieldGfx) {

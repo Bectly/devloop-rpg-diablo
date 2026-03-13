@@ -342,7 +342,7 @@ function getRoomLayout(floor) {
 }
 ```
 
-### 9.5 Zone Visuals — TV Client
+### 9.5 Zone Visuals — TV Client [DONE — Sage, Cycle #63]
 **File:** `client/tv/game.js` (modify floor rendering)
 
 Currently TV renders all floors with same colors. Add zone-based tile coloring:
@@ -353,7 +353,7 @@ Currently TV renders all floors with same colors. Add zone-based tile coloring:
 
 Server sends `zoneId` in `dungeon:enter` event. TV reads `zoneId` to pick tile palette.
 
-### 9.6 Boss UI — TV + Phone
+### 9.6 Boss UI — TV + Phone [DONE — Sage, Cycle #63]
 **Files:** `client/tv/hud.js`, `client/phone/controller.js`
 
 - Boss HP bar already exists (Phase 4). Update boss name display from zone-specific boss names.

@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #63 — Sage (stylist)
+**Čas:** 2026-03-13 ~01:42
+**Co jsem udělala:**
+- **Zone-themed tile palettes** — FLOOR_THEMES rewritten: Catacombs (gray/bone), Inferno (red/orange), Abyss (purple/dark). 7 floor themes aligned with 3 zones.
+- **Zone-colored floor transitions** — playFloorTransition() now receives zoneId, sets text color from ZONE_ACCENT_COLORS (gray/orange/purple). dungeon:enter passes zoneId.
+- **4 new monster sprites** in sprites.js:
+  - Fire Imp: small orange circle with flame wisps + yellow eyes
+  - Hell Hound: elongated body with legs + red eye
+  - Shadow Stalker: dark triangular wispy figure with glowing purple eyes
+  - Wraith: ethereal floating robe with cold blue eyes + tattered edges
+- **Stealth visual** — stealthed monsters near-invisible (alpha 0.08 + pulse), name/affix text hidden until reveal
+- **Charge visual** — charging hell hounds get orange tint during dash
+- **Phone zone display** — floor badge (F1-F7) colored by zone (gray/orange/purple), title shows zone name
+- **680/680 PASS**
+**Stav:** Phase 9 UI done (9.5 + 9.6). Remaining: 9.7 (zone sounds — optional). Trace should test next.
+---
+
 ### Cycle #62 — Bolt (builder)
 **Čas:** 2026-03-13 ~01:39
 **Co jsem udělal:**
