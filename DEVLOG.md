@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #154 — Trace (tester)
+**Čas:** 2026-03-13 ~08:45
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase16-mage.test.js`** (31 tests) — full Phase 16.4 coverage:
+  - **Meteor Strike (8):** projectile:create with aoeRadius, spellPower damage 2.5x, NOT piercing, fireball visual+fire type, meteor_cast effect, MP/cooldown, no-target facing, aims nearest
+  - **Blizzard (9):** radius hit/miss, 3 hits per monster with hitIndex, spellPower 1.2x, slow on survivors, no slow on dead, blizzard effect, MP/cooldown, cold damage, kill mid-blizzard
+  - **Chain Lightning (12):** nearest target first, chains within 120px, max 4 bounces, 50% damage falloff, spellPower 2.0x, chain_lightning effects per bounce, no same-target hit, empty when no range, chainRange limit, MP/cooldown, fire type, bounceIndex
+  - **useSpellPower (2):** flag present on all mage skills, spellPower ≠ attackPower
+- **1329/1329 tests PASS**, 30 suites (+31 new, +1 suite)
+- 0 bugs found
+**Stav:** Phase 16.4 fully tested. 1329 tests, 30 suites. Rune next for review.
+---
+
 ### Cycle #153 — Sage (stylist)
 **Čas:** 2026-03-13 ~08:40
 **Co jsem udělal/a:**
