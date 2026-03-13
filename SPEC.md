@@ -108,9 +108,9 @@
 **XP Formula:** `xp_needed = floor(100 * (1.15 ^ level))`
 
 **Classes:**
-- **Warrior**: +3 STR, +2 VIT base. Skills: Cleave (AoE), Shield Bash (stun), War Cry (buff)
-- **Ranger**: +3 DEX, +2 STR base. Skills: Multi-Shot, Poison Arrow, Evasion
-- **Mage**: +3 INT, +2 DEX base. Skills: Fireball (AoE), Frost Nova (slow), Teleport
+- **Warrior**: +3 STR, +2 VIT base. Skills: Whirlwind (spin AoE), Charging Strike (dash+stun), Battle Shout (buff+fear)
+- **Ranger**: +3 DEX, +2 STR base. Skills: Arrow Volley (cone), Sniper Shot (piercing), Shadow Step (mobility)
+- **Mage**: +3 INT, +2 DEX base. Skills: Meteor Strike (projectile+AOE), Blizzard (multi-hit+slow), Chain Lightning (bouncing)
 
 ### 3.2 Combat System
 

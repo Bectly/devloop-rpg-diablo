@@ -377,31 +377,6 @@ function executeBuff(player, skill, allPlayers) {
 }
 
 /**
- * Movement skill (Teleport): dirMap lookup, move player, clamp to bounds.
- */
-function executeMovement(player, skill) {
-  const results = [];
-
-  const dirMap = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
-  const dir = dirMap[player.facing] || [0, 0];
-  player.x += dir[0] * skill.range;
-  player.y += dir[1] * skill.range;
-  // Clamp
-  player.x = Math.max(16, Math.min(1264, player.x));
-  player.y = Math.max(16, Math.min(704, player.y));
-
-  results.push({
-    type: 'effect:spawn',
-    effectType: 'teleport',
-    playerId: player.id,
-    x: player.x,
-    y: player.y,
-  });
-
-  return results;
-}
-
-/**
  * Spin attack: instant multi-hit AOE. All monsters within radius take
  * skill.hits ticks of damage. Each hit is skill.damage * attackPower.
  */
@@ -1028,9 +1003,6 @@ function executeSkill(combat, player, skillIndex, monsters, allPlayers) {
       break;
     case 'buff':
       results = executeBuff(player, skill, allPlayers);
-      break;
-    case 'movement':
-      results = executeMovement(player, skill);
       break;
     case 'spin':
       results = executeSpin(player, skill, monsters, partyBuffs, skillDamageType);

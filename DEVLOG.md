@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #155 — Rune (reviewer)
+**Čas:** 2026-03-13 ~08:50
+**Co jsem udělal/a:**
+- **Review Phase 16.4 (Mage Skill Rework)** — 3 issues found & fixed:
+  1. Dead code: `executeMovement()` function + `'movement'` switch case in skills.js (unreachable after Teleport removal) → removed
+  2. Dead code: `spawnTeleportEffect()` + `'teleport'` effectType handler in combat-fx.js → removed
+  3. Stale SPEC.md: still listed old skill names (Fireball, Frost Nova, Teleport, Multi-Shot, Poison Arrow, Net Throw) → updated all 3 classes
+- **1329/1329 tests PASS**, 30 suites — no regressions
+- Marked Phase 16.4 DONE in TODO.md
+**Stav:** Phase 16.4 complete & hardened. 1329 tests, 30 suites. Next: Phase 16.5 (Skill Leveling).
+---
+
 ### Cycle #154 — Trace (tester)
 **Čas:** 2026-03-13 ~08:45
 **Co jsem udělal/a:**

@@ -479,28 +479,6 @@ const CombatFX = (() => {
     HUD.spawnDamageText(scene, x, y - 20, 'SLOWED', false, false, '#44cc44');
   }
 
-  function spawnTeleportEffect(scene, fromX, fromY, toX, toY) {
-    const vanish = scene.add.circle(fromX, fromY, 16, 0xbb44ff, 0.6);
-    vanish.setDepth(9);
-    scene.tweens.add({
-      targets: vanish,
-      scale: 0,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => vanish.destroy(),
-    });
-    const appear = scene.add.circle(toX, toY, 0, 0xbb44ff, 0.6);
-    appear.setDepth(9);
-    scene.tweens.add({
-      targets: appear,
-      scale: 1,
-      alpha: 0,
-      duration: 300,
-      delay: 150,
-      onComplete: () => appear.destroy(),
-    });
-  }
-
   // ── Process all combat events for a frame ──
   function processCombatEvents(scene, state) {
     if (!state.events) return;
@@ -672,13 +650,6 @@ const CombatFX = (() => {
       if (ev.type === 'effect:spawn' && ev.effectType === 'shadow_step') {
         spawnShadowStepEffect(scene, ev.fromX, ev.fromY, ev.toX, ev.toY);
       }
-      if (ev.type === 'effect:spawn' && ev.effectType === 'teleport') {
-        const p = state.players?.find(p => p.id === ev.playerId);
-        const sprite = p ? scene.playerSprites.get(p.id) : null;
-        const fromX = sprite ? sprite.x : ev.x;
-        const fromY = sprite ? sprite.y : ev.y;
-        spawnTeleportEffect(scene, fromX, fromY, ev.x, ev.y);
-      }
       // Trap trigger burst effect
       if (ev.type === 'trap:trigger' && ev.x !== undefined) {
         const trapColors = {
@@ -701,5 +672,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect, spawnMeteorCastEffect, spawnBlizzardEffect, spawnChainLightningEffect };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect, spawnMeteorCastEffect, spawnBlizzardEffect, spawnChainLightningEffect };
 })();
