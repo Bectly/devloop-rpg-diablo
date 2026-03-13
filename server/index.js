@@ -920,6 +920,58 @@ function gameLoop() {
           type: 'combo',
         });
       }
+
+      // Apply combo damage/effects to monsters
+      const r2 = (event.radius || 100) * (event.radius || 100);
+
+      if (event.comboId === 'shatter_blast' && event.damage) {
+        for (const m of world.monsters) {
+          if (!m.alive) continue;
+          const dx = m.x - event.x, dy = m.y - event.y;
+          if (dx * dx + dy * dy <= r2) {
+            const dealt = Math.max(1, event.damage - (m.armor || 0) * 0.4);
+            m.hp -= dealt;
+            if (m.hp <= 0) { m.hp = 0; m.alive = false; }
+            combat.events.push({ type: 'combat:hit', targetId: m.id, damage: Math.floor(dealt), damageType: 'cold', skillName: 'Shatter Blast' });
+          }
+        }
+      }
+
+      if (event.comboId === 'battle_fury') {
+        for (const m of world.monsters) {
+          if (!m.alive) continue;
+          const dx = m.x - event.x, dy = m.y - event.y;
+          if (dx * dx + dy * dy <= r2) {
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const pull = Math.min(40, dist);
+            m.x -= (dx / dist) * pull;
+            m.y -= (dy / dist) * pull;
+          }
+        }
+      }
+
+      if (event.comboId === 'firestorm') {
+        for (const m of world.monsters) {
+          if (!m.alive) continue;
+          const dx = m.x - event.x, dy = m.y - event.y;
+          if (dx * dx + dy * dy <= r2) {
+            m.stunned = Math.max(m.stunned || 0, event.duration || 3000);
+          }
+        }
+      }
+
+      if (event.comboId === 'chain_reaction') {
+        for (const m of world.monsters) {
+          if (!m.alive) continue;
+          const dx = m.x - event.x, dy = m.y - event.y;
+          if (dx * dx + dy * dy <= r2) {
+            const dealt = Math.max(1, 30 - (m.armor || 0) * 0.4);
+            m.hp -= dealt;
+            if (m.hp <= 0) { m.hp = 0; m.alive = false; }
+            combat.events.push({ type: 'combat:hit', targetId: m.id, damage: Math.floor(dealt), damageType: 'lightning', skillName: 'Chain Reaction' });
+          }
+        }
+      }
     }
 
     // Send combat events to phones for feedback

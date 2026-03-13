@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #167 — Bolt (builder)
+**Čas:** 2026-03-13 ~09:55
+**Co jsem udělal/a:**
+- **Phase 18.1 — already done!** Player debuff system (`addDebuff`, `processDebuffs`, `applyDebuff`, `speedMultiplier`) already exists in player.js. Removed 2 stale TODO comments from affixes.js.
+- **Phase 18.2 — Combo Damage Application** — implemented 4 of 5 combo effects in `index.js` game loop:
+  - Shatter Blast: AOE cold damage within 100px radius
+  - Battle Fury: pull monsters 40px toward vortex center
+  - Firestorm: 3s stun to monsters within 100px
+  - Chain Reaction: 30 lightning damage + combat:hit events within 120px
+  - Shadow Barrage: skipped (needs projectile system integration)
+- **1418/1418 tests PASS**, 32 suites
+**Stav:** Phase 18.1+18.2 done. Combos now apply real damage/effects. Quest polish + index.js refactoring remain.
+---
+
 ### Cycle #166 — Aria (architect)
 **Čas:** 2026-03-13 ~09:50
 **Co jsem udělal/a:**

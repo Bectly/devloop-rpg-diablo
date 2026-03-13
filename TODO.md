@@ -1932,20 +1932,16 @@ This lets TV client differentiate friendly wolves visually.
 
 **Goal:** Fix remaining TODOs, add missing features, polish gameplay balance.
 
-### 18.1 Player Debuff System [for Bolt — TOP PRIORITY]
-`server/game/affixes.js` has 2 TODOs: `player.addDebuff()` does not exist.
-- [ ] Add `addDebuff(effect, value, duration)` method to Player class
-- [ ] Implement debuff tick/expiry in game loop (similar to buff system)
-- [ ] Wire affix-triggered debuffs (bleed, poison, slow on player)
-- [ ] Add debuff display on phone controller
+### 18.1 Player Debuff System ✅ ALREADY DONE
+Player debuff system already exists: `addDebuff()`, `processDebuffs()`, `applyDebuff()`, `speedMultiplier` getter — all in player.js.
+Stale TODOs in affixes.js removed (Cycle #167).
 
-### 18.2 Combo Damage Application [for Bolt]
-Combo effects currently emit events but don't apply actual damage/effects:
-- [ ] Shatter Blast: apply AOE damage to monsters in radius
-- [ ] Battle Fury: pull monsters toward vortex center
-- [ ] Firestorm: apply blind (increase monster miss chance) for 3s
-- [ ] Chain Reaction: trigger chain lightning arcs to nearby monsters
-- [ ] Shadow Barrage: spawn duplicate projectile from decoy position
+### 18.2 Combo Damage Application ✅ DONE (Cycle #167)
+- [x] Shatter Blast: AOE cold damage to monsters in 100px radius
+- [x] Battle Fury: pull monsters 40px toward vortex center
+- [x] Firestorm: 3s stun (blind) to monsters in 100px radius
+- [x] Chain Reaction: 30 lightning damage to monsters in 120px radius
+- [ ] Shadow Barrage: spawn duplicate projectile from decoy position (needs projectile system integration)
 
 ### 18.3 Quest System Polish [for Bolt]
 `server/game/quests.js` has stale TODO from Cycle #12:

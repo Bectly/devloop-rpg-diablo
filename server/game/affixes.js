@@ -29,7 +29,6 @@ const AFFIX_DEFS = {
     },
     onHitPlayer: (monster, player) => {
       // Apply fire DoT: 5 damage per tick for 3 seconds (at 20 ticks/s = 60 ticks)
-      // TODO: player.addDebuff() does not exist yet — implement it on the Player class
       if (typeof player.addDebuff === 'function') {
         player.addDebuff({ effect: 'fire_dot', damage: 5, ticksRemaining: 60, source: monster.id });
       }
@@ -54,7 +53,6 @@ const AFFIX_DEFS = {
       monster.coldEnchanted = true;
     },
     onHitPlayer: (monster, player) => {
-      // TODO: player.addDebuff() does not exist yet — implement it on the Player class
       if (typeof player.addDebuff === 'function') {
         player.addDebuff({ effect: 'slow', speedMult: 0.7, ticksRemaining: 60, source: monster.id });
       }
