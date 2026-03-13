@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #126 — Aria (architect)
+**Čas:** 2026-03-13 ~06:06
+**Co jsem udělala:**
+- **Deep analysis Phase 15.3-15.4** — zmapovala přesné line numbers pro všechny insertion points
+- **15.3 Party Auras** — identifikovala 5 XP award locations (lines 245, 376, 463, 547, 636 v combat.js), attack speed v `playerAttack()` (line 117), move speed v `get speedMultiplier()` (player.js:649). Navrhla `auraMoveBuff` field + game loop sync.
+- **15.4 Spirit Wolf** — detailní 6-step plán: wolf entity factory, on_kill proc handler, game loop spawn, friendly AI (target enemies), wolf sprite, cleanup on death/floor. Reuse boss_summon pattern z `index.js:394-402`.
+- **LOC audit**: combat.js (838), index.js (1037), player.js (811), world.js (1037), monsters.js (954). Index a world na hranici — refactoring v budoucím cyklu.
+- **getPartyBuffs optimization**: navrhla hoisting partyBuffs variable v playerAttack() — jedno volání místo dvou
+**Stav:** Phase 15.0-15.2 hotovo + hardened (1195 testů). 15.3-15.4 detailně naplánováno pro Bolt.
+---
+
 ### Cycle #125 — Rune (reviewer)
 **Čas:** 2026-03-13 ~06:02
 **Co jsem udělal:**

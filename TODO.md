@@ -1371,10 +1371,10 @@ Test categories:
 - Poison Arrow hard-overwrites active bleed
 **Fix:** Give bleed own fields (`bleedTick`/`bleedDamage`) + separate `processBleed()` tick
 
-### [BUG] Party aura stats unused [Low]
+### [BUG] Party aura stats unused [Low] → FIX PLANNED in 15.3
 - `getPartyBuffs()` computes `xp_percent`, `attack_speed`, `move_speed` but only `str` is used
 - These aura values from Warlord/Beastmaster talents are dead
-**Fix:** Apply in XP award and movement/attack speed calculations
+**Fix:** Detailed plan in Phase 15.3 below — 5 XP locations, attack cooldown reduction, speedMultiplier addition
 
 ---
 
@@ -1474,45 +1474,168 @@ nearest.bleedDamage = Math.max(nearest.bleedDamage || 0, bleedDmg);
 
 **Step D:** Add `combat.processBleed(monster, dt)` call in game loop (`index.js:371`), right after `processPoison`.
 
-### 15.3 Party Aura Full Implementation [Bolt]
-**Files:** `server/game/combat.js`, `server/index.js`, `server/game/player.js`
+### 15.3 Party Aura Full Implementation [Bolt] ✅ 15.0-15.2 DONE
+**Files:** `server/game/combat.js`, `server/game/player.js`
+**Status:** `getPartyBuffs()` (line 822-835) aggregates `str`, `xp_percent`, `attack_speed`, `move_speed`. Only `str` is consumed (line 122-125). The other 3 are DEAD CODE.
 
-`getPartyBuffs()` (line 749-762) returns `xp_percent`, `attack_speed`, `move_speed` but only `str` is used.
-
-**Step A:** XP bonus — in `index.js` kill XP reward (line ~240):
+**Step A — XP aura bonus:** XP is awarded in 5 kill paths in combat.js. Each has this pattern:
 ```javascript
-const partyBuffs = combat.getPartyBuffs(allPlayers);
-const xpMult = 1 + (partyBuffs.xp_percent || 0) / 100;
-const xpResult = player.gainXp(Math.floor(xpAmount * xpMult));
+let xpReward = nearest.xpReward;
+if (player.setBonuses && player.setBonuses.xpPercent) {
+  xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
+}
+const levelResult = player.gainXp(xpReward);
 ```
+**All 5 locations** (search `let xpReward =`):
+- Line 245 — `playerAttack()` basic kill
+- Line 376 — `playerSkill()` AOE kill
+- Line 463 — `playerSkill()` single kill
+- Line 547 — `playerSkill()` multi kill
+- Line 636 — `playerSkill()` dot kill
 
-**Step B:** Attack speed — in `playerAttack()` after cooldown start:
+**Insert AFTER setBonuses XP line, BEFORE gainXp, at each location:**
 ```javascript
-if (partyBuffs.attack_speed > 0) {
+// Party aura: XP bonus (Warlord Inspire talent)
+if (allPlayers) {
+  const partyBuffs = this.getPartyBuffs(allPlayers);
+  if (partyBuffs.xp_percent > 0) {
+    xpReward = Math.floor(xpReward * (1 + partyBuffs.xp_percent / 100));
+  }
+}
+```
+NOTE: `allPlayers` is already available at line 245 (passed to `playerAttack`). For skill kills (lines 376, 463, 547, 636), verify `allPlayers` is in scope — it's passed to `playerSkill()` as parameter.
+
+**Step B — Attack speed aura:** In `playerAttack()` at line 117, `player.startAttackCooldown()` is called. The party aura for attack speed should reduce the cooldown:
+```javascript
+// AFTER line 117: player.startAttackCooldown();
+// AFTER line 126: } (end of party str buff block)
+// Add:
+if (allPlayers) {
+  const partyBuffs = this.getPartyBuffs(allPlayers); // already computed above, reuse variable
+  if (partyBuffs.attack_speed > 0) {
+    // Reduce attack cooldown by aura % (Warlord Commanding Presence)
+    player.attackCooldown = Math.floor(player.attackCooldown * (1 - partyBuffs.attack_speed / 100));
+  }
+}
+```
+OPTIMIZATION: `getPartyBuffs()` is already called at line 122. Hoist the result and reuse:
+```javascript
+const partyBuffs = allPlayers ? this.getPartyBuffs(allPlayers) : null;
+if (partyBuffs && partyBuffs.str > 0) damage += partyBuffs.str;
+// ... after startAttackCooldown:
+if (partyBuffs && partyBuffs.attack_speed > 0) {
   player.attackCooldown = Math.floor(player.attackCooldown * (1 - partyBuffs.attack_speed / 100));
 }
 ```
 
-**Step C:** Move speed — in game loop player movement (index.js), apply speed multiplier:
+**Step C — Move speed aura:** In `player.js` `get speedMultiplier()` (line 649-658):
 ```javascript
-const moveMult = 1 + (partyBuffs.move_speed || 0) / 100;
-// Apply to player.x/y delta
+get speedMultiplier() {
+  let mult = 1.0;
+  const slow = this.debuffs.find(d => d.effect === 'slow');
+  if (slow) mult = slow.speedMult;
+  if (this.setBonuses && this.setBonuses.speedPercent) {
+    mult *= (1 + this.setBonuses.speedPercent / 100);
+  }
+  // NEW: Party aura move speed (Beastmaster Pack Leader)
+  if (this.auraMoveBuff > 0) {
+    mult *= (1 + this.auraMoveBuff / 100);
+  }
+  return mult;
+}
+```
+This requires `player.auraMoveBuff` field. Set it periodically in game loop:
+```javascript
+// In index.js game loop, player update section (~line 270):
+const partyBuffs = combat.getPartyBuffs(Array.from(players.values()));
+for (const player of players.values()) {
+  player.auraMoveBuff = partyBuffs.move_speed || 0;
+}
+```
+Add `this.auraMoveBuff = 0;` to Player constructor.
+
+### 15.4 Spirit Wolf Summon (Ranger T4) [Bolt]
+**Files:** `server/game/combat.js`, `server/game/monsters.js`, `server/game/world.js`, `server/index.js`, `client/tv/sprites.js`
+
+Talent def in `talents.js:287-294`: `{ type: 'proc_chance', trigger: 'on_kill', effect: 'summon_spirit_wolf', chance: 0.25, damage_percent: 80, radius: 60, duration: 3000 }`
+
+**Step A — Wolf entity:** In `monsters.js`, add wolf factory function:
+```javascript
+function createSpiritWolf(x, y, ownerPlayer) {
+  const wolf = new Monster('spirit_wolf', 1, 0, 0); // floor 0, no scaling
+  wolf.friendly = true;
+  wolf.ownerId = ownerPlayer.id;
+  wolf.maxHp = Math.floor(ownerPlayer.maxHp * 0.3);
+  wolf.hp = wolf.maxHp;
+  wolf.attackPower = Math.floor(ownerPlayer.attackPower * 0.8); // 80% player AP
+  wolf.attackCooldown = 1000;
+  wolf.moveSpeed = 200; // faster than player
+  wolf.x = x;
+  wolf.y = y;
+  wolf.expireTimer = 10000; // 10s duration
+  wolf.name = 'Spirit Wolf';
+  wolf.xpReward = 0; // no XP for killing
+  return wolf;
+}
+```
+Export `createSpiritWolf`.
+
+**Step B — Proc handler:** In `combat.js` on-kill proc loop (line 250-260), add:
+```javascript
+if (proc.effect === 'summon_spirit_wolf') {
+  this.events.push({
+    type: 'summon:wolf',
+    playerId: player.id,
+    x: nearest.x,
+    y: nearest.y,
+  });
+}
 ```
 
-### 15.4 Spirit Wolf Summon (Ranger T4) [Bolt — lower priority]
-- On kill 25% chance to summon wolf companion
-- Wolf: friendly Monster instance with `friendly: true` flag
-- AI: `findClosestPlayer` replaced with `findClosestEnemy` — targets nearest monster
-- Duration: 10s, max 1 wolf active (`player.summonedWolf`)
-- Visual: New wolf sprite on TV, nameplate "Spirit Wolf"
-- Despawn: timer expires OR player dies → wolf removed from world.monsters
+**Step C — Spawn in game loop:** In `index.js`, handle `summon:wolf` event:
+```javascript
+if (event.type === 'summon:wolf') {
+  const owner = players.get(event.playerId);
+  if (owner && !owner.summonedWolf) {
+    const wolf = createSpiritWolf(event.x, event.y, owner);
+    world.monsters.push(wolf);
+    owner.summonedWolf = wolf;
+    gameNs.emit('monster:spawn', wolf.serialize());
+  }
+}
+```
+
+**Step D — Wolf AI in game loop:** Friendly monsters need different AI — target nearest enemy monster instead of player. In monster update section:
+```javascript
+if (monster.friendly) {
+  // Target nearest non-friendly monster
+  monster.expireTimer -= dt;
+  if (monster.expireTimer <= 0) {
+    monster.alive = false; // despawn
+    const owner = players.get(monster.ownerId);
+    if (owner) owner.summonedWolf = null;
+    continue;
+  }
+  // Simple chase + attack nearest enemy
+  const nearestEnemy = world.monsters.find(m => m.alive && !m.friendly && dist(monster, m) < 200);
+  if (nearestEnemy) {
+    // Move toward and attack
+    // ... (simplified wolf AI)
+  }
+  continue; // skip normal hostile AI
+}
+```
+
+**Step E — Wolf sprite:** In `client/tv/sprites.js`, add wolf draw function (small canine shape, blue-white ghost tint). On `monster:spawn` with `name === 'Spirit Wolf'`, use wolf sprite.
+
+**Step F — Cleanup:** On player death, despawn wolf. On floor transition, despawn all wolves. Add `this.summonedWolf = null;` to Player constructor.
 
 ### Implementation Order for Bolt:
-1. **15.0** Defensive procs (highest impact — 4 dead talents)
-2. **15.1** Shatter bonus (quick fix — 5 insertion points)
-3. **15.2** Bleed/poison split (medium — new system)
-4. **15.3** Party auras (3 stat applications)
-5. **15.4** Spirit wolf (complex — new entity type)
+1. ~~**15.0** Defensive procs~~ ✅ DONE (Cycle #122)
+2. ~~**15.1** Shatter bonus~~ ✅ DONE (Cycle #122)
+3. ~~**15.2** Bleed/poison split~~ ✅ DONE (Cycle #122)
+4. **15.3** Party auras — 3 sub-tasks (XP, attack speed, move speed) — MEDIUM
+5. **15.4** Spirit wolf — 6 sub-tasks (entity, proc, spawn, AI, sprite, cleanup) — COMPLEX
 
 ---
 
