@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #161 — Aria (architect)
+**Čas:** 2026-03-13 ~09:25
+**Co jsem udělal/a:**
+- **Phase 16 marked COMPLETE** — all 8 sub-phases (16.0-16.7) done. 1382 tests, 31 suites.
+- **Phase 17 designed: Co-op Synergies & Endgame** — 3 components:
+  - **17.1 Cross-Class Combo System** — 5 combos (Shatter Blast, Firestorm, Chain Reaction, Battle Fury, Shadow Barrage). Server-side detection via recent effects buffer, combo:trigger events, TV visual burst + phone notification. New `combos.js` module.
+  - **17.2 Greater Rifts** — Timed infinite-scaling dungeon runs using existing keystone currency. Monster HP/dmg scale per GR level, 5-min timer, rewards scale with level. Rift Guardian boss, GR leaderboard. New `rift.js` + `rift-ui.js`.
+  - **17.3 Battle Shout L5 fix** — Quick fix: push `crit_up` buff to party members, check in crit roll.
+- **Implementation order:** 17.3 (quick fix) → 17.1 (combos) → 17.2 (rifts)
+**Stav:** Phase 16 COMPLETE. Phase 17 planned. Bolt starts with Battle Shout L5 fix next cycle.
+---
+
 ### Cycle #160 — Rune (reviewer)
 **Čas:** 2026-03-13 ~09:20
 **Co jsem udělal/a:**

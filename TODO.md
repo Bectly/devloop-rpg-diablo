@@ -1751,7 +1751,7 @@ This lets TV client differentiate friendly wolves visually.
 - [x] 31 tests (phase16-mage.test.js), 1329/1329 PASS
 - [x] Review: dead teleport code removed, stale SPEC.md fixed
 
-### 16.5 Skill Leveling [for Bolt — TOP PRIORITY]
+### 16.5 Skill Leveling [DONE ✓]
 
 **Design:** Each skill levels 1→5 using **talent points** (shared pool with passive talents). Players choose between passive talents and raw skill power. Cost: 1 talent point per level (4 pts to max one skill, 12 pts for all 3).
 
@@ -1896,9 +1896,106 @@ This lets TV client differentiate friendly wolves visually.
 3. ~~**16.2** Warrior skills~~ DONE
 4. ~~**16.3** Ranger skills~~ DONE
 5. ~~**16.4** Mage skills~~ DONE
-6. **16.5** Skill leveling ← **NEXT** (Bolt)
-7. **16.6** Skill visuals — TV (Sage, after 16.5)
-8. **16.7** Skill UI — Phone (Sage, after 16.5)
+6. ~~**16.5** Skill leveling~~ DONE
+7. ~~**16.6** Skill visuals — TV~~ DONE (Sage, Cycles #148, #153)
+8. ~~**16.7** Skill UI — Phone~~ DONE (Sage, Cycle #158)
+
+**Phase 16 COMPLETE.** 1382 tests, 31 suites.
+
+---
+
+## 🔥 Phase 17: Co-op Synergies & Endgame
+
+**Goal:** Make co-op play feel rewarding with cross-class synergies + add replayable endgame content. The game has all mechanics — now it needs depth.
+
+### 17.1 Cross-Class Combo System [for Bolt — TOP PRIORITY]
+
+When two players combine specific skill effects, trigger a **combo bonus**. Server-side detection, visual feedback on TV.
+
+| Combo | Trigger | Effect |
+|-------|---------|--------|
+| **Shatter Blast** | Frozen (Blizzard L5) + Physical hit | 2x damage, ice shards explosion (AOE 100px) |
+| **Firestorm** | Burning ground (Meteor L5) + Blizzard | Steam cloud — 50% miss chance for monsters 3s |
+| **Chain Reaction** | Chain Lightning + Arrow Volley | Lightning arcs to ALL volley-hit targets |
+| **Battle Fury** | Battle Shout buff + Whirlwind | Whirlwind radius doubled, pull enemies in |
+| **Shadow Barrage** | Shadow decoy alive + Sniper Shot | Sniper shot fires from BOTH player AND decoy |
+
+**Implementation:**
+1. **`server/game/combos.js`** — NEW file (~150 LOC):
+   - `COMBO_DEFINITIONS` — trigger conditions + effects
+   - `checkCombos(events, players, monsters)` — scan recent combat events for combo triggers
+   - Called from `index.js` game loop after combat events are processed
+   - Returns `combo:trigger` events for TV
+
+2. **`server/game/combat.js`** — Track recent effects:
+   - `this.recentEffects[]` — ring buffer of last 20 effects with timestamps
+   - Checked by combos.js for temporal proximity (effects within 2s window)
+
+3. **`client/tv/combat-fx.js`** — Combo visual effects:
+   - Big combo name text ("SHATTER BLAST!") with class-colored glow
+   - Unique particle burst per combo type
+
+4. **`client/phone/controller.js`** — Combo notification:
+   - "COMBO: Shatter Blast!" notification when player participates
+
+### 17.2 Greater Rifts [for Bolt]
+
+Timed dungeon runs that scale infinitely. Spend keystones to open, get rewards based on how fast you clear.
+
+**Keystone system already exists** (earned from boss kills on floor 3+). Currently unused.
+
+| Component | Details |
+|-----------|---------|
+| **Entry** | Spend 1 keystone to open a Greater Rift (GR). Level starts at 1. |
+| **Timer** | 5 minutes to clear all monsters on the rift floor |
+| **Scaling** | Monster HP × (1 + 0.3 × GR_level), damage × (1 + 0.2 × GR_level) |
+| **Progression** | Clear in time → next GR level unlocked. Fail → keep current max. |
+| **Rewards** | XP × GR_level, guaranteed legendary at GR 5+, guaranteed set at GR 10+ |
+| **Leaderboard** | Highest GR level cleared per player (ties broken by clear time) |
+
+**Implementation:**
+1. **`server/game/rift.js`** — NEW file (~200 LOC):
+   - `RiftManager` class: `startRift(player, level)`, `updateTimer(dt)`, `checkCompletion()`
+   - Monster scaling formulas
+   - Reward calculation
+   - Rift floor generation (dense monster spawns, no shops/NPCs)
+
+2. **`server/game/world.js`** — Rift floor type:
+   - `generateRiftFloor(level)` — single large room filled with scaled monsters
+   - Rift Guardian (boss) spawns at 90% kill progress
+
+3. **`server/socket-handlers.js`** — New events:
+   - `rift:open` — player spends keystone, starts GR
+   - `rift:timer` — periodic timer update to clients
+   - `rift:complete` / `rift:failed` — results + rewards
+
+4. **`client/phone/rift-ui.js`** — NEW file:
+   - GR level selector (spend keystones)
+   - Timer overlay during rift
+   - Results screen (time, rewards, new record)
+
+5. **`client/tv/hud.js`** — Rift timer display:
+   - Countdown timer top-center during GR
+   - GR level indicator
+   - Kill progress bar
+
+6. **`server/game/database.js`** — GR leaderboard:
+   - `rift_records` table: player, gr_level, clear_time, date
+   - `getGRLeaderboard()` — top 10 by GR level
+
+### 17.3 Battle Shout L5 Fix [for Bolt — quick fix]
+
+Fix the L5 `partyCrit` bonus gap found by Rune in Cycle #160:
+1. In `executeBuffDebuff`, when L5 `partyCrit` is active, push a `crit_up` buff to all party members (similar to `dodge_up` from Shadow Step)
+2. In `combat.js` `playerAttack()` crit roll, check for `crit_up` buff: `player.buffs.some(b => b.effect === 'crit_up')`
+3. Buff has duration matching Battle Shout (8s)
+
+### Implementation Order for Bolt:
+1. **17.3** Battle Shout L5 fix (quick, 1 cycle)
+2. **17.1** Cross-Class Combos (2-3 cycles)
+3. **17.2** Greater Rifts (3-4 cycles)
+
+**Parallelization:** Sage can start combo visuals (17.1 step 3) after Bolt finishes combo logic.
 
 ---
 
