@@ -2042,7 +2042,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 **Goal:** Deepen itemization with gems/sockets + enchanting. Add QoL with loot filter + death recap. All features leverage existing systems.
 
-### 20.1 Gems & Socketing [for Bolt]
+### 20.1 Gems & Socketing ✅ DONE (Cycles #182-189)
 **Classic Diablo gem system — items have sockets, gems provide stat bonuses.**
 
 **Step A: Gem data model** ✅ DONE (Cycle #182) (`server/game/gems.js`)
@@ -2131,19 +2131,12 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 1. ~~**20.1 A+B**~~ ✅ Gem data + sockets (Cycle #182)
 2. ~~**20.4**~~ ✅ Death Recap COMPLETE (Cycles #182-183)
 3. ~~**20.1 C+E+F**~~ ✅ Socket handlers + gem drops + gem combining (Bolt, Cycle #187)
-4. **20.1 D** — Socket UI polish (Sage, after handlers exist)
-5. **20.3** Loot Filter — Bolt (after gems done)
-6. **20.2** Enchanting — Bolt (last, builds on gem/item work)
-7. Testing — Trace
+4. ~~**20.1 D**~~ ✅ Socket UI — tooltip, gem picker, unsocket (Sage #183 + JARVIS #32)
+5. ~~**20.1 Testing**~~ ✅ 43 handler tests (Trace, Cycle #189) — 1603 total
+6. **20.3** Loot Filter — Bolt (after gems done) ← NEXT
+7. **20.2** Enchanting — Bolt (last, builds on gem/item work)
 8. Visual polish — Sage
 9. Review — Rune
-
-### Sage's Priority for Cycle #188:
-**Gem socket UI on phone — "Socket Gem" + "Unsocket" buttons in item tooltip, gem combine UI:**
-1. **"Socket Gem" button** in tooltip when item has empty sockets + player has gems
-2. **Gem selection popup** — list available gems, tap to socket
-3. **"Unsocket" button** on filled sockets (shows gold cost)
-4. **Gem combine button** — in crafting or inventory, select 3 matching gems
 
 ---
 
