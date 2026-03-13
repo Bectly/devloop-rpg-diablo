@@ -809,6 +809,178 @@ describe('Player', () => {
     });
   });
 
+  // ── Resistances ────────────────────────────────────────────────────
+  describe('resistances', () => {
+    it('player starts with all resistances at 0', () => {
+      const p = new Player('T', 'warrior');
+      expect(p.resistances).toEqual({ fire: 0, cold: 0, poison: 0 });
+    });
+
+    it('resistances initialized for all classes', () => {
+      for (const cls of ['warrior', 'ranger', 'mage']) {
+        const p = new Player('T', cls);
+        expect(p.resistances.fire).toBe(0);
+        expect(p.resistances.cold).toBe(0);
+        expect(p.resistances.poison).toBe(0);
+      }
+    });
+
+    it('recalcEquipBonuses sums fire_resist from equipment', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.chest = { type: 'armor', armor: 10, bonuses: { fire_resist: 15 } };
+      p.equipment.helmet = { type: 'armor', armor: 5, bonuses: { fire_resist: 10 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.fire).toBe(25);
+    });
+
+    it('recalcEquipBonuses sums cold_resist from equipment', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.gloves = { type: 'armor', armor: 3, bonuses: { cold_resist: 12 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.cold).toBe(12);
+    });
+
+    it('recalcEquipBonuses sums poison_resist from equipment', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.boots = { type: 'armor', armor: 4, bonuses: { poison_resist: 18 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.poison).toBe(18);
+    });
+
+    it('all_resist bonus adds to all three resistance types', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.amulet = { type: 'accessory', bonuses: { all_resist: 8 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.fire).toBe(8);
+      expect(p.resistances.cold).toBe(8);
+      expect(p.resistances.poison).toBe(8);
+    });
+
+    it('all_resist stacks with individual element resists', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.chest = { type: 'armor', armor: 10, bonuses: { fire_resist: 15, all_resist: 5 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.fire).toBe(20); // 15 + 5
+      expect(p.resistances.cold).toBe(5);  // 0 + 5
+      expect(p.resistances.poison).toBe(5); // 0 + 5
+    });
+
+    it('resistance capped at 75', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.chest = { type: 'armor', armor: 10, bonuses: { fire_resist: 50 } };
+      p.equipment.helmet = { type: 'armor', armor: 5, bonuses: { fire_resist: 40 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.fire).toBe(75); // 50 + 40 = 90, capped at 75
+    });
+
+    it('all_resist + individual resist capped at 75', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.chest = { type: 'armor', armor: 10, bonuses: { cold_resist: 60, all_resist: 20 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.cold).toBe(75); // 60 + 20 = 80, capped at 75
+    });
+
+    it('unequipping resets resistances to 0', () => {
+      const p = new Player('T', 'warrior');
+      p.equipment.chest = { type: 'armor', armor: 10, bonuses: { fire_resist: 20 } };
+      p.recalcEquipBonuses();
+      expect(p.resistances.fire).toBe(20);
+
+      p.equipment.chest = null;
+      p.recalcEquipBonuses();
+      expect(p.resistances.fire).toBe(0);
+    });
+
+    it('takeDamage with fire type applies fire resistance', () => {
+      const p = new Player('T', 'warrior');
+      p.dodgeChance = 0;
+      p.resistances.fire = 50;
+      const initialHp = p.hp;
+      const dealt = p.takeDamage(100, 'fire');
+      // 50% fire resist: floor(100 * (1 - 50/100)) = 50
+      expect(dealt).toBe(50);
+      expect(p.hp).toBe(initialHp - 50);
+    });
+
+    it('takeDamage with cold type applies cold resistance', () => {
+      const p = new Player('T', 'warrior');
+      p.dodgeChance = 0;
+      p.resistances.cold = 30;
+      const dealt = p.takeDamage(100, 'cold');
+      // 30% cold resist: floor(100 * 0.7) = 70
+      expect(dealt).toBe(70);
+    });
+
+    it('takeDamage with poison type applies poison resistance', () => {
+      const p = new Player('T', 'warrior');
+      p.dodgeChance = 0;
+      p.resistances.poison = 75;
+      const dealt = p.takeDamage(100, 'poison');
+      // 75% poison resist: floor(100 * 0.25) = 25
+      expect(dealt).toBe(25);
+    });
+
+    it('takeDamage with physical type uses armor (not resistance)', () => {
+      const p = new Player('T', 'warrior');
+      p.dodgeChance = 0;
+      p.resistances.fire = 75; // should not affect physical
+      const dealt = p.takeDamage(100, 'physical');
+      // Physical uses armor: max(1, floor(100 - armor * 0.4))
+      const expected = Math.max(1, Math.floor(100 - p.armor * 0.4));
+      expect(dealt).toBe(expected);
+    });
+
+    it('takeDamage defaults to physical when no type specified', () => {
+      const p = new Player('T', 'warrior');
+      p.dodgeChance = 0;
+      const dealt = p.takeDamage(100);
+      const expected = Math.max(1, Math.floor(100 - p.armor * 0.4));
+      expect(dealt).toBe(expected);
+    });
+
+    it('elemental damage bypasses armor entirely', () => {
+      const p = new Player('T', 'warrior');
+      p.dodgeChance = 0;
+      p.equipBonuses.armor = 1000; // massive armor
+      p.recalcStats();
+      p.dodgeChance = 0;
+      p.resistances.fire = 0; // no fire resist
+      const dealt = p.takeDamage(100, 'fire');
+      // Fire ignores armor, 0 resist => full 100 damage
+      expect(dealt).toBe(100);
+    });
+
+    it('serialize() includes resistances', () => {
+      const p = new Player('T', 'warrior');
+      p.resistances = { fire: 10, cold: 20, poison: 30 };
+      const s = p.serialize();
+      expect(s.resistances).toEqual({ fire: 10, cold: 20, poison: 30 });
+    });
+
+    it('serialize() resistances is a copy (not reference)', () => {
+      const p = new Player('T', 'warrior');
+      p.resistances.fire = 15;
+      const s = p.serialize();
+      s.resistances.fire = 999;
+      expect(p.resistances.fire).toBe(15); // unchanged
+    });
+
+    it('serializeForPhone() includes resistances', () => {
+      const p = new Player('T', 'warrior');
+      p.resistances = { fire: 5, cold: 10, poison: 15 };
+      const s = p.serializeForPhone();
+      expect(s.resistances).toEqual({ fire: 5, cold: 10, poison: 15 });
+    });
+
+    it('serializeForPhone() resistances is a copy (not reference)', () => {
+      const p = new Player('T', 'warrior');
+      p.resistances.cold = 25;
+      const s = p.serializeForPhone();
+      s.resistances.cold = 999;
+      expect(p.resistances.cold).toBe(25); // unchanged
+    });
+  });
+
   // ── Debuff System ─────────────────────────────────────────────────
   describe('debuffs', () => {
     let player;

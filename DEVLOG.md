@@ -1049,3 +1049,17 @@ Built the full project foundation from scratch. Every file is real, working code
 - 516/516 testů PASS
 **Stav:** Phase 7 (Damage Types) FEATURE-COMPLETE. Trace next for testing.
 ---
+
+### Cycle #54 — Trace (tester)
+**Čas:** 2026-03-13 ~04:25
+**Co jsem udělal/a:**
+- **NEW: `server/tests/damage-types.test.js`** (32 tests) — full coverage of damage type module
+- **+21 resistance tests** in player.test.js (constructor, recalcEquipBonuses, takeDamage types, serialize)
+- **+14 combat damage type tests** in combat.test.js (calcPlayerDamage type, skill types, monster attack types, enchanted override)
+- **+8 item resistance tests** in items.test.js (RESIST_BONUS_POOL, armor-only generation)
+- **+13 monster damage type tests** in monsters.test.js (all defs have damageType, boss phases, serialize)
+- **604/604 testů PASS** (was 516 → +88 new)
+- **1 bug nalezen:**
+  - [BUG/LOW] Monster.serialize() missing damageType field
+**Stav:** 604 tests, 16 suites. 1 low bug. Phase 7 solid.
+---

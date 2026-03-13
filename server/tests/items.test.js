@@ -6,6 +6,8 @@ const {
   WEAPONS,
   ARMORS,
   CONSUMABLES,
+  BONUS_POOL,
+  RESIST_BONUS_POOL,
   generateWeapon,
   generateArmor,
   generateAccessory,
@@ -232,6 +234,85 @@ describe('Items', () => {
     it('returns null for unknown consumable type', () => {
       const result = generateConsumable('super_elixir');
       expect(result).toBeNull();
+    });
+  });
+
+  // ── Resistance Bonuses ─────────────────────────────────────────
+  describe('resistance bonuses', () => {
+    it('RESIST_BONUS_POOL defines 4 resistance types', () => {
+      expect(RESIST_BONUS_POOL.length).toBe(4);
+      const stats = RESIST_BONUS_POOL.map(b => b.stat);
+      expect(stats).toContain('fire_resist');
+      expect(stats).toContain('cold_resist');
+      expect(stats).toContain('poison_resist');
+      expect(stats).toContain('all_resist');
+    });
+
+    it('fire_resist range is 5-20', () => {
+      const fr = RESIST_BONUS_POOL.find(b => b.stat === 'fire_resist');
+      expect(fr.min).toBe(5);
+      expect(fr.max).toBe(20);
+    });
+
+    it('cold_resist range is 5-20', () => {
+      const cr = RESIST_BONUS_POOL.find(b => b.stat === 'cold_resist');
+      expect(cr.min).toBe(5);
+      expect(cr.max).toBe(20);
+    });
+
+    it('poison_resist range is 5-20', () => {
+      const pr = RESIST_BONUS_POOL.find(b => b.stat === 'poison_resist');
+      expect(pr.min).toBe(5);
+      expect(pr.max).toBe(20);
+    });
+
+    it('all_resist range is 3-10', () => {
+      const ar = RESIST_BONUS_POOL.find(b => b.stat === 'all_resist');
+      expect(ar.min).toBe(3);
+      expect(ar.max).toBe(10);
+    });
+
+    it('armor items can generate resistance bonuses', () => {
+      // Generate many armor items and check if any have resist bonuses
+      let foundResist = false;
+      for (let i = 0; i < 200; i++) {
+        const armor = generateArmor(5); // high tier for more bonuses
+        const bonusKeys = Object.keys(armor.bonuses);
+        if (bonusKeys.some(k => k.includes('resist'))) {
+          foundResist = true;
+          break;
+        }
+      }
+      expect(foundResist).toBe(true);
+    });
+
+    it('resistance bonus values are within valid range (scaled by rarity)', () => {
+      for (let i = 0; i < 200; i++) {
+        const armor = generateArmor(5);
+        for (const [stat, val] of Object.entries(armor.bonuses)) {
+          if (stat === 'fire_resist' || stat === 'cold_resist' || stat === 'poison_resist') {
+            // min 5 * 1.0 (common) = 5, max 20 * 2.2 (legendary) = 44
+            expect(val).toBeGreaterThanOrEqual(5);
+            expect(val).toBeLessThanOrEqual(Math.ceil(20 * RARITIES.legendary.multiplier));
+          }
+          if (stat === 'all_resist') {
+            // min 3 * 1.0 = 3, max 10 * 2.2 = 22
+            expect(val).toBeGreaterThanOrEqual(3);
+            expect(val).toBeLessThanOrEqual(Math.ceil(10 * RARITIES.legendary.multiplier));
+          }
+        }
+      }
+    });
+
+    it('weapons do not get resistance bonuses from RESIST_BONUS_POOL', () => {
+      // generateWeapon uses BONUS_POOL only (no RESIST_BONUS_POOL)
+      // So resist bonuses should never appear on weapons
+      for (let i = 0; i < 200; i++) {
+        const w = generateWeapon(5);
+        const bonusKeys = Object.keys(w.bonuses);
+        const hasResist = bonusKeys.some(k => k.includes('resist'));
+        expect(hasResist).toBe(false);
+      }
     });
   });
 

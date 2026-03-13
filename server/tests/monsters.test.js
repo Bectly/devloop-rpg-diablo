@@ -399,6 +399,93 @@ describe('Monsters', () => {
     });
   });
 
+  // ── Damage Types ───────────────────────────────────────────────
+  describe('damage types', () => {
+    it('all monster types have a damageType in their definition', () => {
+      for (const [type, def] of Object.entries(MONSTER_DEFS)) {
+        expect(def).toHaveProperty('damageType');
+        expect(typeof def.damageType).toBe('string');
+      }
+    });
+
+    it('skeleton has physical damageType', () => {
+      expect(MONSTER_DEFS.skeleton.damageType).toBe('physical');
+    });
+
+    it('demon has fire damageType', () => {
+      expect(MONSTER_DEFS.demon.damageType).toBe('fire');
+    });
+
+    it('slime has poison damageType', () => {
+      expect(MONSTER_DEFS.slime.damageType).toBe('poison');
+    });
+
+    it('slime_small has poison damageType', () => {
+      expect(MONSTER_DEFS.slime_small.damageType).toBe('poison');
+    });
+
+    it('zombie has poison damageType', () => {
+      expect(MONSTER_DEFS.zombie.damageType).toBe('poison');
+    });
+
+    it('archer has physical damageType', () => {
+      expect(MONSTER_DEFS.archer.damageType).toBe('physical');
+    });
+
+    it('boss_knight has physical damageType (base)', () => {
+      expect(MONSTER_DEFS.boss_knight.damageType).toBe('physical');
+    });
+
+    it('monster constructor copies damageType from definition', () => {
+      const skeleton = createMonster('skeleton', 0, 0);
+      expect(skeleton.damageType).toBe('physical');
+
+      const demon = createMonster('demon', 0, 0);
+      expect(demon.damageType).toBe('fire');
+
+      const slime = createMonster('slime', 0, 0);
+      expect(slime.damageType).toBe('poison');
+    });
+
+    it('monster defaults to physical if definition has no damageType', () => {
+      // The constructor uses `def.damageType || 'physical'`
+      // All current defs have damageType, but test the fallback logic
+      const m = createMonster('skeleton', 0, 0);
+      expect(m.damageType).toBe('physical');
+    });
+
+    it('boss_knight has phase-specific damage types', () => {
+      const phases = MONSTER_DEFS.boss_knight.phases;
+      expect(phases[0].damageType).toBe('physical'); // melee phase
+      expect(phases[1].damageType).toBe('fire');     // charge phase
+      expect(phases[2].damageType).toBe('physical'); // aoe_frenzy phase
+    });
+
+    it('boss attack events use phase-specific damageType', () => {
+      const m = createMonster('boss_knight', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      // Set HP to trigger charge phase (60%)
+      m.hp = Math.floor(m.maxHp * 0.55);
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damageType).toBe('fire'); // charge phase = fire
+    });
+
+    it('monster attack events include damageType field', () => {
+      const m = createMonster('zombie', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damageType).toBe('poison');
+    });
+  });
+
   // ── Serialization ───────────────────────────────────────────────
   describe('serialization', () => {
     it('serialize returns expected shape', () => {
@@ -413,6 +500,16 @@ describe('Monsters', () => {
       expect(s).toHaveProperty('hp');
       expect(s).toHaveProperty('maxHp');
       expect(s).toHaveProperty('alive');
+    });
+
+    // [BUG] serialize() does NOT include damageType — client cannot determine
+    // monster damage type from serialized data. Monster.damageType exists on
+    // the instance but is omitted from serialize() output.
+    it('serialize does NOT include damageType (BUG — missing field)', () => {
+      const m = createMonster('demon', 100, 100);
+      expect(m.damageType).toBe('fire'); // instance has it
+      const s = m.serialize();
+      expect(s).not.toHaveProperty('damageType'); // but serialize omits it
     });
   });
 });

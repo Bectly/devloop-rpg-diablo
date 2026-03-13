@@ -173,6 +173,10 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
 - [x] **Phone:** resistance bonuses in equipment tooltips (colored labels)
 - [x] **TV crits:** type-colored with matching stroke
 
+### Found in Cycle #54 (Trace — damage types QA)
+
+- [ ] [BUG/LOW] `monsters.js:514-540` — **`Monster.serialize()` does not include `damageType`.** The `Monster` instance has `this.damageType` set from the definition (e.g. 'fire' for demon, 'poison' for slime), but `serialize()` omits it. The client currently infers damage type from monster `type` string, but the server should send it explicitly for consistency and to support phase-specific damage type changes on bosses. **Fix:** Add `damageType: this.damageType` to the `serialize()` return object.
+
 ### Future (not this phase)
 - [ ] Multiple dungeon zones (different tilesets, monster pools)
 - [ ] Set bonuses (3-4 item sets with 2/3/5-piece bonuses)
@@ -184,7 +188,7 @@ Four damage types that affect all combat. Builds on existing fire/cold affix sys
 
 ## Architecture Notes (Updated Cycle #51)
 **Current LOC:** ~16,521 source JS (28 files). Largest: hud.js 1284, controller.js 1084, game.js 1073, socket-handlers.js 878.
-**Tests:** 516/516 PASS, 15 suites.
+**Tests:** 604/604 PASS, 16 suites.
 **Split needed:** hud.js 1284, controller.js 1084 — both over threshold. MUST split before Phase 7 adds more code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). 0 open bugs.
 

@@ -335,6 +335,170 @@ describe('CombatSystem', () => {
     });
   });
 
+  // ── Damage Types in Combat ─────────────────────────────────────
+  describe('damage types', () => {
+    it('calcPlayerDamage returns damageType field', () => {
+      const result = combat.calcPlayerDamage(player);
+      expect(result).toHaveProperty('damageType');
+      expect(typeof result.damageType).toBe('string');
+    });
+
+    it('calcPlayerDamage defaults to physical damageType', () => {
+      const result = combat.calcPlayerDamage(player);
+      expect(result.damageType).toBe('physical');
+    });
+
+    it('calcPlayerDamage returns fire for weapon with fire_damage bonus', () => {
+      player.equipment.weapon = {
+        type: 'weapon', subType: 'sword', damage: 10,
+        bonuses: { fire_damage: 5 }, attackSpeed: 800,
+      };
+      player.recalcEquipBonuses();
+      const result = combat.calcPlayerDamage(player);
+      expect(result.damageType).toBe('fire');
+    });
+
+    it('calcPlayerDamage returns cold for weapon with cold_damage bonus', () => {
+      player.equipment.weapon = {
+        type: 'weapon', subType: 'sword', damage: 10,
+        bonuses: { cold_damage: 5 }, attackSpeed: 800,
+      };
+      player.recalcEquipBonuses();
+      const result = combat.calcPlayerDamage(player);
+      expect(result.damageType).toBe('cold');
+    });
+
+    it('calcPlayerDamage returns poison for weapon with poison_damage bonus', () => {
+      player.equipment.weapon = {
+        type: 'weapon', subType: 'sword', damage: 10,
+        bonuses: { poison_damage: 5 }, attackSpeed: 800,
+      };
+      player.recalcEquipBonuses();
+      const result = combat.calcPlayerDamage(player);
+      expect(result.damageType).toBe('poison');
+    });
+
+    it('playerAttack event includes damageType field', () => {
+      const m = createMonster('skeleton', player.x + 30, player.y);
+      combat.playerAttack(player, [m]);
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit).toBeDefined();
+      expect(hit).toHaveProperty('damageType');
+    });
+
+    it('skill events include damageType from SKILL_DAMAGE_TYPES', () => {
+      const mage = new Player('Mage', 'mage');
+      mage.dodgeChance = 0;
+      const m = createMonster('skeleton', mage.x + 20, mage.y);
+      combat.playerSkill(mage, 0, [m], [mage]); // Fireball = fire
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit).toBeDefined();
+      expect(hit.damageType).toBe('fire');
+    });
+
+    it('Frost Nova skill events have cold damageType', () => {
+      const mage = new Player('Mage', 'mage');
+      mage.dodgeChance = 0;
+      const m = createMonster('skeleton', mage.x + 20, mage.y);
+      combat.playerSkill(mage, 1, [m], [mage]); // Frost Nova = cold
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit).toBeDefined();
+      expect(hit.damageType).toBe('cold');
+    });
+
+    it('Poison Arrow skill events have poison damageType', () => {
+      const ranger = new Player('Ranger', 'ranger');
+      ranger.dodgeChance = 0;
+      const m = createMonster('skeleton', ranger.x + 30, ranger.y);
+      combat.playerSkill(ranger, 1, [m], [ranger]); // Poison Arrow = poison
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit).toBeDefined();
+      expect(hit.damageType).toBe('poison');
+    });
+
+    it('monster attack events include damageType', () => {
+      const m = createMonster('demon', 100, 100);
+      m.aiState = 'attack';
+      m.attackCooldown = 0;
+      const fakePlayer = { id: player.id, alive: true, x: 200, y: 100 };
+      const events = m.update(16, [fakePlayer]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      if (attack) {
+        expect(attack).toHaveProperty('damageType');
+        expect(attack.damageType).toBe('fire'); // demon = fire
+      }
+    });
+
+    it('processMonsterAttack passes damageType to player.takeDamage', () => {
+      // Set up player with fire resist
+      player.resistances.fire = 50;
+      const initialHp = player.hp;
+      const event = {
+        monsterId: 'demon1',
+        targetId: player.id,
+        damage: 100,
+        damageType: 'fire',
+        attackType: 'ranged',
+      };
+      const m = createMonster('demon', 100, 100);
+      combat.processMonsterAttack(event, [player], m);
+      // With 50 fire resist: floor(100 * 0.5) = 50 damage
+      expect(player.hp).toBe(initialHp - 50);
+    });
+
+    it('processMonsterAttack hit event includes damageType', () => {
+      const event = {
+        monsterId: 'mob1',
+        targetId: player.id,
+        damage: 20,
+        damageType: 'poison',
+        attackType: 'melee',
+      };
+      const m = createMonster('zombie', 100, 100);
+      combat.processMonsterAttack(event, [player], m);
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit).toBeDefined();
+      expect(hit.damageType).toBe('poison');
+    });
+
+    it('fire enchanted monster overrides damageType to fire', () => {
+      const event = {
+        monsterId: 'mob1',
+        targetId: player.id,
+        damage: 20,
+        damageType: 'physical',
+        attackType: 'melee',
+      };
+      const m = createMonster('skeleton', 100, 100);
+      m.fireEnchanted = true;
+      combat.processMonsterAttack(event, [player], m);
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit.damageType).toBe('fire');
+    });
+
+    it('cold enchanted monster overrides damageType to cold', () => {
+      const event = {
+        monsterId: 'mob1',
+        targetId: player.id,
+        damage: 20,
+        damageType: 'physical',
+        attackType: 'melee',
+      };
+      const m = createMonster('skeleton', 100, 100);
+      m.coldEnchanted = true;
+      combat.processMonsterAttack(event, [player], m);
+      const events = combat.clearEvents();
+      const hit = events.find(e => e.type === 'combat:hit');
+      expect(hit.damageType).toBe('cold');
+    });
+  });
+
   // ── Event Management ────────────────────────────────────────────
   describe('events', () => {
     it('clearEvents returns all events and resets', () => {
