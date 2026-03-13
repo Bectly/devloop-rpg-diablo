@@ -43,7 +43,7 @@ const ITEM_SETS = {
     },
     bonuses: {
       2: { spellDamagePercent: 25, maxMana: 20, description: '+25% Spell Damage, +20 Max Mana' },
-      3: { cooldownReduction: 20, description: 'Fireball chains +1 target, -20% Cooldowns' },
+      3: { cooldownReduction: 20, description: 'Meteor Strike chains +1 target, -20% Cooldowns' },
     },
   },
   bones_of_fallen: {

@@ -48,7 +48,7 @@ describe('Player', () => {
       const mage = new Player('M', 'mage');
       expect(warrior.skills[0].name).toBe('Whirlwind');
       expect(ranger.skills[0].name).toBe('Arrow Volley');
-      expect(mage.skills[0].name).toBe('Fireball');
+      expect(mage.skills[0].name).toBe('Meteor Strike');
     });
 
     it('starts at level 1 with 0 xp', () => {
@@ -657,9 +657,9 @@ describe('Player', () => {
     it('mage skills have correct shortNames', () => {
       const p = new Player('M', 'mage');
       const s = p.serializeForPhone();
-      expect(s.skills[0].shortName).toBe('FBL');
-      expect(s.skills[1].shortName).toBe('FRZ');
-      expect(s.skills[2].shortName).toBe('TLP');
+      expect(s.skills[0].shortName).toBe('MTR');
+      expect(s.skills[1].shortName).toBe('BLZ');
+      expect(s.skills[2].shortName).toBe('CLN');
     });
 
     it('serializeForPhone includes buffs and lastDamageTaken', () => {

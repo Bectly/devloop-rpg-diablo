@@ -381,9 +381,9 @@ describe('computeTalentBonuses', () => {
       mage_pyromancer_t1: 3, mage_pyromancer_t2: 3,
       mage_pyromancer_t3: 2, mage_pyromancer_t4: 1
     }, 'mage');
-    expect(b.skillUpgrades['Fireball']).toBeDefined();
-    expect(b.skillUpgrades['Fireball'].burning_ground).toBeDefined();
-    expect(b.skillUpgrades['Fireball'].burning_ground.value).toBe(1);
+    expect(b.skillUpgrades['Meteor Strike']).toBeDefined();
+    expect(b.skillUpgrades['Meteor Strike'].burning_ground).toBeDefined();
+    expect(b.skillUpgrades['Meteor Strike'].burning_ground.value).toBe(1);
   });
 
   it('stacks bonuses from multiple branches', () => {

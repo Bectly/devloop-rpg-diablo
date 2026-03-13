@@ -198,16 +198,17 @@ describe('CombatSystem', () => {
       expect(hits.map(h => h.targetId)).toContain(m2.id);
     });
 
-    it('Fireball uses spellPower for damage', () => {
+    it('Meteor Strike emits projectile:create event', () => {
       const mage = new Player('Mage', 'mage');
       mage.dodgeChance = 0;
       const m = createMonster('skeleton', mage.x + 20, mage.y);
-      const initialHp = m.hp;
 
-      combat.playerSkill(mage, 0, [m], [mage]);
-      // Fireball: damage multiplier 2.5, uses spellPower
-      // spellPower = 39, so base = floor(39 * 2.5) = 97
-      expect(m.hp).toBeLessThan(initialHp);
+      const results = combat.playerSkill(mage, 0, [m], [mage]);
+      // Meteor Strike: emits a projectile:create with aoeRadius
+      const projEvents = results.filter(e => e.type === 'projectile:create');
+      expect(projEvents.length).toBe(1);
+      expect(projEvents[0].aoeRadius).toBe(80);
+      expect(projEvents[0].damageType).toBe('fire');
     });
 
     it('single target skill (Charging Strike) applies stun', () => {
@@ -244,12 +245,18 @@ describe('CombatSystem', () => {
       expect(projEvents[0].piercing).toBe(true);
     });
 
-    it('movement skill (Teleport) moves player in facing direction', () => {
+    it('Chain Lightning hits nearest target and bounces', () => {
       const mage = new Player('M', 'mage');
-      mage.facing = 'right';
-      const oldX = mage.x;
-      combat.playerSkill(mage, 2, [], [mage]); // Teleport, range = 150
-      expect(mage.x).toBe(Math.min(1264, oldX + 150));
+      mage.dodgeChance = 0;
+      const m1 = createMonster('skeleton', mage.x + 30, mage.y);
+      m1.maxHp = 5000; m1.hp = 5000;
+      const m2 = createMonster('skeleton', mage.x + 130, mage.y);
+      m2.maxHp = 5000; m2.hp = 5000;
+      const results = combat.playerSkill(mage, 2, [m1, m2], [mage]); // Chain Lightning
+      const hits = results.filter(e => e.type === 'combat:hit');
+      expect(hits.length).toBe(2); // bounces to both targets
+      expect(hits[0].targetId).toBe(m1.id);
+      expect(hits[1].targetId).toBe(m2.id);
     });
 
     it('skill deducts MP', () => {
@@ -391,18 +398,18 @@ describe('CombatSystem', () => {
       const mage = new Player('Mage', 'mage');
       mage.dodgeChance = 0;
       const m = createMonster('skeleton', mage.x + 20, mage.y);
-      combat.playerSkill(mage, 0, [m], [mage]); // Fireball = fire
+      combat.playerSkill(mage, 0, [m], [mage]); // Meteor Strike = fire
       const events = combat.clearEvents();
-      const hit = events.find(e => e.type === 'combat:hit');
-      expect(hit).toBeDefined();
-      expect(hit.damageType).toBe('fire');
+      const projCreate = events.find(e => e.type === 'projectile:create');
+      expect(projCreate).toBeDefined();
+      expect(projCreate.damageType).toBe('fire');
     });
 
-    it('Frost Nova skill events have cold damageType', () => {
+    it('Blizzard skill events have cold damageType', () => {
       const mage = new Player('Mage', 'mage');
       mage.dodgeChance = 0;
       const m = createMonster('skeleton', mage.x + 20, mage.y);
-      combat.playerSkill(mage, 1, [m], [mage]); // Frost Nova = cold
+      combat.playerSkill(mage, 1, [m], [mage]); // Blizzard = cold
       const events = combat.clearEvents();
       const hit = events.find(e => e.type === 'combat:hit');
       expect(hit).toBeDefined();

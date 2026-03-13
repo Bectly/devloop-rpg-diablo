@@ -22,9 +22,9 @@ const CLASS_SKILLS = {
     { name: 'Shadow Step',   shortName: 'SHD', mpCost: 20, cooldown: 7000, damage: 0,   type: 'shadow_step',  range: 100, dodgeDuration: 1000, decoyDuration: 2000, description: 'Teleport forward, gain dodge, leave shadow decoy' },
   ],
   mage: [
-    { name: 'Fireball',     shortName: 'FBL', mpCost: 22, cooldown: 3500, damage: 2.5, type: 'aoe',    radius: 50, description: 'Explosive fireball dealing area damage' },
-    { name: 'Frost Nova',   shortName: 'FRZ', mpCost: 18, cooldown: 6000, damage: 1.0, type: 'aoe',    radius: 80, effect: 'slow', duration: 3000, description: 'Freeze nearby enemies' },
-    { name: 'Teleport',     shortName: 'TLP', mpCost: 30, cooldown: 8000, damage: 0,   type: 'movement', range: 150, description: 'Blink to target location' },
+    { name: 'Meteor Strike',    shortName: 'MTR', mpCost: 25, cooldown: 5000, damage: 2.5, type: 'meteor',    range: 350, speed: 350, aoeRadius: 80, useSpellPower: true, description: 'Fiery meteor exploding on impact in a wide area' },
+    { name: 'Blizzard',         shortName: 'BLZ', mpCost: 22, cooldown: 7000, damage: 1.2, type: 'blizzard',  radius: 120, hits: 3, effect: 'slow', duration: 3000, useSpellPower: true, description: 'Icy storm dealing 3 hits and slowing enemies' },
+    { name: 'Chain Lightning',  shortName: 'CLN', mpCost: 20, cooldown: 4000, damage: 2.0, type: 'chain',     range: 200, chainRange: 120, maxBounces: 4, falloff: 0.5, useSpellPower: true, description: 'Lightning bouncing between up to 4 targets' },
   ],
 };
 

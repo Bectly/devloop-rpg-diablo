@@ -356,9 +356,9 @@ window.Screens = (() => {
       { name: 'Shadow Step', desc: 'Teleport 100px forward. 100% dodge for 1s. Leaves shadow decoy drawing aggro 2s.', type: 'Movement' },
     ],
     mage: [
-      { name: 'Fireball', desc: 'Hurl a fireball. Deals 2.5x spell damage in 50px explosion.', type: 'AoE' },
-      { name: 'Frost Nova', desc: 'Frozen blast around you. Deals damage and slows enemies for 3 seconds.', type: 'AoE' },
-      { name: 'Teleport', desc: 'Blink 150px forward instantly. Escape danger or reposition.', type: 'Movement' },
+      { name: 'Meteor Strike', desc: 'Fiery meteor dealing 2.5x spell damage. Explodes on impact (80px AOE). Fire damage.', type: 'Meteor' },
+      { name: 'Blizzard', desc: 'Icy storm around you dealing 1.2x × 3 hits. Slows enemies for 3s. Radius 120px.', type: 'Blizzard' },
+      { name: 'Chain Lightning', desc: 'Lightning bolt bouncing to 4 targets. 2x spell damage, 50% falloff per bounce.', type: 'Chain' },
     ],
   };
 

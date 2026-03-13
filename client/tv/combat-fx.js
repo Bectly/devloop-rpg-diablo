@@ -399,16 +399,22 @@ const CombatFX = (() => {
               spawnAoeEffect(scene, ax, ay, 70, 0xff8833, 500);
               break;
             }
-            case 'Fireball': {
+            case 'Meteor Strike': {
               const tx = target ? target.x : 0;
               const ty = target ? target.y : 0;
-              spawnAoeEffect(scene, tx, ty, 50, 0xff3311, 600);
+              spawnAoeEffect(scene, tx, ty, 80, 0xff3311, 600);
               break;
             }
-            case 'Frost Nova': {
+            case 'Blizzard': {
               const ax = attacker ? attacker.x : (target ? target.x : 0);
               const ay = attacker ? attacker.y : (target ? target.y : 0);
-              spawnAoeEffect(scene, ax, ay, 80, 0x44ddff, 700);
+              spawnAoeEffect(scene, ax, ay, 120, 0x44ddff, 700);
+              break;
+            }
+            case 'Chain Lightning': {
+              if (target) {
+                spawnAoeEffect(scene, target.x, target.y, 20, 0xffff44, 400);
+              }
               break;
             }
             case 'Arrow Volley': {

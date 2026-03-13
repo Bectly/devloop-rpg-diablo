@@ -82,10 +82,10 @@ describe('DamageTypes', () => {
       expect(SKILL_DAMAGE_TYPES['Battle Shout']).toBe('physical');
     });
 
-    it('mage skills: Fireball=fire, Frost Nova=cold, Teleport=physical', () => {
-      expect(SKILL_DAMAGE_TYPES['Fireball']).toBe('fire');
-      expect(SKILL_DAMAGE_TYPES['Frost Nova']).toBe('cold');
-      expect(SKILL_DAMAGE_TYPES['Teleport']).toBe('physical');
+    it('mage skills: Meteor Strike=fire, Blizzard=cold, Chain Lightning=fire', () => {
+      expect(SKILL_DAMAGE_TYPES['Meteor Strike']).toBe('fire');
+      expect(SKILL_DAMAGE_TYPES['Blizzard']).toBe('cold');
+      expect(SKILL_DAMAGE_TYPES['Chain Lightning']).toBe('fire');
     });
 
     it('ranger skills: Arrow Volley=physical, Sniper Shot=physical, Shadow Step=physical', () => {
@@ -197,8 +197,8 @@ describe('DamageTypes', () => {
   // ── getSkillDamageType ──────────────────────────────────────────
   describe('getSkillDamageType', () => {
     it('returns correct type for known skills', () => {
-      expect(getSkillDamageType('Fireball')).toBe('fire');
-      expect(getSkillDamageType('Frost Nova')).toBe('cold');
+      expect(getSkillDamageType('Meteor Strike')).toBe('fire');
+      expect(getSkillDamageType('Blizzard')).toBe('cold');
       expect(getSkillDamageType('Sniper Shot')).toBe('physical');
       expect(getSkillDamageType('Whirlwind')).toBe('physical');
     });

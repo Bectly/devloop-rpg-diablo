@@ -327,21 +327,21 @@ const MAGE_TREE = {
       {
         id: 'mage_pyromancer_t3',
         name: 'Fire Mastery',
-        description: 'Fireball explosion radius +15% per rank.',
+        description: 'Meteor Strike explosion radius +15% per rank.',
         tier: 3,
         maxRank: 2,
         effects: [
-          { type: 'skill_upgrade', skill: 'Fireball', property: 'radius_percent', value: 15, per_rank: true }
+          { type: 'skill_upgrade', skill: 'Meteor Strike', property: 'radius_percent', value: 15, per_rank: true }
         ]
       },
       {
         id: 'mage_pyromancer_t4',
         name: 'Inferno',
-        description: 'Fireball leaves burning ground for 3s dealing fire DoT.',
+        description: 'Meteor Strike leaves burning ground for 3s dealing fire DoT.',
         tier: 4,
         maxRank: 1,
         effects: [
-          { type: 'skill_upgrade', skill: 'Fireball', property: 'burning_ground', value: 1, duration: 3000, damage_per_tick: 8, tick_interval: 500, per_rank: false }
+          { type: 'skill_upgrade', skill: 'Meteor Strike', property: 'burning_ground', value: 1, duration: 3000, damage_per_tick: 8, tick_interval: 500, per_rank: false }
         ]
       }
     ]
@@ -385,11 +385,11 @@ const MAGE_TREE = {
       {
         id: 'mage_frost_t4',
         name: 'Blizzard',
-        description: 'Frost Nova also deals sustained damage over 3s after the initial hit.',
+        description: 'Blizzard also deals sustained damage over 3s after the initial hit.',
         tier: 4,
         maxRank: 1,
         effects: [
-          { type: 'skill_upgrade', skill: 'Frost Nova', property: 'dot_after', value: 1, duration: 3000, damage_per_tick: 6, tick_interval: 500, per_rank: false }
+          { type: 'skill_upgrade', skill: 'Blizzard', property: 'dot_after', value: 1, duration: 3000, damage_per_tick: 6, tick_interval: 500, per_rank: false }
         ]
       }
     ]

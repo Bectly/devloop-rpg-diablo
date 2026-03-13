@@ -22,7 +22,7 @@ function applyShatter(damage, player, target) {
  * @returns {number} final damage value
  */
 function calcSkillDamage(player, skill, baseDmg, monster) {
-  const isSpell = skill.name === 'Fireball' || skill.name === 'Frost Nova';
+  const isSpell = skill.useSpellPower === true;
 
   // Set bonus: spell damage
   if (isSpell && player.setBonuses && player.setBonuses.spellDamagePercent) {
@@ -166,7 +166,7 @@ function handleSkillKill(player, monster, results, partyBuffs) {
 
 /**
  * AOE skill: damage all monsters within skill.radius.
- * Spells (Fireball, Frost Nova) use spellPower; others use attackPower.
+ * Spells (useSpellPower=true) use spellPower; others use attackPower.
  * Applies stun/slow effects based on skill.effect / skill.duration.
  */
 function executeAoe(player, skill, monsters, partyBuffs, skillDamageType) {
@@ -178,7 +178,7 @@ function executeAoe(player, skill, monsters, partyBuffs, skillDamageType) {
     const dy = monster.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist <= skill.radius) {
-      const isSpell = skill.name === 'Fireball' || skill.name === 'Frost Nova';
+      const isSpell = skill.useSpellPower === true;
       let baseDmg = isSpell
         ? Math.floor(player.spellPower * skill.damage)
         : Math.floor(player.attackPower * skill.damage);
@@ -791,6 +791,207 @@ function executeShadowStep(player, skill, monsters, allPlayers) {
   return results;
 }
 
+/**
+ * Meteor Strike: fire a projectile that explodes on impact (AOE).
+ * Emits projectile:create event with aoeRadius. Uses spellPower.
+ */
+function executeMeteor(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+
+  // Find nearest monster to aim at
+  let targetAngle;
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
+    if (dist <= skill.range && dist < nearestDist) {
+      nearest = monster;
+      nearestDist = dist;
+    }
+  }
+
+  if (nearest) {
+    targetAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+  } else {
+    const dirMap = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
+    targetAngle = dirMap[player.facing] || 0;
+  }
+
+  const projDamage = Math.floor(player.spellPower * skill.damage);
+
+  results.push({
+    type: 'projectile:create',
+    ownerId: player.id,
+    x: player.x,
+    y: player.y,
+    angle: targetAngle,
+    speed: skill.speed || 350,
+    damage: projDamage,
+    damageType: skillDamageType,
+    piercing: false,
+    aoeRadius: skill.aoeRadius || 80,
+    visual: 'fireball',
+    skillName: skill.name,
+  });
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'meteor_cast',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    angle: targetAngle,
+  });
+
+  return results;
+}
+
+/**
+ * Blizzard: AOE around player with multiple damage ticks + slow.
+ * Uses spellPower. Hits all monsters in radius, applies slow.
+ */
+function executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+
+  results.push({
+    type: 'effect:spawn',
+    effectType: 'blizzard',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    radius: skill.radius,
+    hits: skill.hits,
+  });
+
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dx = monster.x - player.x;
+    const dy = monster.y - player.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > skill.radius) continue;
+
+    for (let hit = 0; hit < skill.hits; hit++) {
+      if (!monster.alive) break;
+      let baseDmg = Math.floor(player.spellPower * skill.damage);
+      baseDmg = calcSkillDamage(player, skill, baseDmg, monster);
+      const dealt = monster.takeDamage(baseDmg);
+      applyLifesteal(player, dealt);
+
+      results.push({
+        type: 'combat:hit',
+        attackerId: player.id,
+        targetId: monster.id,
+        targetName: monster.name,
+        damage: dealt,
+        damageType: skillDamageType,
+        isCrit: false,
+        skillName: skill.name,
+        hitIndex: hit,
+        targetHp: monster.hp,
+        targetMaxHp: monster.maxHp,
+      });
+
+      if (!monster.alive) {
+        handleSkillKill(player, monster, results, partyBuffs);
+      }
+    }
+
+    // Apply slow after all hits
+    if (monster.alive && skill.effect === 'slow') {
+      monster.applySlow(skill.duration);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Chain Lightning: bounces between targets with damage falloff.
+ * Uses spellPower. Finds nearest target, chains to next nearest within chainRange.
+ */
+function executeChain(player, skill, monsters, partyBuffs, skillDamageType) {
+  const results = [];
+  const hitIds = new Set();
+
+  // Find initial target (nearest within range)
+  let current = null;
+  let currentDist = Infinity;
+  for (const monster of monsters) {
+    if (!monster.alive) continue;
+    const dist = Math.sqrt((monster.x - player.x) ** 2 + (monster.y - player.y) ** 2);
+    if (dist <= skill.range && dist < currentDist) {
+      current = monster;
+      currentDist = dist;
+    }
+  }
+
+  if (!current) return results;
+
+  let currentDamage = Math.floor(player.spellPower * skill.damage);
+  let sourceX = player.x;
+  let sourceY = player.y;
+  let bounceCount = 0;
+
+  while (current && bounceCount < (skill.maxBounces || 4)) {
+    hitIds.add(current.id);
+
+    let dmg = currentDamage;
+    dmg = calcSkillDamage(player, skill, dmg, current);
+    const dealt = current.takeDamage(dmg);
+    applyLifesteal(player, dealt);
+
+    results.push({
+      type: 'combat:hit',
+      attackerId: player.id,
+      targetId: current.id,
+      targetName: current.name,
+      damage: dealt,
+      damageType: skillDamageType,
+      isCrit: false,
+      skillName: skill.name,
+      bounceIndex: bounceCount,
+      targetHp: current.hp,
+      targetMaxHp: current.maxHp,
+    });
+
+    // Chain lightning arc visual
+    results.push({
+      type: 'effect:spawn',
+      effectType: 'chain_lightning',
+      fromX: sourceX,
+      fromY: sourceY,
+      toX: current.x,
+      toY: current.y,
+      bounceIndex: bounceCount,
+    });
+
+    if (!current.alive) {
+      handleSkillKill(player, current, results, partyBuffs);
+    }
+
+    // Find next target within chainRange
+    sourceX = current.x;
+    sourceY = current.y;
+    currentDamage = Math.floor(currentDamage * (skill.falloff || 0.5));
+    bounceCount++;
+
+    let next = null;
+    let nextDist = Infinity;
+    for (const monster of monsters) {
+      if (!monster.alive || hitIds.has(monster.id)) continue;
+      const dist = Math.sqrt((monster.x - sourceX) ** 2 + (monster.y - sourceY) ** 2);
+      if (dist <= (skill.chainRange || 120) && dist < nextDist) {
+        next = monster;
+        nextDist = dist;
+      }
+    }
+    current = next;
+  }
+
+  return results;
+}
+
 // ── Main entry ──────────────────────────────────────────────────────
 
 /**
@@ -848,6 +1049,15 @@ function executeSkill(combat, player, skillIndex, monsters, allPlayers) {
       break;
     case 'shadow_step':
       results = executeShadowStep(player, skill, monsters, allPlayers);
+      break;
+    case 'meteor':
+      results = executeMeteor(player, skill, monsters, partyBuffs, skillDamageType);
+      break;
+    case 'blizzard':
+      results = executeBlizzard(player, skill, monsters, partyBuffs, skillDamageType);
+      break;
+    case 'chain':
+      results = executeChain(player, skill, monsters, partyBuffs, skillDamageType);
       break;
     default:
       results = [];

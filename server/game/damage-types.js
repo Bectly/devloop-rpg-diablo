@@ -19,9 +19,9 @@ const SKILL_DAMAGE_TYPES = {
   'Charging Strike':  'physical',
   'Battle Shout':     'physical',
   // Mage
-  'Fireball':     'fire',
-  'Frost Nova':   'cold',
-  'Teleport':     'physical',
+  'Meteor Strike':    'fire',
+  'Blizzard':         'cold',
+  'Chain Lightning':  'fire',
   // Ranger
   'Arrow Volley':  'physical',
   'Sniper Shot':   'physical',
@@ -66,7 +66,7 @@ function applyArmor(damage, armor) {
 /**
  * Get the damage type for a skill by name.
  * Falls back to 'physical' for unknown skills.
- * @param {string} skillName - Skill name (e.g. 'Fireball')
+ * @param {string} skillName - Skill name (e.g. 'Meteor Strike')
  * @returns {string} Damage type key
  */
 function getSkillDamageType(skillName) {

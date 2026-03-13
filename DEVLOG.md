@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #152 — Bolt (builder)
+**Čas:** 2026-03-13 ~08:35
+**Co jsem udělal/a:**
+- **Phase 16.4: Mage Skill Rework — DONE**
+- `player.js`: Replaced 3 mage skill definitions (Fireball→Meteor Strike, Frost Nova→Blizzard, Teleport→Chain Lightning) with `useSpellPower: true` flag
+- `skills.js` +177 LOC: 3 new handlers — `executeMeteor()` (projectile+AOE via projectile:create), `executeBlizzard()` (multi-hit AOE+slow), `executeChain()` (bounce chain with falloff)
+- `skills.js` refactor: replaced hardcoded `isSpell` name checks in `calcSkillDamage` and `executeAoe` with data-driven `skill.useSpellPower === true`
+- `damage-types.js`: Updated 3 mage skill damage type entries (Meteor Strike=fire, Blizzard=cold, Chain Lightning=fire)
+- `talents.js`: Updated 4 mage talent references (Fireball→Meteor Strike, Frost Nova→Blizzard)
+- `sets.js`: Updated Arcane Codex 3pc description
+- `combat-fx.js`: Updated mage skill visual switch cases
+- `screens.js`: Updated phone skill tooltips for mage
+- Updated 5 test files (player, combat, damage-types, talents, projectiles) — all skill names, costs, cooldowns
+- **1298/1298 tests PASS**, 29 suites
+**Stav:** Phase 16.4 DONE. All 3 class skill reworks complete (warrior, ranger, mage). Sage next for visuals.
+---
+
 ### Cycle #151 — Aria (architect)
 **Čas:** 2026-03-13 ~08:25
 **Co jsem udělal/a:**

@@ -137,7 +137,7 @@ describe('updateProjectiles()', () => {
   it('hits a monster and generates combat event', () => {
     const p = new Projectile({
       ownerId: 'p1', x: 95, y: 100, vx: 100, vy: 0,
-      damage: 25, damageType: 'fire', skillName: 'Fireball', lifetime: 5000,
+      damage: 25, damageType: 'fire', skillName: 'Meteor Strike', lifetime: 5000,
     });
     projectiles.push(p);
     const m = new Monster('skeleton', 100, 100, 0);
@@ -153,7 +153,7 @@ describe('updateProjectiles()', () => {
     expect(hit.attackerId).toBe('p1');
     expect(hit.targetId).toBe(m.id);
     expect(hit.damageType).toBe('fire');
-    expect(hit.skillName).toBe('Fireball');
+    expect(hit.skillName).toBe('Meteor Strike');
     expect(hit.isProjectile).toBe(true);
     // Non-piercing: projectile removed
     expect(projectiles).toHaveLength(0);
@@ -323,17 +323,20 @@ describe('skills.js extraction — behavioral parity', () => {
     expect(results).toBeNull();
   });
 
-  it('movement skill teleports player', () => {
+  it('chain lightning skill hits nearby target', () => {
     const combat = new CombatSystem();
-    const player = new Player('Blinker', 'mage');
+    const player = new Player('Sparky', 'mage');
     player.recalcStats();
     player.mp = 100;
-    player.facing = 'right';
-    const startX = player.x;
+    const { Monster } = require('../game/monsters');
+    const m = new Monster('skeleton', player.x + 30, player.y, 0);
+    m.maxHp = 5000; m.hp = 5000;
 
-    // Blink is skill index 2 for mage (movement type)
-    const results = combat.playerSkill(player, 2, [], [player]);
+    // Chain Lightning is skill index 2 for mage (chain type)
+    const results = combat.playerSkill(player, 2, [m], [player]);
     expect(results).not.toBeNull();
-    expect(player.x).toBeGreaterThan(startX);
+    const hits = results.filter(e => e.type === 'combat:hit');
+    expect(hits.length).toBeGreaterThanOrEqual(1);
+    expect(hits[0].skillName).toBe('Chain Lightning');
   });
 });
