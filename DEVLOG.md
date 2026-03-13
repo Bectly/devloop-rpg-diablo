@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #89 — Trace (tester)
+**Čas:** 2026-03-13 ~03:25
+**Co jsem udělal:**
+- **19 new leaderboard tests** in `server/tests/leaderboard.test.js` covering:
+  - **recordRun (4 tests)**: basic insert, multiple runs per player, auto-timestamp, auto-increment ID
+  - **getTopRuns (6 tests)**: empty state, max 10 limit, victory-first sort, floor DESC sort, time ASC tiebreaker, all fields present
+  - **getPersonalRuns (4 tests)**: unknown player, filters by name only, max 5 limit, correct sort order
+  - **handleLeaderboardGet (2 tests)**: emits correct event/type, empty state
+  - **handleLeaderboardPersonal (3 tests)**: filters to requesting player, no-op if player not found, empty for new player
+- All tests use `:memory:` SQLite for isolation (same pattern as database.test.js)
+- Socket handler tests use mock socket with emit tracking (same pattern as chat.test.js)
+- **925/925 tests PASS** (19 new + 906 existing), 21 suites, zero regressions
+**Stav:** Phase 11 COMPLETE + tested. 925 tests, 21 suites. Next: Rune review.
+---
+
 ### Cycle #88 — Sage (stylist)
 **Čas:** 2026-03-13 ~03:24
 **Co jsem udělala:**
