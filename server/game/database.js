@@ -61,6 +61,7 @@ class GameDatabase {
         keystones INTEGER NOT NULL DEFAULT 0,
         paragon_level INTEGER NOT NULL DEFAULT 0,
         paragon_xp INTEGER NOT NULL DEFAULT 0,
+        loot_filter TEXT NOT NULL DEFAULT 'off',
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
@@ -106,6 +107,7 @@ class GameDatabase {
     if (!cols.includes('paragon_level')) this.db.exec("ALTER TABLE characters ADD COLUMN paragon_level INTEGER NOT NULL DEFAULT 0");
     if (!cols.includes('paragon_xp'))    this.db.exec("ALTER TABLE characters ADD COLUMN paragon_xp INTEGER NOT NULL DEFAULT 0");
     if (!cols.includes('hardcore'))      this.db.exec("ALTER TABLE characters ADD COLUMN hardcore INTEGER NOT NULL DEFAULT 0");
+    if (!cols.includes('loot_filter'))  this.db.exec("ALTER TABLE characters ADD COLUMN loot_filter TEXT NOT NULL DEFAULT 'off'");
   }
 
   _prepareStatements() {
@@ -113,11 +115,11 @@ class GameDatabase {
       INSERT OR REPLACE INTO characters
         (name, class, level, xp, stats, equipment, inventory, gold, floor, kills,
          health_potions, mana_potions, free_stat_points, talents, keystones,
-         paragon_level, paragon_xp, hardcore, updated_at)
+         paragon_level, paragon_xp, hardcore, loot_filter, updated_at)
       VALUES
         (@name, @class, @level, @xp, @stats, @equipment, @inventory, @gold, @floor, @kills,
          @health_potions, @mana_potions, @free_stat_points, @talents, @keystones,
-         @paragonLevel, @paragonXp, @hardcore, datetime('now'))
+         @paragonLevel, @paragonXp, @hardcore, @lootFilter, datetime('now'))
     `);
 
     this._stmtLoad = this.db.prepare(`
@@ -236,6 +238,7 @@ class GameDatabase {
       paragonLevel: player.paragonLevel || 0,
       paragonXp: player.paragonXp || 0,
       hardcore: player.hardcore ? 1 : 0,
+      lootFilter: player.lootFilter || 'off',
     });
   }
 
@@ -290,6 +293,7 @@ class GameDatabase {
       paragonLevel: row.paragon_level || 0,
       paragonXp: row.paragon_xp || 0,
       hardcore: row.hardcore === 1,
+      lootFilter: row.loot_filter || 'off',
     };
   }
 

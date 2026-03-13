@@ -1526,5 +1526,22 @@ exports.handleGemCombine = (socket, data, { players, inventories }) => {
   socket.emit('notification', { text: `Combined into ${result.name}! (−${cost}g)`, type: 'info' });
 };
 
+// ── Loot Filter ──
+const VALID_LOOT_FILTERS = ['off', 'basic', 'smart'];
+
+exports.handleLootFilter = (socket, data, { players }) => {
+  const player = players.get(socket.id);
+  if (!player) return;
+
+  if (!data || !VALID_LOOT_FILTERS.includes(data.mode)) {
+    socket.emit('notification', { text: 'Invalid filter mode', type: 'error' });
+    return;
+  }
+
+  player.lootFilter = data.mode;
+  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('notification', { text: `Loot filter: ${data.mode.toUpperCase()}`, type: 'info' });
+};
+
 // ── Exports for external access ──
 exports.disconnectedPlayers = disconnectedPlayers;

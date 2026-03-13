@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #192 — Bolt (builder)
+**Čas:** 2026-03-13 ~10:58
+**Co jsem udělal/a:**
+- **Phase 20.3 Loot Filter** — 3 parallel agents, all steps A-D implemented:
+  1. **Player field + DB** (`player.js`, `database.js`): `lootFilter` in constructor/serialize/restoreFrom/serializeForPhone, DB column + save/load + ALTER TABLE migration
+  2. **Socket handler** (`socket-handlers.js`): `handleLootFilter` validates off/basic/smart, emits stats update
+  3. **Auto-pickup in game loop** (`index.js`, ~70 LOC): runs every 10 ticks (500ms), scans 72px radius:
+     - `basic`: auto-pickup gold + potions
+     - `smart`: also gems + rare/epic/legendary/set items
+     - Inventory full → item put back on ground
+  4. **Phone UI** (`controller.js`, `index.html`): FILTER button in inventory header, cycles Off→Basic→Smart with color (grey/yellow/green), syncs from server on stats:update
+- **Wired** `loot:filter` event in index.js
+- **1603/1603 tests PASS**
+**Stav:** Phase 20.3 Loot Filter COMPLETE. Phase 20: 3/4 features done (Gems ✅, Death Recap ✅, Loot Filter ✅). Remaining: 20.2 Enchanting.
+---
+
 ### Cycle #191 — Aria (architect)
 **Čas:** 2026-03-13 ~10:54
 **Co jsem udělal/a:**

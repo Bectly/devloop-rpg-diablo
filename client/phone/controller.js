@@ -43,6 +43,7 @@ let notificationCount = 0;
 let shopData = null;
 let questData = [];
 let stashData = [];
+let currentLootFilter = 'off';
 // encounteredElites moved to reconnect.js (Reconnect.encounteredElites)
 
 // ─── DOM Elements ───────────────────────────────────────────────
@@ -117,6 +118,7 @@ socket.on('joined', (data) => {
   currentFloor = data.floor || 0;
   currentFloorName = data.floorName || '';
   questData = data.quests || [];
+  if (data.stats && data.stats.lootFilter) currentLootFilter = data.stats.lootFilter;
   Screens.setQuestContext(questData, socket);
 
   joinScreen.classList.add('hidden');
@@ -220,6 +222,11 @@ socket.on('stats:update', (data) => {
   playerStats = data;
   updateHUD(data);
   if (data.keystones !== undefined) RiftUI.updateKeystones(data.keystones);
+  // Sync loot filter mode from server
+  if (data.lootFilter) {
+    currentLootFilter = data.lootFilter;
+    if (typeof updateFilterButton === 'function') updateFilterButton();
+  }
 });
 
 socket.on('inventory:update', (data) => {
@@ -990,6 +997,30 @@ function initButtons() {
   if (gemsBtn) {
     gemsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showGemCombinePanel(); });
     gemsBtn.addEventListener('click', () => showGemCombinePanel());
+  }
+
+  // Loot Filter — cycles off → basic → smart → off
+  const filterBtn = document.getElementById('loot-filter-btn');
+  if (filterBtn) {
+    const FILTER_MODES = ['off', 'basic', 'smart'];
+    const FILTER_COLORS = { off: '#666', basic: '#ffdd44', smart: '#44ff44' };
+    const FILTER_LABELS = { off: 'FILTER', basic: 'BASIC', smart: 'SMART' };
+
+    window.updateFilterButton = function updateFilterButton() {
+      filterBtn.textContent = FILTER_LABELS[currentLootFilter] || 'FILTER';
+      filterBtn.style.color = FILTER_COLORS[currentLootFilter] || '#666';
+    };
+
+    function cycleLootFilter() {
+      const idx = FILTER_MODES.indexOf(currentLootFilter);
+      currentLootFilter = FILTER_MODES[(idx + 1) % FILTER_MODES.length];
+      socket.emit('loot:filter', { mode: currentLootFilter });
+      updateFilterButton();
+    }
+
+    filterBtn.addEventListener('touchstart', (e) => { e.preventDefault(); cycleLootFilter(); });
+    filterBtn.addEventListener('click', cycleLootFilter);
+    updateFilterButton();
   }
 }
 

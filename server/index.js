@@ -167,6 +167,7 @@ controllerNs.on('connection', (socket) => {
   socket.on('gem:socket', (data) => handlers.handleGemSocket(socket, data, ctx));
   socket.on('gem:unsocket', (data) => handlers.handleGemUnsocket(socket, data, ctx));
   socket.on('gem:combine', (data) => handlers.handleGemCombine(socket, data, ctx));
+  socket.on('loot:filter', (data) => handlers.handleLootFilter(socket, data, ctx));
 
   // ── New Game (restart after victory) ──
   socket.on('game:restart', (data) => {
@@ -1220,6 +1221,78 @@ function gameLoop() {
 
   // ── Auto-save every 60 seconds ──
   tickCount++;
+
+  // ── Loot filter: auto-pickup ──
+  if (tickCount % 10 === 0) {
+    const AUTO_PICKUP_RADIUS = 72; // 1.5 tiles
+    const RARE_PLUS = new Set(['rare', 'epic', 'legendary', 'set']);
+
+    for (const [pid, player] of players) {
+      if (!player.alive || player.lootFilter === 'off') continue;
+
+      const inv = inventories.get(player.id);
+      const sock = controllerNs.sockets.get(pid);
+      if (!sock) continue;
+
+      // Scan ground items within radius
+      const nearby = [];
+      for (const gi of world.groundItems) {
+        const dx = gi.x - player.x;
+        const dy = gi.y - player.y;
+        if (dx * dx + dy * dy <= AUTO_PICKUP_RADIUS * AUTO_PICKUP_RADIUS) {
+          nearby.push(gi);
+        }
+      }
+
+      for (const gi of nearby) {
+        const item = gi.item;
+        let shouldPickup = false;
+
+        if (player.lootFilter === 'basic') {
+          // Basic: gold + potions only
+          shouldPickup = item.type === 'currency' ||
+            item.subType === 'health_potion' ||
+            item.subType === 'mana_potion';
+        } else if (player.lootFilter === 'smart') {
+          // Smart: gold + potions + rare+ items + gems
+          shouldPickup = item.type === 'currency' ||
+            item.subType === 'health_potion' ||
+            item.subType === 'mana_potion' ||
+            item.type === 'gem' ||
+            RARE_PLUS.has(item.rarity);
+        }
+
+        if (!shouldPickup) continue;
+
+        // Pickup the item
+        const picked = world.pickupItem(item.id, player.x, player.y, AUTO_PICKUP_RADIUS);
+        if (!picked) continue;
+
+        if (picked.type === 'currency') {
+          player.gold += picked.quantity;
+          sock.emit('notification', { text: `+${picked.quantity} gold`, type: 'gold' });
+        } else if (picked.subType === 'health_potion') {
+          player.healthPotions += picked.quantity;
+          sock.emit('notification', { text: `+${picked.quantity} Health Potion`, type: 'info' });
+        } else if (picked.subType === 'mana_potion') {
+          player.manaPotions += picked.quantity;
+          sock.emit('notification', { text: `+${picked.quantity} Mana Potion`, type: 'info' });
+        } else {
+          // Equipment/gem → inventory
+          if (!inv) continue;
+          const result = inv.addItem(picked);
+          if (result.success) {
+            sock.emit('notification', { text: `Auto: ${picked.name}`, type: picked.rarity || 'info' });
+            sock.emit('inventory:update', inv.serialize());
+          } else {
+            // Put back if inventory full
+            world.addGroundItem(picked, player.x, player.y);
+          }
+        }
+      }
+    }
+  }
+
   if (tickCount % (TICK_RATE * 60) === 0) {
     saveAllPlayers();
     // Notify phones that progress was saved

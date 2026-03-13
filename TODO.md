@@ -2099,7 +2099,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 **Files:** `server/game/world.js`, `server/socket-handlers.js`, `client/phone/controller.js`
 
-### 20.3 Loot Filter ⭐ NEXT [for Bolt, Cycle #192]
+### 20.3 Loot Filter ✅ DONE [Bolt, Cycle #192]
 **Auto-pickup and visual filtering — reduces phone tedium.**
 
 **Step A: Player preference** (`server/game/player.js`)
@@ -2154,7 +2154,7 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 3. ~~**20.1 C+E+F**~~ ✅ Socket handlers + gem drops + gem combining (Bolt, Cycle #187)
 4. ~~**20.1 D**~~ ✅ Socket UI — tooltip, gem picker, unsocket (Sage #183 + JARVIS #32)
 5. ~~**20.1 Testing**~~ ✅ 43 handler tests (Trace, Cycle #189) — 1603 total
-6. **20.3** Loot Filter — ⭐ Bolt (Cycle #192), 3 parallel agents
+6. ~~**20.3**~~ ✅ Loot Filter — Bolt (Cycle #192)
 7. **20.2** Enchanting — Bolt (last, builds on gem/item work)
 8. Visual polish — Sage
 9. Review — Rune

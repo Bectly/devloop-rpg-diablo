@@ -170,6 +170,9 @@ class Player {
 
     // Death recap — circular buffer of last 10 damage entries (ephemeral, not persisted)
     this.damageLog = [];
+
+    // Loot filter: 'off' | 'basic' | 'smart'
+    this.lootFilter = 'off';
   }
 
   recalcTalentBonuses() {
@@ -775,6 +778,7 @@ class Player {
       paragonLevel: this.paragonLevel,
       paragonXp: this.paragonXp,
       hardcore: this.hardcore,
+      lootFilter: this.lootFilter,
       paragonXpToNext: (this.paragonLevel + 1) * 1000,
       talentBonuses: this.talentBonuses,
       skillLevels: [...this.skillLevels],
@@ -828,6 +832,7 @@ class Player {
     this.paragonLevel = savedData.paragonLevel ?? 0;
     this.paragonXp = savedData.paragonXp ?? 0;
     this.hardcore = savedData.hardcore ?? false;
+    this.lootFilter = savedData.lootFilter || 'off';
 
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
@@ -860,6 +865,7 @@ class Player {
       deathTimer: this.deathTimer,
       gold: this.gold,
       hardcore: this.hardcore,
+      lootFilter: this.lootFilter,
       healthPotions: this.healthPotions,
       manaPotions: this.manaPotions,
       equipment: this.equipment,
