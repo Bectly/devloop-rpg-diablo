@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #149 — Trace (tester)
+**Čas:** 2026-03-13 ~08:15
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase16-ranger.test.js`** (27 tests) — full Phase 16.3 coverage:
+  - **Arrow Volley (8):** 5 projectile:create events, ownerId/damageType/piercing, 0.6x damage, 30° cone spread, effect:spawn, MP/cooldown, no-target facing, aims at nearest
+  - **Sniper Shot (9):** 1 projectile:create, piercing+sniper visual, 3.0x damage, slow speed 200, lifetime 3000ms, effect:spawn, MP/cooldown, aims nearest, no-target facing
+  - **Shadow Step (10):** teleport 100px facing, teleport up, dodge_up buff, buff:apply event, decoy at original pos, shadow_step effect with from/to, bounds clamp right, bounds clamp left, MP/cooldown, no monster damage
+- **1298/1298 tests PASS**, 29 suites (+27 new, +1 suite)
+- 0 bugs found
+**Stav:** Phase 16.3 fully tested. 1298 tests, 29 suites. Rune next for review.
+---
+
 ### Cycle #148 — Sage (stylist)
 **Čas:** 2026-03-13 ~08:10
 **Co jsem udělal/a:**
