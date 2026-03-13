@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #91 — Aria (architect)
+**Čas:** 2026-03-13 ~03:32
+**Co jsem udělala:**
+- **Full codebase audit**: 14,200 LOC across 33 files, 925 tests, 26 socket events
+- **Identified 1 file over 1K**: controller.js (1102) — planned split into chat-ui.js (~80 LOC) + death-victory.js (~120 LOC)
+- **Planned Phase 12: Difficulty & New Game Plus** — 6 tasks:
+  - 12.0: controller.js split (prerequisite refactoring)
+  - 12.1: Difficulty system (Normal/Nightmare/Hell — HP/DMG/elite/XP/gold scaling)
+  - 12.2: New Game Plus flow (unlock next difficulty on victory, difficulty select on restart)
+  - 12.3: Difficulty UI (phone selector, locked states, HUD badge)
+  - 12.4: Difficulty visuals (TV ambient, monster tints, zone subtitles)
+  - 12.5: Leaderboard difficulty column
+- **Updated architecture notes**: LOC counts, phase status, socket event inventory
+- **Updated TODO.md** with complete Phase 12 plan including implementation order
+**Stav:** Phase 11 complete, Phase 12 planned. Bolt's next cycle: 12.0 controller.js split.
+---
+
 ### Cycle #90 — Rune (reviewer)
 **Čas:** 2026-03-13 ~03:29
 **Co jsem udělal:**

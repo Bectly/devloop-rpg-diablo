@@ -408,11 +408,12 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 
 ---
 
-## Architecture Notes (Updated Cycle #66)
-**Current LOC:** ~22,850 source JS (50 files). All source files under 1000 LOC. Largest: controller.js 988, monsters.js 952, hud.js 887, socket-handlers.js 886, game.js 861, world.js 829, sprites.js 822, index.js 801, screens.js 770. New: stats-ui.js 215, combat-fx.js 189, effects.js 184.
-**Tests:** 925/925 PASS, 21 suites (19 leaderboard tests added Cycle #89).
-**Splits done:** hud.js 1284→807 (victory.js 339, dialogue-hud.js 153), controller.js 1183→988→~1070 (reconnect.js 119, stats-ui.js 215), game.js 1231→861 (effects.js 184, combat-fx.js 189). All clean.
-**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). **Traps:** complete (Cycles #77-80). **Chat:** complete (Cycles #82-85). 0 open bugs, 0 security issues.
+## Architecture Notes (Updated Cycle #91)
+**Current LOC:** ~14,200 source JS (33 files). 1 file over 1000 LOC: controller.js (1102).
+**Tests:** 925/925 PASS, 21 suites.
+**Approaching 1K:** hud.js (971), monsters.js (952), socket-handlers.js (925), screens.js (923).
+**Phases 1-11 COMPLETE.** 0 open bugs, 0 security issues.
+**Socket events:** 26 registered (gameplay 5, inventory 5, interact 4, NPC 5, crafting 5, social 3, admin+lifecycle 3).
 
 ---
 
@@ -795,7 +796,93 @@ Leaderboard overlay + table styles. Follow craft/shop pattern. Gold/green accent
 4. ~~**11.6** Refactoring~~ ✅ DONE
 5. ~~**11.2** Chat~~ ✅ DONE
 6. ~~**11.3** Leaderboard~~ ✅ DONE
-7. **11.7** Leaderboard polish (Sage) — review styling, victory screen link
+7. ~~**11.7** Leaderboard polish~~ ✅ DONE (Sage Cycle #88)
+
+---
+
+## 🔥 NEXT PRIORITIES (Phase 12: Difficulty & New Game Plus)
+
+**Goal:** Endgame content loop. After beating the dungeon, players can restart at higher difficulty with scaling rewards. Drives replayability beyond the first victory.
+
+### 12.0 Refactoring: controller.js split [for Bolt]
+**Why:** controller.js at 1102 LOC — only file over 1000 threshold.
+
+Extract `client/phone/chat-ui.js` (~80 LOC):
+- `showChatMessage()`, `renderChatMessages()`, `sendChat()`, `toggleChatInput()`, chatMessages array, MAX_CHAT_DISPLAY
+- Pattern: IIFE module, `ChatUI.init(socket)` for deferred binding
+- controller.js drops to ~1020 LOC
+
+Extract `client/phone/death-victory.js` (~120 LOC):
+- `showDeathScreen()`, `hideDeathScreen()`, death countdown logic
+- `showVictoryScreen()`, `hideVictoryScreen()`, victory button wiring
+- Pattern: IIFE module, `DeathVictory.init(socket)` for socket binding
+- controller.js drops to ~900 LOC
+
+Update phone index.html script tags (before controller.js).
+
+### 12.1 Difficulty System — Server [for Bolt]
+**File:** `server/game/world.js` (add difficulty scaling)
+
+**Difficulty levels:**
+| Difficulty | Monster HP | Monster DMG | Elite % | XP Mult | Gold Mult | Loot Tier | Unlock |
+|-----------|-----------|------------|---------|---------|-----------|-----------|--------|
+| Normal | 1.0x | 1.0x | base | 1.0x | 1.0x | base | Default |
+| Nightmare | 1.5x | 1.3x | +10% | 1.5x | 1.5x | +1 | Beat Normal |
+| Hell | 2.5x | 1.8x | +20% | 2.5x | 2.0x | +2 | Beat Nightmare |
+
+**Implementation:**
+- `ctx.difficulty = 'normal'|'nightmare'|'hell'` — stored in game state
+- `world.generateFloor()` receives difficulty → scales monster stats
+- Monster constructor: `hp *= difficultyScale.hp`, `damage *= difficultyScale.dmg`
+- Elite spawn chance: `baseChance + difficultyBonus`
+- Loot generation: `effectiveFloor = floor + difficultyTierBonus`
+- Player unlock tracking: `player.unlockedDifficulties = ['normal']` persisted in DB
+
+### 12.2 New Game Plus — Server [for Bolt]
+**Files:** `server/index.js` (game:restart), `server/socket-handlers.js`, `server/game/database.js`
+
+On victory → unlock next difficulty. On `game:restart`:
+- Emit `difficulty:select` to controller (Normal / Nightmare / Hell buttons)
+- Controller sends back `game:restart_with_difficulty { difficulty: 'nightmare' }`
+- Server validates player has unlocked that difficulty
+- Generate dungeon with selected difficulty scaling
+
+**Database changes:**
+- Add `unlocked_difficulties TEXT DEFAULT '["normal"]'` to characters table
+- Save/load in `saveCharacter()`/`loadCharacter()`
+- OR store in leaderboard (victory at difficulty X → unlock X+1)
+
+### 12.3 Difficulty UI — Phone [for Sage]
+**Files:** `client/phone/controller.js`, `client/phone/style.css`
+
+- Difficulty selector on victory screen (replace simple NEW GAME button)
+- 3 buttons: Normal (gray), Nightmare (orange, locked if not unlocked), Hell (red, locked)
+- Current difficulty badge on HUD status bar
+- Locked difficulties show lock icon + "Beat [previous] to unlock"
+
+### 12.4 Difficulty Visual Scaling — TV [for Sage]
+**Files:** `client/tv/game.js`, `client/tv/hud.js`
+
+- Nightmare: Darker ambient, red-tinted monsters, "Nightmare" zone subtitle
+- Hell: Black ambient, fire particles everywhere, "Hell" zone subtitle, boss HP bars red
+- Difficulty badge on TV HUD (top-right corner)
+
+### 12.5 Leaderboard — Difficulty Tracking [for Bolt]
+**File:** `server/game/database.js`
+
+Add `difficulty` column to leaderboard table:
+```sql
+ALTER TABLE leaderboard ADD COLUMN difficulty TEXT DEFAULT 'normal';
+```
+- Top runs sorted by: difficulty DESC, victory DESC, floor DESC, time ASC
+- Phone leaderboard shows difficulty badge per entry
+
+### Implementation Order for Bolt:
+1. **12.0** controller.js split (prerequisite — quick, 30 min)
+2. **12.1** Difficulty scaling in world.js + monsters.js (core feature)
+3. **12.2** New Game Plus flow (game:restart + DB)
+4. **12.5** Leaderboard difficulty column
+5. **12.3-12.4** UI/visuals (Sage's domain)
 
 ---
 
