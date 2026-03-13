@@ -755,11 +755,11 @@ socket.on('quest:update', (quests) => {
   Screens.setQuestContext(questData, socket);
 
   if (newlyCompleted.length > 0) {
-    // Flash the QST button only for genuinely new completions
-    const qstBtn = document.getElementById('btn-quests');
-    if (qstBtn) {
-      qstBtn.classList.add('quest-flash');
-      setTimeout(() => qstBtn.classList.remove('quest-flash'), 1500);
+    // Flash the menu button to indicate quest completion
+    const menuBtn = document.getElementById('btn-menu');
+    if (menuBtn) {
+      menuBtn.classList.add('quest-flash');
+      setTimeout(() => menuBtn.classList.remove('quest-flash'), 1500);
     }
   }
   // If quest screen is visible, re-render
@@ -1113,84 +1113,81 @@ function initButtons() {
     socket.emit('loot:pickup_nearest');
   });
 
-  // Inventory
-  document.getElementById('btn-inventory').addEventListener('touchstart', (e) => {
+  // ── Menu Drawer Toggle ──
+  const menuDrawer = document.getElementById('menu-drawer');
+  const menuOverlay = document.getElementById('menu-drawer-overlay');
+
+  document.getElementById('btn-menu').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    openInventory();
+    hapticFeedback();
+    menuDrawer.classList.toggle('hidden');
   });
-  document.getElementById('btn-inventory').addEventListener('click', () => {
-    openInventory();
+  document.getElementById('btn-menu').addEventListener('click', () => {
+    menuDrawer.classList.toggle('hidden');
   });
 
-  // Quests
-  document.getElementById('btn-quests').addEventListener('touchstart', (e) => {
+  menuOverlay.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    Screens.toggleQuestLog();
+    menuDrawer.classList.add('hidden');
   });
-  document.getElementById('btn-quests').addEventListener('click', (e) => {
-    e.preventDefault();
-    Screens.toggleQuestLog();
+  menuOverlay.addEventListener('click', () => {
+    menuDrawer.classList.add('hidden');
   });
 
-  // Crafting
-  document.getElementById('btn-craft').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    Screens.toggleCrafting(inventoryData, socket, hapticFeedback, () => {});
-  });
-  document.getElementById('btn-craft').addEventListener('click', () => {
-    Screens.toggleCrafting(inventoryData, socket, hapticFeedback, () => {});
-  });
-
-  // Chat toggle
-  const chatBtn = document.getElementById('btn-chat');
-  if (chatBtn) {
-    chatBtn.addEventListener('touchstart', (e) => {
+  // ── Menu Items — wire data-action to existing logic ──
+  document.querySelectorAll('.menu-item').forEach(btn => {
+    btn.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      ChatUI.toggleChatInput();
+      hapticFeedback();
+      menuDrawer.classList.add('hidden');
+      handleMenuAction(btn.dataset.action);
     });
-    chatBtn.addEventListener('click', () => ChatUI.toggleChatInput());
+    btn.addEventListener('click', () => {
+      menuDrawer.classList.add('hidden');
+      handleMenuAction(btn.dataset.action);
+    });
+  });
+
+  function handleMenuAction(action) {
+    switch (action) {
+      case 'inventory':
+        openInventory();
+        break;
+      case 'quests':
+        Screens.toggleQuestLog();
+        break;
+      case 'craft':
+        Screens.toggleCrafting(inventoryData, socket, hapticFeedback, () => {});
+        break;
+      case 'talents':
+        Sound.uiClick();
+        TalentsUI.show();
+        break;
+      case 'rift':
+        Sound.uiClick();
+        RiftUI.show();
+        break;
+      case 'chat':
+        ChatUI.toggleChatInput();
+        break;
+      case 'leaderboard':
+        Screens.toggleLeaderboard(socket);
+        break;
+    }
   }
 
-  // Talents
-  const tlnBtn = document.getElementById('btn-talents');
-  if (tlnBtn) {
-    tlnBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      Sound.uiClick();
-      TalentsUI.show();
-    });
-    tlnBtn.addEventListener('click', () => { Sound.uiClick(); TalentsUI.show(); });
-  }
+  // Talent close button (still in talent-screen HTML)
   const talentClose = document.getElementById('talent-close');
   if (talentClose) {
     talentClose.addEventListener('touchstart', (e) => { e.preventDefault(); TalentsUI.hide(); });
     talentClose.addEventListener('click', () => TalentsUI.hide());
   }
 
-  // Rift
-  const riftBtn = document.getElementById('btn-rift');
-  if (riftBtn) {
-    riftBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      Sound.uiClick();
-      RiftUI.show();
-    });
-    riftBtn.addEventListener('click', () => { Sound.uiClick(); RiftUI.show(); });
-  }
+  // Rift close button (still in rift-screen HTML)
   const riftClose = document.getElementById('rift-close');
   if (riftClose) {
     riftClose.addEventListener('touchstart', (e) => { e.preventDefault(); RiftUI.hide(); });
     riftClose.addEventListener('click', () => RiftUI.hide());
-  }
-
-  // Leaderboard
-  const ldbBtn = document.getElementById('btn-leaderboard');
-  if (ldbBtn) {
-    ldbBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      Screens.toggleLeaderboard(socket);
-    });
-    ldbBtn.addEventListener('click', () => Screens.toggleLeaderboard(socket));
   }
 
   // Stash — accessible from inventory header tab

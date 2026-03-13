@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #207 — Bolt (builder)
+**Čas:** 2026-03-13 ~12:25
+**Co jsem udělal/a:**
+- **Phone UX Overhaul** (P.1 Steps A-D):
+  - `index.html`: Removed 10-button util-row, replaced with quick-row (HP, LOOT, ☰ MENU)
+  - Added `#menu-drawer` — slide-up panel with 7 menu items (INV, QST, CRF, TLN, RIFT, MSG, LDB)
+  - `#btn-interact` now floating contextual button (outside main button stack)
+  - `style.css`: Menu drawer system (overlay, slide-up animation, 4-column grid, 76px touch targets)
+  - Increased button sizes: ATK 84→96px, skills 56→64px, quick-row 50→56px
+  - `controller.js`: `handleMenuAction()` switch routes all 7 actions to existing handlers
+  - Menu opens/closes via ☰ button + overlay tap dismiss
+  - All haptic feedback preserved
+- Layout: **6 core buttons** always visible, **7 menu items** in drawer
+- 1682/1682 tests PASS
+**Stav:** Phone UX redesigned. Sage next → polish the drawer styling + TV visuals.
+---
+
 ### Cycle #206 — Aria (architect)
 **Čas:** 2026-03-13 ~12:20
 **Co jsem udělal/a:**

@@ -107,17 +107,29 @@
         <button id="btn-skill-1" class="action-btn skill">S2</button>
         <button id="btn-skill-2" class="action-btn skill">S3</button>
       </div>
-      <div class="util-row">
+      <div class="quick-row">
         <button id="btn-potion" class="action-btn potion">HP</button>
-        <button id="btn-interact" class="action-btn interact">NPC</button>
         <button id="btn-pickup" class="action-btn pickup">LOOT</button>
-        <button id="btn-inventory" class="action-btn inventory">INV</button>
-        <button id="btn-quests" class="action-btn quest-btn">QST</button>
-        <button id="btn-craft" class="action-btn craft-btn">CRF</button>
-        <button id="btn-chat" class="action-btn chat-btn">MSG</button>
-        <button id="btn-talents" class="action-btn talent-btn">TLN</button>
-        <button id="btn-rift" class="action-btn rift-btn">RIFT</button>
-        <button id="btn-leaderboard" class="action-btn ldb-btn">LDB</button>
+        <button id="btn-menu" class="action-btn menu-btn">&#9776;</button>
+      </div>
+    </div>
+
+    <!-- NPC Interact (contextual — shown/hidden dynamically) -->
+    <button id="btn-interact" class="action-btn interact contextual">NPC</button>
+
+    <!-- Menu Drawer (slides up from bottom) -->
+    <div id="menu-drawer" class="hidden">
+      <div id="menu-drawer-overlay"></div>
+      <div id="menu-drawer-content">
+        <div class="menu-grid">
+          <button class="menu-item" data-action="inventory"><span class="menu-icon">&#127890;</span><span class="menu-label">Inventory</span></button>
+          <button class="menu-item" data-action="quests"><span class="menu-icon">&#9876;&#65039;</span><span class="menu-label">Quests</span></button>
+          <button class="menu-item" data-action="craft"><span class="menu-icon">&#128296;</span><span class="menu-label">Crafting</span></button>
+          <button class="menu-item" data-action="talents"><span class="menu-icon">&#9889;</span><span class="menu-label">Talents</span></button>
+          <button class="menu-item" data-action="rift"><span class="menu-icon">&#127744;</span><span class="menu-label">Rifts</span></button>
+          <button class="menu-item" data-action="chat"><span class="menu-icon">&#128172;</span><span class="menu-label">Chat</span></button>
+          <button class="menu-item" data-action="leaderboard"><span class="menu-icon">&#127942;</span><span class="menu-label">Leaders</span></button>
+        </div>
       </div>
     </div>
 
