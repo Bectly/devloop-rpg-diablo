@@ -2506,44 +2506,76 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 ---
 
-## 🔥 Phase 23: Gameplay Polish & Playability
+## Phase 23: Gameplay Polish & Playability ✅ MOSTLY COMPLETE
 
-**Goal:** Make this feel like a real game. Smooth camera, proper minimap interaction, better monster spawning, balanced pacing.
+**Done (Cycles #217-220):**
+- [x] 23.1A: Smooth camera lerp (0.08 damping, midpoint tracking)
+- [x] 23.1B: Dynamic zoom (1.0→0.6 based on player distance)
+- [x] 23.1C: Screen shake (8-tier intensity, boss/crit/death)
+- [x] 23.2B: Monster aggro range (192px, sticky flag, boss unlimited)
+- [x] 23.2C: Monster patrol (wander 2 tiles around spawn, 30% speed)
+- [x] 23.3A: Auto gold pickup (40px radius, every 5 ticks)
+- [x] 23.4C: Floor progress indicator ("F3/7" on phone HUD)
+- [x] 23.5: Debug logs removed from player.js
 
-### 23.1 Camera & Viewport [for Sage — PRIORITY]
-**Problem:** Camera needs to feel smooth and centered on the action.
+**Remaining → rolled into Phase 24:**
+- 23.2A: Staggered spawn animation
+- 23.3B: XP curve balancing
+- 23.3C: Potion drop rate
+- 23.4A: Damage type icons on monster HP bars
+- 23.4B: Auto-equip better items
 
-- [ ] **A:** Smooth camera lerp — camera follows midpoint between players with damping (lerp 0.08), not instant snap
-- [ ] **B:** Camera zoom based on player distance — zoom out when players are far apart, zoom in when close
-- [ ] **C:** Screen shake on big hits — boss attacks, player crits, explosions. Scale by damage amount.
+---
 
-### 23.2 Monster Spawn Improvements [for Bolt]
-**Problem:** Monsters appear instantly, all at once. Feels artificial.
+## 🔥 Phase 24: Multiplayer Experience & Final Polish
 
-- [ ] **A:** Staggered spawn — monsters appear 0.2s apart with a "rising from ground" animation cue (emit event with spawn delay)
-- [ ] **B:** Monster aggro range — monsters only chase players within 6 tiles (~192px). Beyond that, patrol/idle. Currently ALL monsters in room chase immediately.
-- [ ] **C:** Monster patrol — idle monsters wander slowly in small radius (2 tiles) around spawn point instead of standing still
+**Goal:** Make two-player co-op feel seamless. Fix remaining QoL from Phase 23. Ensure the game is fully playable end-to-end from any device on the local network.
 
-### 23.3 Loot & Gold Balancing [for Bolt]
-**Problem:** Economy might be unbalanced for a new playthrough. Need to verify pacing.
+### 24.1 Multiplayer Connectivity [for Bolt — PRIORITY]
+**Problem:** Players connect from different devices on LAN. Connection needs to be bulletproof.
 
-- [ ] **A:** Auto-pickup gold — gold drops are auto-collected when player walks over them (no LOOT button needed). Already have auto-loot filter, extend to gold always.
-- [ ] **B:** XP curve review — verify leveling feels right for 7 floors. Currently XP per kill and per level?
-- [ ] **C:** Potion drop rate — ensure enough potions drop naturally. Players shouldn't run out if they play well.
+- [ ] **A:** Connection status indicator on phone — show socket state (connected/reconnecting/disconnected) in HUD corner. Green dot = connected, yellow = reconnecting, red = disconnected.
+- [ ] **B:** Ping display — measure round-trip latency every 5s, show in phone HUD (e.g. "42ms"). Server responds to `ping` with `pong`.
+- [ ] **C:** Auto-reconnect toast — when socket reconnects, show brief "Reconnected!" toast instead of silent recovery.
 
-### 23.4 Quality of Life [for Bolt]
-- [ ] **A:** Show damage type icons on monster health bars (fire=🔥, ice=❄️, poison=☠️)
-- [ ] **B:** Auto-equip better items option — compare and equip if clearly better (higher stat total)
-- [ ] **C:** Floor progress indicator on phone — "Floor 3/7" always visible
+### 24.2 Staggered Monster Spawns [for Bolt — carried from 23.2A]
+**Problem:** All monsters in a room appear instantly when floor loads. Feels artificial.
 
-### 23.5 Remove Debug Logs [for Rune]
-- [ ] Remove `[WALL]` and `[COLLISION]` console.warn/log from player.js (added for debugging)
+- [ ] **A:** Server-side spawn delay — when spawning room monsters, assign `spawnDelay` (0, 200ms, 400ms...) per monster. Monster with delay is `spawning=true` (invulnerable, no AI, no collision). After delay → `spawning=false`, emit `monster:spawned` event.
+- [ ] **B:** TV spawn animation — on `monster:spawned` event, play "rising from ground" effect: sprite scales from 0→1 over 300ms with shadow expanding, dust particles at feet.
+- [ ] **C:** Cursed event waves also use staggered spawns — each wave spawns monsters 0.3s apart.
+
+### 24.3 Balancing Pass [for Bolt]
+**Problem:** Economy and progression pacing untested for full 7-floor playthrough.
+
+- [ ] **A:** XP curve audit — log XP gains per floor, verify player reaches ~level 12-15 by floor 7. Adjust `XP_PER_LEVEL` or `BASE_XP` if needed.
+- [ ] **B:** Potion drop rate — ensure 1 potion drops per ~3-4 monster kills on average. Check `CONSUMABLE_DROP_CHANCE` in items.js and adjust if needed.
+- [ ] **C:** Gold scaling — verify shop prices vs gold earned per floor. Player should afford 2-3 gambles per floor.
+
+### 24.4 TV Visual Polish [for Sage]
+**Problem:** Small visual improvements that add up to a much better TV experience.
+
+- [ ] **A:** Damage type icons on monster HP bars — show small colored icon next to monster name: physical=sword, fire=flame, cold=snowflake, poison=skull, lightning=bolt. Use emoji or procedural shapes.
+- [ ] **B:** Loot beam effect — rare+ items on ground get a vertical beam of light in their rarity color (like Diablo 3). Use Phaser Graphics: thin line upward + glow.
+- [ ] **C:** Monster spawn shadow — dark circle expands on floor before monster appears (pairs with 24.2B). Makes dungeons feel alive.
+
+### 24.5 Phone QoL [for Sage]
+**Problem:** Phone controller needs final touch-ups for comfortable long sessions.
+
+- [ ] **A:** Auto-equip toggle — button in inventory screen. Compare total stat value of new item vs equipped in same slot, equip if better. Notification: "Equipped Iron Sword (+12 ATK)".
+- [ ] **B:** Quick-compare tooltip — tapping an inventory item shows side-by-side comparison with currently equipped item in that slot (green = better, red = worse per stat).
+- [ ] **C:** Skill damage preview — skill tooltips show actual damage numbers based on current stats (not just base values). e.g. "Fireball: 245 fire damage (INT: 52)".
+
+### 24.6 Code Quality [for Rune — from 22.4]
+- [ ] **A:** Consolidate armor formula — combat.js and monsters.js both have `1 - armor/(armor+50)`. Extract to `damage-types.js:applyArmor()` (already exists, just unused).
+- [ ] **B:** Replace magic numbers in game-loop.js — `20` → `TICK_RATE`, `50` → `TICK_MS`, define at top.
+- [ ] **C:** ChatUI.init(socket) missing in controller.js — chat module never gets socket reference, chat send is silently broken.
 
 **Agent assignments:**
-1. Bolt: 23.2 (monster spawns) + 23.3 (balancing) + 23.4 (QoL)
-2. Sage: 23.1 (camera polish)
-3. Trace: test all changes
-4. Rune: review + remove debug logs (23.5)
+1. Bolt: 24.1 (connectivity) + 24.2 (staggered spawns) + 24.3 (balancing)
+2. Sage: 24.4 (TV visuals) + 24.5 (phone QoL)
+3. Trace: test all changes, verify full 7-floor playthrough
+4. Rune: 24.6 (code quality) + review all changes
 
 ---
 

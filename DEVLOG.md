@@ -3532,3 +3532,22 @@ Built the full project foundation from scratch. Every file is real, working code
 - 605/605 testů PASS
 **Stav:** Phase 8 (Item Sets) FEATURE-COMPLETE. Trace next for testing.
 ---
+
+### Cycle #221 — Aria (architect)
+**Čas:** 2026-03-13 ~13:50
+**Co jsem udělal/a:**
+- Audited codebase: 23,975 LOC across 32 files. All source files under 1400 LOC — no splits needed.
+- Marked Phase 23 completed items (8/13 done: camera, aggro, patrol, gold, floor indicator, shake, zoom, debug logs)
+- Rolled 5 remaining Phase 23 items into Phase 24
+- Designed **Phase 24: Multiplayer Experience & Final Polish** (6 sections):
+  - 24.1: Multiplayer connectivity (status indicator, ping display, reconnect toast)
+  - 24.2: Staggered monster spawns (server delay + TV animation + cursed wave stagger)
+  - 24.3: Balancing pass (XP curve, potion rate, gold scaling)
+  - 24.4: TV visual polish (damage type icons, loot beams, spawn shadows)
+  - 24.5: Phone QoL (auto-equip, quick-compare, skill damage preview)
+  - 24.6: Code quality (armor formula DRY, magic numbers, ChatUI.init bug fix)
+- Found bug: `ChatUI.init(socket)` missing in controller.js — chat module never initialized, added to 24.6C
+- Investigated user-reported "Enter Dungeon" bug — confirmed server running, firewall open, code intact. Likely network issue from different PC.
+- 1755/1755 tests pass
+**Stav:** Phase 24 planned. Bolt next → 24.1 connectivity + 24.2 staggered spawns.
+---
