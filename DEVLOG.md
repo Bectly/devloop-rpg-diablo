@@ -1,5 +1,14 @@
 # DevLoop RPG — Development Log
 
+### Cycle #218 — Sage (stylist)
+**Čas:** 2026-03-13 ~13:35
+**Co jsem udělal/a:**
+- **Smooth camera lerp** (game.js): Camera follows midpoint of alive players with 0.08 lerp damping. Holds position if no alive players.
+- **Dynamic zoom** (game.js): 2-player spread tracking — zooms from 1.0 (close) to 0.6 (800px+ apart) with 0.05 lerp. Solo lerps back to 1.0.
+- **Screen shake** (combat-fx.js): 8-tier intensity hierarchy from elite death (0.002) to hardcore death (0.008). Boss attacks, crits, boss/elite kills all trigger appropriate shake.
+**Stav:** Phase 23.1 DONE. Camera feels smooth. Trace next.
+---
+
 ### Cycle #217 — Bolt (builder)
 **Čas:** 2026-03-13 ~13:30
 **Co jsem udělal/a:**

@@ -525,22 +525,61 @@ class GameScene extends Phaser.Scene {
     // ── Chat bubbles (hud.js) ──
     HUD.updateChatBubbles(this, state);
 
-    // ── Camera follow with lerp ──
-    if (state.players.length > 0) {
-      let cx = 0, cy = 0;
-      for (const p of state.players) { cx += p.x; cy += p.y; }
-      cx /= state.players.length;
-      cy /= state.players.length;
+    // ── Camera follow with lerp (Phase 23.1) ──
+    {
+      const cam = this.cameras.main;
+      // Only follow alive players (fall back to all players if none alive)
+      const alivePlayers = state.players.filter(p => p.alive !== false && p.hp > 0);
+      const trackPlayers = alivePlayers.length > 0 ? alivePlayers : state.players;
 
-      const worldW = (state.world.gridW || 60) * TILE_SIZE;
-      const worldH = (state.world.gridH || 40) * TILE_SIZE;
-      const targetX = Math.max(GAME_W / 2, Math.min(cx, worldW - GAME_W / 2));
-      const targetY = Math.max(GAME_H / 2, Math.min(cy, worldH - GAME_H / 2));
+      if (trackPlayers.length > 0) {
+        // Camera target = midpoint of all tracked players
+        let cx = 0, cy = 0;
+        let minPX = Infinity, maxPX = -Infinity;
+        let minPY = Infinity, maxPY = -Infinity;
+        for (const p of trackPlayers) {
+          cx += p.x; cy += p.y;
+          if (p.x < minPX) minPX = p.x;
+          if (p.x > maxPX) maxPX = p.x;
+          if (p.y < minPY) minPY = p.y;
+          if (p.y > maxPY) maxPY = p.y;
+        }
+        cx /= trackPlayers.length;
+        cy /= trackPlayers.length;
 
-      // Smooth lerp camera (0.08 factor)
-      this.camTargetX += (targetX - this.camTargetX) * 0.08;
-      this.camTargetY += (targetY - this.camTargetY) * 0.08;
-      this.cameras.main.centerOn(this.camTargetX, this.camTargetY);
+        const worldW = (state.world.gridW || 60) * TILE_SIZE;
+        const worldH = (state.world.gridH || 40) * TILE_SIZE;
+        const targetX = Math.max(GAME_W / 2, Math.min(cx, worldW - GAME_W / 2));
+        const targetY = Math.max(GAME_H / 2, Math.min(cy, worldH - GAME_H / 2));
+
+        // Smooth lerp camera position (0.08 = smooth damping)
+        this.camTargetX += (targetX - this.camTargetX) * 0.08;
+        this.camTargetY += (targetY - this.camTargetY) * 0.08;
+        cam.centerOn(this.camTargetX, this.camTargetY);
+
+        // ── Dynamic zoom based on player distance ──
+        if (trackPlayers.length >= 2) {
+          const dx = maxPX - minPX;
+          const dy = maxPY - minPY;
+          const spread = Math.max(dx, dy);
+
+          const minZoom = 0.6;
+          const maxZoom = 1.0;
+          const zoomThreshold = 300;
+          const zoomMaxDist = 800;
+
+          let targetZoom = maxZoom;
+          if (spread > zoomThreshold) {
+            const t = Math.min((spread - zoomThreshold) / (zoomMaxDist - zoomThreshold), 1);
+            targetZoom = maxZoom - t * (maxZoom - minZoom);
+          }
+          cam.zoom += (targetZoom - cam.zoom) * 0.05;
+        } else {
+          // Solo player: lerp back to 1.0
+          cam.zoom += (1.0 - cam.zoom) * 0.05;
+        }
+      }
+      // If no players at all, camera stays where it is (no snap to 0,0)
     }
 
     // ── Fog of War + Torch Lighting + Ambient Particles (lighting.js) ──

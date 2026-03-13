@@ -730,8 +730,19 @@ const CombatFX = (() => {
           || state.players?.find(p => p.id === ev.targetId);
         if (target) {
           HUD.spawnDamageText(scene, target.x || 0, (target.y || 0) - 30, ev.damage, ev.isCrit, ev.dodged, null, ev.damageType);
+
+          // ── Screen shake on significant hits (Phase 23.1) ──
           if (ev.isCrit) {
-            scene.cameras.main.shake(200, 0.003);
+            // Player critical hit
+            scene.cameras.main.shake(100, 0.003);
+          }
+          // Boss attack hitting a player — heavier shake
+          const isPlayerTarget = state.players?.some(p => p.id === ev.targetId);
+          if (isPlayerTarget && ev.attackerId) {
+            const attackingMonster = state.world.monsters?.find(m => m.id === ev.attackerId);
+            if (attackingMonster && attackingMonster.isBoss) {
+              scene.cameras.main.shake(150, 0.005);
+            }
           }
         }
 
@@ -820,11 +831,20 @@ const CombatFX = (() => {
           }
         }
       }
-      if (ev.type === 'combat:death' && ev.keystoneReward) {
-        const killer = state.players?.find(p => p.id === ev.killedBy);
-        const rx = killer ? killer.x : GAME_W / 2;
-        const ry = killer ? killer.y : GAME_H / 2;
-        HUD.showKeystoneNotification(scene, rx, ry, ev.keystoneReward);
+      if (ev.type === 'combat:death') {
+        // Keystone notification
+        if (ev.keystoneReward) {
+          const killer = state.players?.find(p => p.id === ev.killedBy);
+          const rx = killer ? killer.x : GAME_W / 2;
+          const ry = killer ? killer.y : GAME_H / 2;
+          HUD.showKeystoneNotification(scene, rx, ry, ev.keystoneReward);
+        }
+        // Screen shake on boss/elite death (Phase 23.1)
+        if (ev.isBoss) {
+          scene.cameras.main.shake(200, 0.006);
+        } else if (ev.isElite) {
+          scene.cameras.main.shake(80, 0.002);
+        }
       }
       if (ev.type === 'combat:proc') {
         const target = state.world.monsters?.find(m => m.id === ev.targetId)
