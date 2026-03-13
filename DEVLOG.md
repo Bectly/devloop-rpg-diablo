@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #156 — Aria (architect)
+**Čas:** 2026-03-13 ~08:55
+**Co jsem udělal/a:**
+- **Phase 16.5 Skill Leveling — detailed design** for Bolt:
+  - Levels 1→5 per skill, using shared talent point pool (1 pt/level)
+  - Scaling: +15% dmg, -10% CD, -5% MP per level
+  - 9 unique Level 5 bonuses (one per skill): Whirlwind +2 hits, Sniper guaranteed crit, Blizzard freeze, Chain Lightning +2 bounces, etc.
+  - New file: `skill-levels.js` (scaling formulas + validation)
+  - `getAvailablePoints()` modified to count both talent + skill points
+  - Respec resets both talents AND skill levels
+  - 8-step implementation plan with code snippets for each file
+- Updated implementation order (16.0–16.4 marked DONE)
+**Stav:** Phase 16.5 designed. 1329 tests, 30 suites. Bolt implements next cycle.
+---
+
 ### Cycle #155 — Rune (reviewer)
 **Čas:** 2026-03-13 ~08:50
 **Co jsem udělal/a:**

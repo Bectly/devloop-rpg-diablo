@@ -1751,22 +1751,123 @@ This lets TV client differentiate friendly wolves visually.
 - [x] 31 tests (phase16-mage.test.js), 1329/1329 PASS
 - [x] Review: dead teleport code removed, stale SPEC.md fixed
 
-### 16.5 Skill Leveling [for Bolt]
-**Integration with Talent System (Phase 13):**
-- Each skill gets levels 1-5
-- Spend talent points to level skills (alternative to passive talents)
-- Level scaling: damage +15%, cooldown -10%, mana cost -5% per level
-- Level 5 bonus: unique modifier (Whirlwind pulls enemies, Arrow Rain poisons, Meteor shatters frozen)
+### 16.5 Skill Leveling [for Bolt — TOP PRIORITY]
 
-**Player.js changes:**
-```javascript
-this.skillLevels = [1, 1, 1]; // default level 1
-// In allocateSkillPoint(skillIndex):
-if (this.freeStatPoints > 0 && this.skillLevels[skillIndex] < 5) {
-  this.skillLevels[skillIndex]++;
-  this.freeStatPoints--;
-}
-```
+**Design:** Each skill levels 1→5 using **talent points** (shared pool with passive talents). Players choose between passive talents and raw skill power. Cost: 1 talent point per level (4 pts to max one skill, 12 pts for all 3).
+
+**Scaling per level:**
+| Level | Damage | Cooldown | MP Cost | Special |
+|-------|--------|----------|---------|---------|
+| 1 | 1.0x (base) | 100% | 100% | — |
+| 2 | 1.15x | 90% | 95% | — |
+| 3 | 1.30x | 80% | 90% | — |
+| 4 | 1.45x | 70% | 85% | — |
+| 5 | 1.60x | 60% | 80% | **Unique bonus** |
+
+**Level 5 unique bonuses:**
+| Skill | Bonus |
+|-------|-------|
+| Whirlwind | +2 hits (3→5) |
+| Charging Strike | 1s stun on impact |
+| Battle Shout | +5% crit to party |
+| Arrow Volley | +2 arrows (5→7) |
+| Sniper Shot | Guaranteed crit |
+| Shadow Step | 2 decoys instead of 1 |
+| Meteor Strike | Burning ground DOT (3s, 0.5x spellPower/tick) |
+| Blizzard | Freeze instead of slow (2s) |
+| Chain Lightning | +2 max bounces (4→6) |
+
+**Implementation order for Bolt:**
+
+1. **`server/game/skill-levels.js`** — NEW file (~80 LOC):
+   ```javascript
+   const SKILL_LEVEL_SCALING = { damage: 0.15, cooldown: -0.10, mpCost: -0.05 };
+   const MAX_SKILL_LEVEL = 5;
+   const LEVEL_5_BONUSES = { /* per skill name */ };
+
+   function getScaledSkill(skill, level) {
+     // Returns copy of skill with damage/cooldown/mpCost scaled
+     // At level 5, merges LEVEL_5_BONUSES properties
+   }
+
+   function canLevelUp(player, skillIndex) {
+     // Check: level < 5, has available talent points
+     // Available = player.level - totalTalentPoints - totalSkillPoints
+   }
+
+   function getSkillPointsSpent(skillLevels) {
+     // Sum of (level - 1) for each skill (base level 1 costs nothing)
+     return skillLevels.reduce((sum, lv) => sum + (lv - 1), 0);
+   }
+
+   module.exports = { getScaledSkill, canLevelUp, getSkillPointsSpent, MAX_SKILL_LEVEL, LEVEL_5_BONUSES };
+   ```
+
+2. **`server/game/player.js`** — Add skillLevels:
+   - Constructor: `this.skillLevels = [1, 1, 1];`
+   - New method `levelUpSkill(skillIndex)` — validates, increments, returns true/false
+   - `serializeForPhone()` — add `skillLevels` to output
+   - `serialize()` — add `skillLevels` to output
+   - **IMPORTANT:** `getAvailablePoints()` in talents.js must account for skill point spend
+
+3. **`server/game/talents.js`** — Modify `getAvailablePoints()`:
+   ```javascript
+   // Currently: level - Object.values(talents).reduce(...)
+   // New: level - talentPointsSpent - skillPointsSpent
+   function getAvailablePoints(level, talents, skillLevels = [1, 1, 1]) {
+     const talentSpent = Object.values(talents).reduce((s, r) => s + r, 0);
+     const skillSpent = getSkillPointsSpent(skillLevels);
+     return Math.max(0, level - talentSpent - skillSpent);
+   }
+   ```
+   - `respec()` must ALSO reset skillLevels → return `{ talents: {}, skillLevels: [1, 1, 1] }`
+
+4. **`server/game/skills.js`** — Apply level scaling in damage + execution:
+   - `calcSkillDamage()` — multiply baseDmg by `1 + (level - 1) * 0.15`
+   - `executeSkill()` — compute effective cooldown/mpCost from level:
+     ```javascript
+     const level = player.skillLevels[skillIndex] || 1;
+     const effectiveMP = Math.floor(skill.mpCost * (1 - (level - 1) * 0.05));
+     const effectiveCD = Math.floor(skill.cooldown * (1 - (level - 1) * 0.10));
+     ```
+   - Each handler checks Level 5 bonus:
+     - `executeSpin`: `if (level >= 5) skill.hits += 2;`
+     - `executeCharge`: `if (level >= 5) results.push(stunEvent);`
+     - `executeVolley`: `if (level >= 5) projectileCount += 2;`
+     - etc.
+
+5. **`server/socket-handlers.js`** — New handler:
+   ```javascript
+   handleSkillLevelUp(socket, { skillIndex }, { players }) {
+     const player = players.get(socket.id);
+     // Validate: 0 <= skillIndex <= 2, level < 5, has available points
+     // Increment player.skillLevels[skillIndex]
+     // Send updated stats + talent tree (available points changed)
+   }
+   ```
+   - Register: `socket.on('skill:level-up', ...)`
+   - Modify `handleTalentRespec`: also reset `player.skillLevels = [1, 1, 1]`
+   - Modify `handleTalentAllocate`: pass `player.skillLevels` to `getAvailablePoints()`
+   - Modify `handleTalentTree`: include `skillLevels` in response
+
+6. **`server/index.js`** — Wire socket event:
+   ```javascript
+   socket.on('skill:level-up', (data) => handleSkillLevelUp(socket, data, context));
+   ```
+
+7. **`client/phone/screens.js`** — Update serialization display:
+   - `showSkillTooltip()` — show current level, damage at current level vs next
+   - Skill buttons — small level badge (L1-L5)
+
+8. **Update existing tests** — `player.test.js`, `talents.test.js`, `skills.js` tests
+
+**Key architecture decisions:**
+- Skill levels stored as array `[1, 1, 1]` matching skill slot indices (not by name — simpler, no lookup needed)
+- Talent points and skill points share ONE pool (`player.level` = total budget)
+- `skill-levels.js` is a pure utility (no state) — scaling formulas + validation
+- Level 5 bonuses modify skill behavior in handlers, NOT skill definitions (definitions stay static)
+- Respec resets BOTH talents AND skill levels (same gold cost)
+- `getScaledSkill()` returns a modified copy — never mutate CLASS_SKILLS originals
 
 ### 16.6 Skill Visuals — TV [for Sage]
 - Projectile sprites: arrow (triangle), fireball (circle + trail), lightning (jagged line)
@@ -1789,15 +1890,15 @@ if (this.freeStatPoints > 0 && this.skillLevels[skillIndex] < 5) {
 - Shadow decoy uses `monster.friendly = true` pattern from spirit wolf
 - Skill leveling shares talent point pool (don't add new currency)
 
-### Implementation Order for Bolt:
-1. **16.0** Extract skill engine → `skills.js` (FIRST — unblocks everything)
-2. **16.1** Projectile system → `projectiles.js` (needed for ranger/mage)
-3. **16.2** Warrior skills (no projectiles needed, can be done before 16.1)
-4. **16.3** Ranger skills (needs projectiles)
-5. **16.4** Mage skills (needs projectiles + ground targeting)
-6. **16.5** Skill leveling (can be done anytime after 16.0)
-
-**Parallelization:** 16.2 + 16.1 can run in parallel. 16.6/16.7 (Sage) can start after 16.2.
+### Implementation Order:
+1. ~~**16.0** Extract skill engine → `skills.js`~~ DONE
+2. ~~**16.1** Projectile system → `projectiles.js`~~ DONE
+3. ~~**16.2** Warrior skills~~ DONE
+4. ~~**16.3** Ranger skills~~ DONE
+5. ~~**16.4** Mage skills~~ DONE
+6. **16.5** Skill leveling ← **NEXT** (Bolt)
+7. **16.6** Skill visuals — TV (Sage, after 16.5)
+8. **16.7** Skill UI — Phone (Sage, after 16.5)
 
 ---
 
