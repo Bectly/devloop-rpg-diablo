@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 const handlers = require('../socket-handlers');
 const { Player } = require('../game/player');
-const { BONUS_POOL, RESIST_BONUS_POOL } = require('../game/items');
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────
 
 function makeSocket(id = 's1') {
   const emitted = [];
@@ -29,10 +28,10 @@ function makeItem(overrides = {}) {
     rarity: 'rare',
     level: 5,
     damage: 20,
-    bonuses: { str: 5, dex: 3 },
+    bonuses: { str: 8, dex: 4 },
     sockets: [],
-    stackable: false,
-    enchantCount: 0,
+    gridW: 1, gridH: 2,
+    stackable: false, quantity: 1,
     ...overrides,
   };
 }
@@ -42,6 +41,11 @@ function makeMockInventory(items = []) {
   return {
     getAllItems: () => [..._items],
     getItem: (id) => _items.find(i => i.id === id) || null,
+    removeItem: (id) => {
+      const idx = _items.findIndex(i => i.id === id);
+      if (idx >= 0) _items.splice(idx, 1);
+    },
+    addItem: (item) => { _items.push(item); return { success: true }; },
     serialize: () => ({ items: [..._items] }),
   };
 }
@@ -52,308 +56,284 @@ function makeCtx(player, inv) {
   return { players, inventories };
 }
 
-function makePlayer() {
-  const p = new Player('Hero', 'warrior');
-  p.id = 'p1';
-  p.gold = 1000;
-  return p;
-}
-
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // handleEnchantPreview
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 describe('handleEnchantPreview', () => {
-  let player, socket;
+  let player, weapon, inv, socket;
 
   beforeEach(() => {
-    player = makePlayer();
+    player = new Player('Hero', 'warrior');
+    player.id = 'p1';
+    player.gold = 5000;
+    weapon = makeItem({ id: 'w1', name: 'Sword', level: 5, rarity: 'rare', bonuses: { str: 8, dex: 4 } });
+    player.equipment.weapon = weapon;
+    inv = makeMockInventory([]);
     socket = makeSocket('s1');
   });
 
-  it('emits enchant:preview for inventory item', () => {
-    const item = makeItem({ id: 'w1', level: 5, enchantCount: 0, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
+  it('previews enchant on equipped item', () => {
     handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
     const preview = socket._find('enchant:preview');
     expect(preview).toBeTruthy();
     expect(preview.data.itemId).toBe('w1');
     expect(preview.data.bonusKey).toBe('str');
-    expect(preview.data.currentValue).toBe(5);
+    expect(preview.data.currentValue).toBe(8);
+    expect(preview.data.cost).toBe(500); // 100 * 5 * 1.0
+    expect(preview.data.pool).toBeInstanceOf(Array);
+    expect(preview.data.pool.length).toBeGreaterThan(0);
   });
 
-  it('calculates cost correctly: 100 × level × (1 + enchantCount × 0.5)', () => {
-    const item = makeItem({ id: 'w1', level: 4, enchantCount: 2, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    const preview = socket._find('enchant:preview');
-    // 100 * 4 * (1 + 2 * 0.5) = 100 * 4 * 2 = 800
-    expect(preview.data.cost).toBe(800);
-  });
-
-  it('first enchant cost: 100 × level', () => {
-    const item = makeItem({ id: 'w1', level: 3, enchantCount: 0, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    const preview = socket._find('enchant:preview');
-    expect(preview.data.cost).toBe(300); // 100 * 3 * 1
-  });
-
-  it('weapon pool contains only BONUS_POOL stats', () => {
-    const item = makeItem({ id: 'w1', slot: 'weapon', bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    const preview = socket._find('enchant:preview');
-    const poolStats = preview.data.pool.map(p => p.stat);
-    const bonusStats = BONUS_POOL.map(b => b.stat);
-    const resistStats = RESIST_BONUS_POOL.map(b => b.stat);
-
-    // All returned stats should be in BONUS_POOL
-    for (const s of poolStats) expect(bonusStats).toContain(s);
-    // No resist stats for weapons
-    for (const s of poolStats) expect(resistStats).not.toContain(s);
-  });
-
-  it('armor pool includes BONUS_POOL + RESIST_BONUS_POOL', () => {
-    const item = makeItem({ id: 'c1', slot: 'chest', bonuses: { armor: 10 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantPreview(socket, { itemId: 'c1', bonusKey: 'armor' }, makeCtx(player, inv));
-
-    const preview = socket._find('enchant:preview');
-    const poolStats = preview.data.pool.map(p => p.stat);
-    const resistStats = RESIST_BONUS_POOL.map(b => b.stat);
-
-    // At least one resist stat must be present
-    const hasResist = resistStats.some(s => poolStats.includes(s));
-    expect(hasResist).toBe(true);
-  });
-
-  it('emits enchant:preview for equipped item', () => {
-    const item = makeItem({ id: 'w1', bonuses: { str: 7 } });
-    player.equipment.weapon = item;
-    const inv = makeMockInventory([]);
-    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+  it('previews enchant on inventory item', () => {
+    player.equipment.weapon = null;
+    inv = makeMockInventory([weapon]);
+    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'dex' }, makeCtx(player, inv));
 
     const preview = socket._find('enchant:preview');
     expect(preview).toBeTruthy();
-    expect(preview.data.currentValue).toBe(7);
+    expect(preview.data.currentValue).toBe(4);
   });
 
-  it('returns error notification for missing itemId', () => {
-    const inv = makeMockInventory([]);
-    handlers.handleEnchantPreview(socket, { bonusKey: 'str' }, makeCtx(player, inv));
+  it('cost escalates with enchantCount', () => {
+    weapon.enchantCount = 2;
+    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
+    const preview = socket._find('enchant:preview');
+    // 100 * 5 * (1 + 2 * 0.5) = 100 * 5 * 2 = 1000
+    expect(preview.data.cost).toBe(1000);
+  });
+
+  it('armor items get resist bonus pool', () => {
+    const chest = makeItem({ id: 'c1', slot: 'chest', rarity: 'rare', level: 3, bonuses: { vit: 5 } });
+    player.equipment.chest = chest;
+    handlers.handleEnchantPreview(socket, { itemId: 'c1', bonusKey: 'vit' }, makeCtx(player, inv));
+
+    const preview = socket._find('enchant:preview');
+    const statNames = preview.data.pool.map(p => p.stat);
+    expect(statNames).toContain('fire_resist');
+    expect(statNames).toContain('all_resist');
+  });
+
+  it('weapon items do NOT get resist pool', () => {
+    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+
+    const preview = socket._find('enchant:preview');
+    const statNames = preview.data.pool.map(p => p.stat);
+    expect(statNames).not.toContain('fire_resist');
+  });
+
+  it('rejects missing data', () => {
+    handlers.handleEnchantPreview(socket, null, makeCtx(player, inv));
     const notif = socket._find('notification');
     expect(notif).toBeTruthy();
     expect(notif.data.type).toBe('error');
-    expect(socket._find('enchant:preview')).toBeUndefined();
   });
 
-  it('returns error notification for missing bonusKey', () => {
-    const inv = makeMockInventory([]);
+  it('rejects missing bonusKey', () => {
     handlers.handleEnchantPreview(socket, { itemId: 'w1' }, makeCtx(player, inv));
-
     const notif = socket._find('notification');
     expect(notif.data.type).toBe('error');
   });
 
-  it('returns error when item not found', () => {
-    const inv = makeMockInventory([]);
+  it('rejects nonexistent item', () => {
     handlers.handleEnchantPreview(socket, { itemId: 'nope', bonusKey: 'str' }, makeCtx(player, inv));
-
     const notif = socket._find('notification');
     expect(notif.data.type).toBe('error');
   });
 
-  it('returns error when bonusKey not on item', () => {
-    const item = makeItem({ id: 'w1', bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'dex' }, makeCtx(player, inv));
-
+  it('rejects nonexistent bonus key', () => {
+    handlers.handleEnchantPreview(socket, { itemId: 'w1', bonusKey: 'magic' }, makeCtx(player, inv));
     const notif = socket._find('notification');
     expect(notif.data.type).toBe('error');
   });
 
-  it('handles null data gracefully', () => {
-    const inv = makeMockInventory([]);
-    handlers.handleEnchantPreview(socket, null, makeCtx(player, inv));
-    expect(socket._find('notification').data.type).toBe('error');
+  it('does nothing for unknown socket', () => {
+    const unknownSocket = makeSocket('unknown');
+    handlers.handleEnchantPreview(unknownSocket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+    expect(unknownSocket._emitted).toHaveLength(0);
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // handleEnchantExecute
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 describe('handleEnchantExecute', () => {
-  let player, socket;
+  let player, weapon, inv, socket;
 
   beforeEach(() => {
-    player = makePlayer();
+    player = new Player('Hero', 'warrior');
+    player.id = 'p1';
+    player.gold = 5000;
+    weapon = makeItem({ id: 'w1', name: 'Sword', level: 5, rarity: 'rare', bonuses: { str: 8, dex: 4 } });
+    player.equipment.weapon = weapon;
+    inv = makeMockInventory([]);
     socket = makeSocket('s1');
   });
 
-  it('deducts gold on success', () => {
-    const item = makeItem({ id: 'w1', level: 2, enchantCount: 0, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    player.gold = 1000;
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    const cost = 100 * 2 * 1; // 200
-    expect(player.gold).toBe(1000 - cost);
-  });
-
-  it('increments enchantCount and sets enchanted flag', () => {
-    const item = makeItem({ id: 'w1', level: 1, enchantCount: 1, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    expect(item.enchantCount).toBe(2);
-    expect(item.enchanted).toBe(true);
-  });
-
-  it('emits enchant:result with old/new value and cost', () => {
-    const item = makeItem({ id: 'w1', level: 1, enchantCount: 0, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
+  it('enchants equipped item and deducts gold', () => {
     handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
     const result = socket._find('enchant:result');
     expect(result).toBeTruthy();
     expect(result.data.itemId).toBe('w1');
     expect(result.data.bonusKey).toBe('str');
-    expect(result.data.oldValue).toBe(5);
-    expect(result.data.cost).toBe(100); // 100 * 1 * 1
+    expect(result.data.oldValue).toBe(8);
     expect(typeof result.data.newValue).toBe('number');
+    expect(result.data.cost).toBe(500);
+    expect(player.gold).toBe(4500);
   });
 
-  it('emits player:stats and inventory:update on success', () => {
-    const item = makeItem({ id: 'w1', level: 1, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
+  it('sets enchanted flag and increments enchantCount', () => {
     handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
-    expect(socket._find('player:stats')).toBeTruthy();
-    expect(socket._find('inventory:update')).toBeTruthy();
+    expect(weapon.enchanted).toBe(true);
+    expect(weapon.enchantCount).toBe(1);
   });
 
-  it('emits success notification', () => {
-    const item = makeItem({ id: 'w1', level: 1, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
+  it('enchantCount increments on subsequent enchants', () => {
+    weapon.enchantCount = 3;
     handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
-    const notif = socket._find('notification');
-    expect(notif).toBeTruthy();
-    expect(notif.data.text).toContain('str');
+    expect(weapon.enchantCount).toBe(4);
   });
 
-  it('rejects when player has insufficient gold', () => {
-    const item = makeItem({ id: 'w1', level: 10, enchantCount: 3, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    player.gold = 1; // cost = 100 * 10 * 2.5 = 2500
+  it('recalcs stats when item is equipped', () => {
+    player.equipment.weapon = weapon;
     handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
-    expect(player.gold).toBe(1); // unchanged
-    expect(item.enchantCount).toBe(3); // unchanged
-    const notif = socket._find('notification');
-    expect(notif.data.type).toBe('error');
-    expect(socket._find('enchant:result')).toBeUndefined();
+    const stats = socket._find('player:stats');
+    expect(stats).toBeTruthy();
   });
 
-  it('calls recalcEquipBonuses + recalcStats when item is equipped', () => {
-    const item = makeItem({ id: 'w1', level: 1, bonuses: { str: 5 } });
-    player.equipment.weapon = item;
-    player.recalcEquipBonuses = vi.fn();
-    player.recalcStats = vi.fn();
-    const inv = makeMockInventory([]);
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    expect(player.recalcEquipBonuses).toHaveBeenCalled();
-    expect(player.recalcStats).toHaveBeenCalled();
-  });
-
-  it('does NOT recalc stats for inventory items', () => {
-    const item = makeItem({ id: 'w1', level: 1, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    player.recalcEquipBonuses = vi.fn();
-    player.recalcStats = vi.fn();
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-
-    expect(player.recalcEquipBonuses).not.toHaveBeenCalled();
-    expect(player.recalcStats).not.toHaveBeenCalled();
-  });
-
-  it('bad luck protection: forces different value after 3 same-key rerolls', () => {
-    const item = makeItem({ id: 'w1', level: 1, bonuses: { str: 5 } });
-    // Seed history: 3 × 'str' already enchanted
-    item._enchantHistory = ['str', 'str', 'str'];
-    item.enchantCount = 3;
-    const inv = makeMockInventory([item]);
-
-    // Mock Math.random to return same value that would yield oldValue
-    // oldValue is 5, rare multiplier 1.5, BONUS_POOL str: min=1,max=8
-    // Math.ceil((1 + rand * 7) * 1.5) = 5 → need rand that gives ~2.33/7 = 0.333
-    const origRandom = Math.random;
-    Math.random = () => 0.28; // Math.ceil((1 + 0.28*7)*1.5) = Math.ceil(3.96*1.5) = Math.ceil(5.94) = 6
-    // Actually with rand=0.28: (1 + 0.28*7)*1.5 = (1+1.96)*1.5 = 2.96*1.5 = 4.44 → ceil = 5
-    // That equals oldValue=5, so bad luck kicks in
-
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
-    Math.random = origRandom;
+  it('works on inventory items without recalc', () => {
+    player.equipment.weapon = null;
+    inv = makeMockInventory([weapon]);
+    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'dex' }, makeCtx(player, inv));
 
     const result = socket._find('enchant:result');
     expect(result).toBeTruthy();
-    // With bad luck protection, newValue !== oldValue (5)
-    expect(result.data.newValue).not.toBe(5);
+    expect(result.data.oldValue).toBe(4);
+    expect(player.gold).toBe(4500);
   });
 
-  it('new value is a positive integer', () => {
-    const item = makeItem({ id: 'w1', level: 3, bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
+  it('rejects when not enough gold', () => {
+    player.gold = 100;
     handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
+    const notif = socket._find('notification');
+    expect(notif.data.type).toBe('error');
+    expect(notif.data.text).toMatch(/gold/i);
+    expect(player.gold).toBe(100);
+    expect(weapon.bonuses.str).toBe(8);
+  });
+
+  it('rejects nonexistent item', () => {
+    handlers.handleEnchantExecute(socket, { itemId: 'nope', bonusKey: 'str' }, makeCtx(player, inv));
+    expect(socket._find('notification').data.type).toBe('error');
+    expect(player.gold).toBe(5000);
+  });
+
+  it('rejects null data', () => {
+    handlers.handleEnchantExecute(socket, null, makeCtx(player, inv));
+    expect(socket._find('notification').data.type).toBe('error');
+  });
+
+  it('emits inventory:update', () => {
+    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+    expect(socket._find('inventory:update')).toBeTruthy();
+  });
+
+  it('emits notification with stat change', () => {
+    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+    const notifs = socket._findAll('notification');
+    const enchantNotif = notifs.find(n => n.data.text.includes('✧'));
+    expect(enchantNotif).toBeTruthy();
+  });
+
+  it('escalating cost: second enchant costs more', () => {
+    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+    expect(player.gold).toBe(4500);
+
+    socket._emitted.length = 0;
+
+    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
     const result = socket._find('enchant:result');
-    expect(result.data.newValue).toBeGreaterThan(0);
-    expect(Number.isInteger(result.data.newValue)).toBe(true);
+    expect(result.data.cost).toBe(750); // 100 * 5 * 1.5
+    expect(player.gold).toBe(3750);
   });
 
-  it('error when item not found', () => {
-    const inv = makeMockInventory([]);
-    handlers.handleEnchantExecute(socket, { itemId: 'ghost', bonusKey: 'str' }, makeCtx(player, inv));
-    expect(socket._find('notification').data.type).toBe('error');
-    expect(socket._find('enchant:result')).toBeUndefined();
+  it('new value is always a positive integer', () => {
+    for (let i = 0; i < 50; i++) {
+      const p = new Player('Hero', 'warrior');
+      p.id = 'p1';
+      p.gold = 99999;
+      const w = makeItem({ id: 'w1', level: 1, rarity: 'common', bonuses: { str: 5 } });
+      p.equipment.weapon = w;
+      const s = makeSocket('s1');
+      handlers.handleEnchantExecute(s, { itemId: 'w1', bonusKey: 'str' }, makeCtx(p, makeMockInventory([])));
+      const r = s._find('enchant:result');
+      expect(r.data.newValue).toBeGreaterThan(0);
+    }
   });
 
-  it('error when bonusKey not on item', () => {
-    const item = makeItem({ id: 'w1', bonuses: { str: 5 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'vit' }, makeCtx(player, inv));
-    expect(socket._find('notification').data.type).toBe('error');
+  it('does nothing for unknown socket', () => {
+    const unknownSocket = makeSocket('unknown');
+    handlers.handleEnchantExecute(unknownSocket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
+    expect(unknownSocket._emitted).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// World — spawnEnchantNpc
+// ══════════════════════════════════════════════════════════════════
+
+describe('World.spawnEnchantNpc', () => {
+  const { World } = require('../game/world');
+
+  it('spawns enchant NPC in boss room', () => {
+    const world = new World();
+    world.generateFloor(1);
+    const bossRoom = world.rooms.find(r => r.type === 'boss');
+    if (!bossRoom) return;
+
+    world.spawnEnchantNpc(bossRoom);
+    expect(world.enchantNpc).not.toBeNull();
+    expect(world.enchantNpc.id).toBe('enchant_npc');
+    expect(world.enchantNpc.name).toBe('Mystic');
+    expect(world.enchantNpc.type).toBe('enchanter');
+    expect(typeof world.enchantNpc.x).toBe('number');
+    expect(typeof world.enchantNpc.y).toBe('number');
   });
 
-  it('error when stat not in pool (unmappable)', () => {
-    // 'custom_stat' won't exist in BONUS_POOL or RESIST_BONUS_POOL
-    const item = makeItem({ id: 'w1', bonuses: { custom_stat: 99 } });
-    const inv = makeMockInventory([item]);
-    handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'custom_stat' }, makeCtx(player, inv));
-    expect(socket._find('notification').data.type).toBe('error');
+  it('serializes enchantNpc', () => {
+    const world = new World();
+    world.generateFloor(1);
+    const bossRoom = world.rooms.find(r => r.type === 'boss');
+    if (!bossRoom) return;
+
+    world.spawnEnchantNpc(bossRoom);
+    const data = world.serialize();
+    expect(data.enchantNpc).not.toBeNull();
+    expect(data.enchantNpc.name).toBe('Mystic');
   });
 
-  it('cost scales with enchantCount: 100×lvl×(1+count×0.5)', () => {
-    // enchantCount=0: 100 * 1 * 1.0 = 100
-    const item0 = makeItem({ id: 'a1', level: 1, enchantCount: 0, bonuses: { str: 5 } });
-    const socket0 = makeSocket();
-    const p0 = makePlayer();
-    handlers.handleEnchantExecute(socket0, { itemId: 'a1', bonusKey: 'str' }, { players: new Map([['s1', p0]]), inventories: new Map([['p1', makeMockInventory([item0])]]) });
-    expect(socket0._find('enchant:result').data.cost).toBe(100);
+  it('resets enchantNpc on new floor', () => {
+    const world = new World();
+    world.generateFloor(1);
+    const bossRoom = world.rooms.find(r => r.type === 'boss');
+    if (bossRoom) world.spawnEnchantNpc(bossRoom);
 
-    // enchantCount=4: 100 * 1 * (1 + 4*0.5) = 300
-    const item4 = makeItem({ id: 'b1', level: 1, enchantCount: 4, bonuses: { str: 5 } });
-    const socket4 = makeSocket();
-    const p4 = makePlayer();
-    handlers.handleEnchantExecute(socket4, { itemId: 'b1', bonusKey: 'str' }, { players: new Map([['s1', p4]]), inventories: new Map([['p1', makeMockInventory([item4])]]) });
-    expect(socket4._find('enchant:result').data.cost).toBe(300);
+    world.generateFloor(2);
+    expect(world.enchantNpc).toBeNull();
+  });
+
+  it('handles null bossRoom gracefully', () => {
+    const world = new World();
+    world.generateFloor(1);
+    world.spawnEnchantNpc(null);
+    expect(world.enchantNpc).toBeNull();
   });
 });

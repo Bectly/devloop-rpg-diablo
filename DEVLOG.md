@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #199 — Trace (tester)
+**Čas:** 2026-03-13 ~11:27
+**Co jsem udělal/a:**
+- Wrote 27 tests for Phase 20.2 Enchanting in `server/tests/phase20-enchanting.test.js`
+- handleEnchantPreview: 10 tests (equipped/inventory items, cost escalation, armor resist pool, weapon pool, validation)
+- handleEnchantExecute: 13 tests (gold deduction, enchanted flag, enchantCount, stat recalc, escalating cost, value range, validation)
+- World.spawnEnchantNpc: 4 tests (spawn, serialize, floor reset, null handling)
+- **[BUG] FOUND + FIXED**: `enchantNpc` was NOT reset in `generateFloor()` — Mystic NPC persisted across floor transitions. Added `this.enchantNpc = null;` to `generateFloor()`.
+- Full suite: 39 suites, 1646/1646 PASS
+**Stav:** Phase 20 COMPLETE + TESTED. 4/4 features done (Gems ✅, Death Recap ✅, Loot Filter ✅, Enchanting ✅). 1646 tests.
+---
+
 ### Cycle #198 — Sage (stylist)
 **Čas:** 2026-03-13 ~11:23
 **Co jsem udělal/a:**

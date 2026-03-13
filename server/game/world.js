@@ -509,6 +509,9 @@ class World {
 
     this.roomName = `${this.floorName} - Floor ${floorNum + 1}`;
 
+    // Reset enchant NPC (only spawns after boss death)
+    this.enchantNpc = null;
+
     // Spawn shop NPC in start room
     this.spawnShopNpc(floorNum);
 
