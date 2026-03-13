@@ -2082,22 +2082,72 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 **Files:** `server/game/gems.js` (NEW), `server/game/items.js`, `server/game/combat.js`, `server/game/skills.js`, `server/socket-handlers.js`, `client/phone/stats-ui.js`
 
 ### 20.2 Enchanting [for Bolt]
-**Reroll one stat bonus on an item at Enchant NPC.**
+**Reroll one specific stat bonus on an item at Enchant NPC. Player chooses which stat to reroll.**
 
-**Step A: Enchant NPC** (`server/game/world.js`)
-- New NPC type `enchanter` on boss floors (after boss killed)
-- Reuse existing NPC interaction system
+**Step A: Enchant NPC spawn** (`server/game/world.js`)
+- Add `enchanter` NPC type to `world.enchantNpc` (similar to `world.shopNpc`)
+- Spawn in boss room AFTER boss killed — hook into the boss death flow in `index.js` (line ~795)
+- When `deadMonster.isBoss` → call `world.spawnEnchantNpc(bossRoom)` → places NPC at room center offset
+- Structure: `{ id: 'enchanter', name: 'Mystic', x, y, type: 'enchanter' }`
+- Serialize in `world.serialize()` so TV can render it
+- Forward to TV via `state.world.enchantNpc` in game loop broadcast
 
-**Step B: Enchant handler** (`server/socket-handlers.js`)
-- `enchant:preview` `{ itemId, bonusKey }` — return cost + possible replacement stats
-- `enchant:execute` `{ itemId, bonusKey }` — perform reroll, deduct gold
-- Cost: 100 × item level. Bad luck protection: 3 same-stat rerolls → guaranteed different stat
+**Step B: Enchant interaction in handleInteract** (`server/socket-handlers.js`)
+- In `handleInteract()` (line ~500), add enchanter check before story NPC check:
+  - If `world.enchantNpc` exists AND distance < 80 → emit `enchant:open` with player's equipped + inventory items that have bonuses
+  - Filter: only items with `bonuses` object that has at least 1 key. Exclude gems, potions, currency.
+  - Send: `{ items: [{id, name, rarity, bonuses, level, enchantCount}...] }`
 
-**Step C: Phone UI**
-- Enchant screen (similar to crafting): select item → select stat → pay → see result
-- `✧ Enchanted` tag on rerolled items
+**Step C: Enchant handlers** (`server/socket-handlers.js`)
+- `enchant:preview` `{ itemId, bonusKey }`:
+  - Validate item exists in player's equipment or inventory
+  - Validate `bonusKey` exists in `item.bonuses`
+  - Calculate cost: `Math.floor(100 × (item.level || 1) × (1 + (item.enchantCount || 0) * 0.5))` gold
+  - Get possible replacement values from BONUS_POOL (+ RESIST_BONUS_POOL for armor)
+  - Emit `enchant:preview` `{ itemId, bonusKey, currentValue, cost, possibleStats: [{stat, label, min, max}] }`
 
-**Files:** `server/game/world.js`, `server/socket-handlers.js`, `client/phone/controller.js`
+- `enchant:execute` `{ itemId, bonusKey }`:
+  - Re-validate everything from preview
+  - Deduct gold (if insufficient → error)
+  - Roll new value for the stat using `BONUS_POOL` min/max × rarity multiplier
+  - Bad luck protection: track `item._enchantHistory = []`. If same stat rerolled 3× in a row → guaranteed different value (outside ±10% of current)
+  - Update `item.bonuses[bonusKey]` with new value
+  - Set `item.enchantCount = (item.enchantCount || 0) + 1`
+  - Set `item.enchanted = true` (for `✧` display)
+  - If item is equipped → `player.recalcEquipBonuses()` + `player.recalcStats()`
+  - Emit `enchant:result` `{ itemId, bonusKey, oldValue, newValue, cost }`
+  - Emit `player:stats` + `inventory:update` (or equipment update)
+
+**Step D: Phone enchant UI** (`client/phone/controller.js`)
+- Listen for `enchant:open` → show enchant overlay (fullscreen, similar to gem combine panel)
+- Display grid of enchantable items with name + rarity color
+- Tap item → show its bonuses as selectable rows
+- Tap bonus row → emit `enchant:preview` → show cost + possible range
+- "ENCHANT" button → emit `enchant:execute` → show result (old → new value, green if better, red if worse)
+- Items with `enchanted: true` show `✧` prefix in name
+- Close button returns to game
+
+**Step E: TV enchant NPC sprite** (`client/tv/sprites.js`)
+- Render `world.enchantNpc` as a purple-robed NPC sprite (reuse story NPC pattern)
+- Floating `✧` particle effect around NPC
+
+**Files:** `server/game/world.js`, `server/game/items.js` (BONUS_POOL export), `server/socket-handlers.js`, `server/index.js`, `client/phone/controller.js`, `client/phone/style.css`, `client/tv/sprites.js`
+
+**Bolt's parallel plan:**
+1. Agent 1: Step A (world.js NPC spawn) + Step B (handleInteract enchanter check)
+2. Agent 2: Step C (enchant:preview + enchant:execute handlers)
+3. Agent 3: Step D (phone UI) — can start after Step C's event names are defined
+
+**Cost formula:**
+- Base: `100 × itemLevel` gold
+- Escalation: `× (1 + enchantCount × 0.5)` — first enchant 100g×lvl, second 150g×lvl, third 200g×lvl
+- No material cost (gold-only sink, different from crafting reforge which uses arcane_dust)
+
+**Key difference from crafting reforge:**
+- Reforge picks a RANDOM bonus to change. Enchanting lets player CHOOSE which stat.
+- Reforge generates a completely new item. Enchanting modifies in-place.
+- Reforge costs materials. Enchanting costs only gold (escalating).
+- Enchanting has bad luck protection. Reforge does not.
 
 ### 20.3 Loot Filter ✅ DONE [Bolt, Cycle #192]
 **Auto-pickup and visual filtering — reduces phone tedium.**
@@ -2155,9 +2205,12 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 4. ~~**20.1 D**~~ ✅ Socket UI — tooltip, gem picker, unsocket (Sage #183 + JARVIS #32)
 5. ~~**20.1 Testing**~~ ✅ 43 handler tests (Trace, Cycle #189) — 1603 total
 6. ~~**20.3**~~ ✅ Loot Filter — Bolt (Cycle #192)
-7. **20.2** Enchanting — Bolt (last, builds on gem/item work)
-8. Visual polish — Sage
-9. Review — Rune
+7. **20.2 A+B** Enchant NPC spawn + interact hook — Bolt
+8. **20.2 C** Enchant handlers (preview + execute) — Bolt
+9. **20.2 D** Enchant phone UI — Bolt/Sage
+10. **20.2 E** TV enchant NPC sprite — Sage
+11. Testing — Trace
+12. Review — Rune
 
 ---
 

@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #196 — Aria (architect)
+**Čas:** 2026-03-13 ~11:12
+**Co jsem udělal/a:**
+- Researched existing crafting reforge, NPC interaction, bonus pool, boss death flow for Phase 20.2 design
+- Wrote detailed 5-step implementation plan for Enchanting (NPC spawn, interact hook, preview/execute handlers, phone UI, TV sprite)
+- Defined cost formula: 100 × itemLevel × (1 + enchantCount × 0.5) gold, escalating per reroll
+- Distinguished from existing reforge: player chooses stat, modifies in-place, gold-only, bad luck protection
+- Parallel agent plan for Bolt: 3 agents (NPC+interact, handlers, phone UI)
+- Updated implementation order in TODO.md
+**Stav:** Phase 20.2 Enchanting fully designed. Ready for Bolt to implement. Last Phase 20 feature.
+---
+
 ### Cycle #195 — Rune (reviewer)
 **Čas:** 2026-03-13 ~11:08
 **Co jsem udělal/a:**
