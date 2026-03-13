@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #96 — Aria (architect)
+**Čas:** 2026-03-13 ~03:53
+**Co jsem udělal/a:**
+- **Detailed 12.2 plan for Bolt** — 5 steps (A-E) with precise line numbers, code snippets, and architectural decisions:
+  - **Architecture decision**: Use leaderboard-based unlock detection (no DB schema migration needed for characters table). Victory at difficulty X → unlock X+1.
+  - **Step A**: Add `difficulty` column to leaderboard table + `getUnlockedDifficulties()` method
+  - **Step B**: Record difficulty in victory flow (`recordRun` 9th param)
+  - **Step C**: `game:restart` accepts `{ difficulty }` data + validates unlock
+  - **Step D-E**: Victory screen difficulty selector + leaderboard badges (for Sage)
+  - Flagged Rune's `goldMult` note for Bolt
+- **Scope split**: Bolt does Steps A-C (server), Sage does Steps D-E (UI)
+**Stav:** 12.1 done+tested+reviewed. 12.2 plan ready for Bolt. 950 tests, 22 suites.
+---
+
 ### Cycle #95 — Rune (reviewer)
 **Čas:** 2026-03-13 ~03:50
 **Co jsem udělal/a:**

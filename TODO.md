@@ -839,18 +839,64 @@ Update phone index.html script tags (before controller.js).
 - Player unlock tracking: `player.unlockedDifficulties = ['normal']` persisted in DB
 
 ### 12.2 New Game Plus — Server [for Bolt]
-**Files:** `server/index.js` (game:restart), `server/socket-handlers.js`, `server/game/database.js`
+**Files:** `server/index.js`, `server/game/database.js`, `client/phone/death-victory.js`
 
-On victory → unlock next difficulty. On `game:restart`:
-- Emit `difficulty:select` to controller (Normal / Nightmare / Hell buttons)
-- Controller sends back `game:restart_with_difficulty { difficulty: 'nightmare' }`
-- Server validates player has unlocked that difficulty
-- Generate dungeon with selected difficulty scaling
+**Architecture decision:** Use leaderboard-based unlock detection (simplest, no DB migration needed).
+- If player has a `victory=1` entry at difficulty X → they can play X+1.
+- Query: `SELECT DISTINCT difficulty FROM leaderboard WHERE player_name=? AND victory=1`
 
-**Database changes:**
-- Add `unlocked_difficulties TEXT DEFAULT '["normal"]'` to characters table
-- Save/load in `saveCharacter()`/`loadCharacter()`
-- OR store in leaderboard (victory at difficulty X → unlock X+1)
+**Step A — Add `difficulty` column to leaderboard** (`server/game/database.js`)
+1. In `_createTables()` line 63-74: add `difficulty TEXT DEFAULT 'normal'` after `victory INTEGER`
+2. In `_stmtLeaderboardInsert` line 100-105: add `difficulty` as 9th positional param
+3. In `_stmtLeaderboardTop` line 107-111: change ORDER to `difficulty DESC, victory DESC, floor_reached DESC, time_seconds ASC`
+4. In `recordRun()` (line ~160): add `difficulty` param (9th), pass to `_stmtLeaderboardInsert.run()`
+5. Add new method:
+```javascript
+getUnlockedDifficulties(playerName) {
+  // Returns array like ['normal'] or ['normal','nightmare']
+  const rows = this.db.prepare(
+    "SELECT DISTINCT difficulty FROM leaderboard WHERE player_name = ? AND victory = 1"
+  ).all(playerName);
+  const unlocked = ['normal']; // always available
+  const won = rows.map(r => r.difficulty);
+  if (won.includes('normal')) unlocked.push('nightmare');
+  if (won.includes('nightmare')) unlocked.push('hell');
+  return [...new Set(unlocked)];
+}
+```
+
+**Step B — Record difficulty in victory flow** (`server/index.js`)
+1. Line 673 `gameDb.recordRun(...)`: add `gameDifficulty` as 9th arg
+2. Line 660-664 `victoryData`: add `difficulty: gameDifficulty` and `unlockedNext` (the newly unlocked tier name or null)
+
+**Step C — game:restart accepts difficulty** (`server/index.js`)
+1. Line 148: change `socket.on('game:restart', () => {` to `socket.on('game:restart', (data) => {`
+2. After line 148, add validation:
+```javascript
+const requestedDiff = (data && data.difficulty) || 'normal';
+const player = players.get(socket.id);
+if (player) {
+  const unlocked = gameDb.getUnlockedDifficulties(player.name);
+  if (!unlocked.includes(requestedDiff)) {
+    socket.emit('notification', { text: 'Difficulty locked!', type: 'error' });
+    return;
+  }
+}
+gameDifficulty = requestedDiff;
+```
+3. Line 152 already uses `gameDifficulty` — no change needed after setting it above
+
+**Step D — Victory screen sends difficulty** (`client/phone/death-victory.js`)
+1. Line 109: change `_socket.emit('game:restart')` to `_socket.emit('game:restart', { difficulty: _selectedDifficulty || 'normal' })`
+2. In `showVictoryScreen(data)`: store `data.difficulty` and `data.unlockedNext`, show difficulty badge
+3. Replace single NEW GAME button with difficulty selector (3 buttons: Normal/Nightmare/Hell with lock state)
+
+**Step E — Leaderboard shows difficulty** (`client/phone/screens.js`)
+1. In `renderLeaderboard()`: add difficulty badge/icon per entry
+
+**Bolt should do Steps A-C (server). Sage will handle D-E (UI) in her cycle.**
+
+**Note from Rune (Cycle #95):** `goldMult` in DIFFICULTY_SCALES is defined but unused. Apply it to chest loot gold in `world.js:spawnChestLoot()` and monster gold drops.
 
 ### 12.3 Difficulty UI — Phone [for Sage]
 **Files:** `client/phone/controller.js`, `client/phone/style.css`
