@@ -346,3 +346,86 @@ CREATE TABLE IF NOT EXISTS stash (
 - Always accessible from phone (no town-only restriction — couch co-op UX)
 - Stash survives hardcore death (items are cross-character)
 - 20 slots max (4×5 grid on phone UI)
+
+## 17. Gems & Socketing (Phase 20)
+
+Classic Diablo gem system. Items can have sockets, gems drop from monsters, socketing provides stat bonuses.
+
+### Gem Types & Tiers
+```
+Gem         Tier 1 (Chipped)  Tier 2 (Flawed)  Tier 3 (Perfect)
+─────────── ────────────────  ───────────────── ─────────────────
+Ruby        +3 STR            +6 STR            +10 STR
+Sapphire    +3 INT            +6 INT            +10 INT
+Emerald     +3 DEX            +6 DEX            +10 DEX
+Topaz       +3 VIT            +6 VIT            +10 VIT
+Diamond     +2% All Resist    +4% All Resist    +7% All Resist
+Amethyst    +5% Crit Chance   +8% Crit Chance   +12% Crit Chance
+```
+
+### Item Sockets
+- Weapons: 0-2 sockets (legendary can have 3)
+- Armor: 0-1 sockets (set items can have 2)
+- Socket count rolled at item drop based on rarity
+- Empty sockets shown as `[○]` in tooltip, filled as `[◆]`
+
+### Socket Events
+- `gem:socket` (itemId, gemId) → insert gem into item socket
+- `gem:unsocket` (itemId, socketIndex) → remove gem (costs gold)
+- Socketing is free, unsocketing costs 50 × item level gold
+
+### Gem Drops
+- Monsters have 5% base gem drop rate (modified by loot tier)
+- Gem tier = floor(monsterLevel / 10): floors 1-9 → Chipped, 10-19 → Flawed, 20+ → Perfect
+- Gems are stackable items (quantity field in inventory)
+
+### Gem Combining (Crafting Integration)
+- 3 Chipped → 1 Flawed (at crafting NPC, costs 100 gold)
+- 3 Flawed → 1 Perfect (costs 500 gold)
+- Reuses existing crafting UI with new recipe type
+
+## 18. Enchanting (Phase 20)
+
+Reroll one stat bonus on an item. Provides a gold sink and lets players optimize gear.
+
+### Rules
+- Visit Enchant NPC (new NPC type, appears on boss floors)
+- Select item → select bonus to reroll → pay gold → get random replacement
+- Cost: 100 × item level gold per reroll
+- Same bonus can appear (bad luck), different bonus guaranteed after 3 consecutive same-stat rolls
+- Cannot reroll set bonuses or legendary unique effects
+- Enchanted items show `✧ Enchanted` tag in tooltip
+
+### Socket Events
+- `enchant:preview` (itemId, bonusKey) → server responds with cost + possible outcomes
+- `enchant:execute` (itemId, bonusKey) → perform reroll, emit updated item
+
+## 19. Loot Filter (Phase 20)
+
+Auto-pickup and visual filtering. Reduces inventory management tedium on phone.
+
+### Filter Levels
+- **Off** — manual pickup for everything
+- **Basic** — auto-pickup gold + potions
+- **Smart** — auto-pickup gold + potions + rare+ items; grey/white items not shown on TV
+
+### Implementation
+- Player-side preference stored in `player.lootFilter` (persisted in DB)
+- Game loop checks filter on loot drop proximity
+- TV client dims/hides filtered items (alpha 0.3)
+- Phone setting toggle in inventory header
+
+## 20. Death Recap (Phase 20)
+
+Show damage breakdown on death screen. Helps players learn from mistakes.
+
+### Data Tracked
+- Last 5 damage sources before death (monster name, damage type, amount)
+- Total damage taken in last 10 seconds
+- Killer identified (highest damage contributor)
+
+### Implementation
+- `player.damageLog` — circular buffer of last 10 entries
+- On death: serialize damageLog, send with `player:died` event
+- Phone death screen shows: "Killed by [Monster] — [Damage] [Type] damage"
+- Damage entries: `{ source, amount, type, timestamp }`

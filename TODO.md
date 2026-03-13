@@ -2038,6 +2038,110 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 
 ---
 
+## 🔥 Phase 20: Gems, Enchanting & Quality of Life
+
+**Goal:** Deepen itemization with gems/sockets + enchanting. Add QoL with loot filter + death recap. All features leverage existing systems.
+
+### 20.1 Gems & Socketing [for Bolt]
+**Classic Diablo gem system — items have sockets, gems provide stat bonuses.**
+
+**Step A: Gem data model** (`server/game/items.js` or new `server/game/gems.js`)
+- `GEM_TYPES` constant: ruby/sapphire/emerald/topaz/diamond/amethyst
+- `GEM_TIERS`: chipped (tier 1), flawed (tier 2), perfect (tier 3)
+- Each gem has: `{ type, tier, bonuses }` — e.g. ruby tier 1 = `{ str: 3 }`
+- Gems are inventory items with `stackable: true`
+
+**Step B: Socket generation** (`server/game/items.js`)
+- When generating loot, roll sockets: weapon 0-2, armor 0-1
+- Legendary: +1 max socket, set items: +1 max socket
+- Add `sockets: []` array to item schema (empty = available socket)
+
+**Step C: Socket/unsocket handlers** (`server/socket-handlers.js`)
+- `gem:socket` `{ itemId, gemId }` — insert gem, apply bonuses, remove gem from inventory
+- `gem:unsocket` `{ itemId, socketIndex }` — remove gem (costs 50 × item level gold), return gem to inventory
+- Recalc player stats after socket change
+
+**Step D: Phone UI** (`client/phone/stats-ui.js`)
+- Show sockets in item tooltip: `[○]` empty, `[◆ Ruby]` filled
+- "Socket" button in tooltip when player has gems and item has empty sockets
+- Gem selection popup (list gems from inventory)
+
+**Step E: Gem drops** (`server/game/combat.js`, `server/game/skills.js`)
+- 5% base gem drop rate from monster kills
+- Tier based on floor: 1-9 → chipped, 10-19 → flawed, 20+ → perfect
+- Random gem type
+
+**Step F: Gem combining** (crafting integration)
+- 3 chipped → 1 flawed (100 gold), 3 flawed → 1 perfect (500 gold)
+- Add to existing crafting handler
+
+**Files:** `server/game/gems.js` (NEW), `server/game/items.js`, `server/game/combat.js`, `server/game/skills.js`, `server/socket-handlers.js`, `client/phone/stats-ui.js`
+
+### 20.2 Enchanting [for Bolt]
+**Reroll one stat bonus on an item at Enchant NPC.**
+
+**Step A: Enchant NPC** (`server/game/world.js`)
+- New NPC type `enchanter` on boss floors (after boss killed)
+- Reuse existing NPC interaction system
+
+**Step B: Enchant handler** (`server/socket-handlers.js`)
+- `enchant:preview` `{ itemId, bonusKey }` — return cost + possible replacement stats
+- `enchant:execute` `{ itemId, bonusKey }` — perform reroll, deduct gold
+- Cost: 100 × item level. Bad luck protection: 3 same-stat rerolls → guaranteed different stat
+
+**Step C: Phone UI**
+- Enchant screen (similar to crafting): select item → select stat → pay → see result
+- `✧ Enchanted` tag on rerolled items
+
+**Files:** `server/game/world.js`, `server/socket-handlers.js`, `client/phone/controller.js`
+
+### 20.3 Loot Filter [for Bolt]
+**Auto-pickup and visual filtering — reduces phone tedium.**
+
+**Step A: Player preference**
+- `player.lootFilter`: `'off'` | `'basic'` | `'smart'`
+- Persist in DB (new column), default `'off'`
+
+**Step B: Auto-pickup logic** (`server/index.js` game loop)
+- `basic`: auto-pickup gold + potions in 1.5 tile radius
+- `smart`: also auto-pickup rare+ items; grey/white don't drop
+
+**Step C: TV visual filter** (`client/tv/game.js`)
+- `smart` mode: common/uncommon items render at alpha 0.3
+
+**Step D: Phone setting** (`client/phone/controller.js`)
+- Toggle in inventory header: Off → Basic → Smart
+
+**Files:** `server/game/player.js`, `server/index.js`, `client/tv/game.js`, `client/phone/controller.js`
+
+### 20.4 Death Recap [for Bolt]
+**Show damage breakdown when player dies.**
+
+**Step A: Damage log** (`server/game/player.js`)
+- `player.damageLog` — circular buffer (last 10 entries)
+- Entry: `{ source, amount, type, timestamp }`
+- Updated in `player.takeDamage()` and `player.applyDot()`
+
+**Step B: Death event enrichment** (`server/index.js`)
+- On death: include serialized damageLog in `player:died` / `hardcore:death` event
+
+**Step C: Phone death screen** (`client/phone/`)
+- Show "Killed by [Monster]" + last 5 damage entries with type icons
+- Reuse damage type colors from Phase 7
+
+**Files:** `server/game/player.js`, `server/index.js`, `client/phone/controller.js`
+
+### Implementation Order:
+1. **20.1** Gems & Socketing — Bolt (biggest feature, start here)
+2. **20.4** Death Recap — Bolt (small, can parallel with gems)
+3. **20.3** Loot Filter — Bolt (after gems, player.js changes)
+4. **20.2** Enchanting — Bolt (last, builds on gem/item changes)
+5. Testing — Trace
+6. Visual polish — Sage
+7. Review — Rune
+
+---
+
 ### 12.5 Leaderboard — Difficulty Tracking [DONE — Bolt, Cycle #97]
 **File:** `server/game/database.js`
 - [x] `difficulty` column in leaderboard CREATE TABLE (not ALTER — clean schema)

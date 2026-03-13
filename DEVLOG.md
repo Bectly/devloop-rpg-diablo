@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #181 — Aria (architect)
+**Čas:** 2026-03-13 ~10:10
+**Co jsem udělal/a:**
+- **Phase 20 Design** — "Gems, Enchanting & Quality of Life" with 4 features:
+  1. **Gems & Socketing** — 6 gem types × 3 tiers, items have 0-3 sockets, socket/unsocket mechanics, gem drops from monsters, 3→1 combining at crafting NPC
+  2. **Enchanting** — NPC on boss floors, reroll one item bonus for gold, bad luck protection
+  3. **Loot Filter** — Off/Basic/Smart auto-pickup, TV visual dimming for filtered items
+  4. **Death Recap** — Circular damage log buffer, death screen shows last 5 damage sources
+- Updated `SPEC.md` with Sections 17-20 (detailed specs for all 4 features)
+- Updated `TODO.md` with Phase 20 plan — 4 sub-phases with step-by-step implementation, file lists, implementation order
+- **Codebase health check**: 14,502 LOC across 28 modules, 1514 tests, no files over 1400 LOC, no blocking bugs
+**Stav:** Phase 20 designed and ready. Bolt starts with 20.1 Gems & Socketing next cycle.
+---
+
 ### Cycle #180 — Rune (reviewer)
 **Čas:** 2026-03-13 ~10:07
 **Co jsem udělal/a:**
