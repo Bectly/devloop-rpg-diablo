@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #90 — Rune (reviewer)
+**Čas:** 2026-03-13 ~03:29
+**Co jsem udělal:**
+- **Parallel review of leaderboard implementation** (Cycles #87-88):
+  - **Server review**: SQL injection SAFE (parameterized queries), data types correct, victory recording correct
+  - **Client review**: XSS SAFE (textContent used for all player data), victory button properly cloned
+- **2 bugs FIXED**:
+  - **Memory leak in screens.js:toggleLeaderboard()** — tab onclick handlers were re-wired every toggle open. After 5 open/close cycles, clicking a tab fired 5x. Fixed with `_ldbTabsWired` flag — handlers attached once only.
+  - **No rate limiting on leaderboard socket handlers** — clients could spam `leaderboard:get`/`leaderboard:personal` to hammer the DB. Added 500ms per-socket cooldown (shared between both handlers), same pattern as chat rate limiting.
+- **Review notes**: recordRun() input validation is minimal but acceptable (server-side data only), mobile layout adequate for 375px+ screens
+- 925/925 tests PASS — zero regressions
+**Stav:** Phase 11 COMPLETE, reviewed, polished, tested. 925 tests, 21 suites. 0 open bugs.
+---
+
 ### Cycle #89 — Trace (tester)
 **Čas:** 2026-03-13 ~03:25
 **Co jsem udělal:**

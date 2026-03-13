@@ -901,11 +901,20 @@ exports.handleChat = function(socket, data, ctx) {
 
 // ── Leaderboard ──
 exports.handleLeaderboardGet = function(socket, data, ctx) {
+  // Rate limit: 1 request per 500ms per socket
+  const now = Date.now();
+  if (socket._lastLdbTime && now - socket._lastLdbTime < 500) return;
+  socket._lastLdbTime = now;
+
   const entries = ctx.gameDb.getTopRuns();
   socket.emit('leaderboard:data', { entries, type: 'top' });
 };
 
 exports.handleLeaderboardPersonal = function(socket, data, ctx) {
+  const now = Date.now();
+  if (socket._lastLdbTime && now - socket._lastLdbTime < 500) return;
+  socket._lastLdbTime = now;
+
   const player = ctx.players.get(socket.id);
   if (!player) return;
   const entries = ctx.gameDb.getPersonalRuns(player.name);

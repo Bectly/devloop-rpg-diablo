@@ -771,6 +771,8 @@ window.Screens = (() => {
 
   let _ldbSocket = null;
 
+  let _ldbTabsWired = false;
+
   function toggleLeaderboard(socket) {
     createLeaderboardScreen();
     if (socket) _ldbSocket = socket;
@@ -778,20 +780,23 @@ window.Screens = (() => {
     screen.classList.toggle('hidden');
 
     if (!screen.classList.contains('hidden')) {
-      // Wire tab buttons
-      const topTab = document.getElementById('ldb-tab-top');
-      const personalTab = document.getElementById('ldb-tab-personal');
+      // Wire tab buttons ONCE (avoid memory leak from re-wiring every toggle)
+      if (!_ldbTabsWired) {
+        const topTab = document.getElementById('ldb-tab-top');
+        const personalTab = document.getElementById('ldb-tab-personal');
 
-      topTab.onclick = () => {
-        topTab.classList.add('active');
-        personalTab.classList.remove('active');
-        if (_ldbSocket) _ldbSocket.emit('leaderboard:get');
-      };
-      personalTab.onclick = () => {
-        personalTab.classList.add('active');
-        topTab.classList.remove('active');
-        if (_ldbSocket) _ldbSocket.emit('leaderboard:personal');
-      };
+        topTab.onclick = () => {
+          topTab.classList.add('active');
+          personalTab.classList.remove('active');
+          if (_ldbSocket) _ldbSocket.emit('leaderboard:get');
+        };
+        personalTab.onclick = () => {
+          personalTab.classList.add('active');
+          topTab.classList.remove('active');
+          if (_ldbSocket) _ldbSocket.emit('leaderboard:personal');
+        };
+        _ldbTabsWired = true;
+      }
 
       // Request top runs by default
       if (_ldbSocket) _ldbSocket.emit('leaderboard:get');
