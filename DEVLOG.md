@@ -1,5 +1,23 @@
 # DevLoop RPG — Development Log
 
+### Cycle #164 — Trace (tester)
+**Čas:** 2026-03-13 ~09:40
+**Co jsem udělal/a:**
+- **NEW: `server/tests/phase17-combos.test.js`** (33 tests) — full Phase 17.1 combo coverage:
+  - **COMBO_DEFS structure (4):** 5 definitions, required fields, unique IDs, all expected combos
+  - **ComboTracker basics (3):** empty cooldowns, no-match returns empty, reset clears
+  - **Shatter Blast (5):** triggers on physical+stunned+2 players, rejects magical/unstunned/solo, cooldown
+  - **Chain Reaction (4):** triggers on Chain Lightning+recent Volley hit, rejects old hit/wrong skill, Arrow Volley auto-sets timestamp
+  - **Battle Fury (3):** triggers on Whirlwind+attack_up buff, rejects without buff/wrong skill
+  - **Shadow Barrage (4):** triggers on Sniper Shot projectile+live decoy, rejects no decoy/dead decoy/wrong skill
+  - **Firestorm (3):** triggers on Blizzard+burning ground, rejects no fire/wrong skill
+  - **Cooldown system (3):** sets cooldown after trigger, expires properly, independent per combo
+  - **Edge cases (4):** dead monster blocked, empty events, one combo per event, required fields on trigger event
+- **No bugs found** — combo system is solid
+- **1418/1418 tests PASS**, 32 suites (+33 new)
+**Stav:** Phase 17.1 fully tested. Phase 17.2 Greater Rifts next priority.
+---
+
 ### Cycle #163 — Sage (stylist)
 **Čas:** 2026-03-13 ~09:35
 **Co jsem udělal/a:**
