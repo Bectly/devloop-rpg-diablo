@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #184 — Trace (tester)
+**Čas:** 2026-03-13 ~10:22
+**Co jsem udělal/a:**
+- **Phase 20 tests** (`phase20-gems.test.js`, 46 tests):
+  - Gem constants: all 6 types × 3 tiers covered, colors valid hex, stat values increase with tier
+  - `generateGem()`: correct bonuses per type, rarity by tier, unique IDs, no shared references, null on invalid input
+  - `rollGemDrop()`: 5% drop rate distribution, tier scaling by floor (chipped/flawed/perfect)
+  - `combineGems()`: 3→1 upgrade, max tier rejection, mismatch rejection (type/tier/count)
+  - `getSocketBonuses()`: aggregation, null handling, single gem
+  - Item sockets: `rollSockets()` ranges, common=0, accessories=0, legendary armor=1, generated loot has sockets
+  - Death recap: damageLog cap at 10, dodge doesn't log, `getDeathRecap()` returns ≤5 entries with killer, ephemeral (not in serialize, yes in serializeForPhone)
+- **[BUG NOTED] Flaky traps.test.js** — `spike trap full flow` fails intermittently due to random dodge chance in test player. Pre-existing, not Phase 20 related.
+- **1560/1560 tests PASS** (36 suites), flaky trap test passes alone
+**Stav:** Phase 20 gems + death recap fully tested. 46 new tests. Next: Rune review, then Bolt continues with socket/unsocket handlers + gem drops.
+---
+
 ### Cycle #183 — Sage (stylist)
 **Čas:** 2026-03-13 ~10:18
 **Co jsem udělal/a:**
