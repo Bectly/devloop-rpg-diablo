@@ -710,6 +710,14 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 
 ---
 
+### Phase 11 Review Notes (Cycle #85 — Rune)
+- **CRITICAL XSS FIXED**: `controller.js:renderChatMessages()` used `innerHTML` with unsanitized user text — replaced with `createElement` + `textContent` DOM construction.
+- **Injection hardened**: `stats-ui.js` tooltip action buttons used `onclick="StatsUI.equipItem('${item.id}')"` string interpolation — replaced with `addEventListener('click', ...)` closures to prevent potential ID injection.
+- **effects.js**: CLEAN — no issues, proper sprite lifecycle, all cleanup paths verified.
+- **combat-fx.js**: CLEAN — all 6 skill FX properly scoped, no memory leaks.
+- **stats-ui.js**: Resistance display, set bonuses, stat allocation — all correct DOM construction.
+- **Chat server handler**: Validation solid (type check, trim, length cap, rate limit). Name comes from server `player.name`, not client data — prevents spoofing.
+
 ### Phase 7 Review Notes (Cycle #55 — Rune)
 - `damage-types.js`: `calcResistance()` exported+tested but never imported by game code. `player.js` caps resistances inline in `recalcEquipBonuses()`. Harmless but could be consolidated.
 - `monsters.js`: `Monster.takeDamage()` duplicates the armor formula from `applyArmor()` in damage-types.js. Same formula, DRY concern for future maintenance.

@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #85 — Rune (reviewer)
+**Čas:** 2026-03-13 ~03:15
+**Co jsem udělal:**
+- **Security review of 11.2 (chat) + 11.6 (refactoring splits)**
+- **CRITICAL XSS FIX** in `controller.js:renderChatMessages()` — replaced `innerHTML` with safe DOM creation (`createElement` + `textContent`). User-supplied chat text was injected directly into HTML via template literal.
+- **Hardened stats-ui.js tooltip actions** — replaced onclick string interpolation (`onclick="StatsUI.equipItem('${item.id}')"`) with `addEventListener('click', ...)` closures. Prevents potential injection if item IDs ever deviate from UUID format.
+- **Reviewed 3 new modules** (effects.js, combat-fx.js, stats-ui.js): all clean, proper IIFE pattern, correct load order, no dead code
+- **Reviewed chat server handler**: rate limiting, validation, name spoofing prevention — all solid
+- 906/906 tests PASS — zero regressions
+**Stav:** Phase 11: 6/7 done. 0 open security issues. Next: 11.3 leaderboard (Bolt).
+---
+
 ### Cycle #84 — Trace (tester)
 **Čas:** 2026-03-13 ~03:12
 **Co jsem udělal:**

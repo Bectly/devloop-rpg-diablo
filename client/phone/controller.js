@@ -743,11 +743,19 @@ function renderChatMessages() {
     container.id = 'chat-messages';
     document.getElementById('controller').appendChild(container);
   }
-  // Show last N messages
+  // Show last N messages (safe DOM creation — no innerHTML with user text)
   const recent = chatMessages.slice(-MAX_CHAT_DISPLAY);
-  container.innerHTML = recent.map(m =>
-    `<div class="chat-msg"><span class="chat-name">${m.name}:</span> ${m.text}</div>`
-  ).join('');
+  container.innerHTML = '';
+  for (const m of recent) {
+    const row = document.createElement('div');
+    row.className = 'chat-msg';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'chat-name';
+    nameSpan.textContent = m.name + ':';
+    row.appendChild(nameSpan);
+    row.appendChild(document.createTextNode(' ' + m.text));
+    container.appendChild(row);
+  }
   // Auto-fade after 5s
   clearTimeout(container._fadeTimer);
   container.classList.remove('fading');

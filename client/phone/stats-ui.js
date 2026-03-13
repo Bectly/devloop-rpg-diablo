@@ -171,17 +171,31 @@ const StatsUI = (() => {
       html += '</div>';
     }
 
-    html += '<div class="tt-actions">';
-    if (isEquipped) {
-      html += `<button onclick="StatsUI.unequipItem('${slotName}')">Unequip</button>`;
-    } else if (item.slot) {
-      html += `<button onclick="StatsUI.equipItem('${item.id}')">Equip</button>`;
-    }
-    html += `<button onclick="StatsUI.dropItem('${item.id}')">Drop</button>`;
-    html += `<button onclick="StatsUI.hideTooltip()">Close</button>`;
-    html += '</div>';
-
     tt.innerHTML = html;
+
+    // Action buttons — appended via DOM to avoid ID injection in onclick strings
+    const actions = document.createElement('div');
+    actions.className = 'tt-actions';
+    if (isEquipped) {
+      const btn = document.createElement('button');
+      btn.textContent = 'Unequip';
+      btn.addEventListener('click', () => StatsUI.unequipItem(slotName));
+      actions.appendChild(btn);
+    } else if (item.slot) {
+      const btn = document.createElement('button');
+      btn.textContent = 'Equip';
+      btn.addEventListener('click', () => StatsUI.equipItem(item.id));
+      actions.appendChild(btn);
+    }
+    const dropBtn = document.createElement('button');
+    dropBtn.textContent = 'Drop';
+    dropBtn.addEventListener('click', () => StatsUI.dropItem(item.id));
+    actions.appendChild(dropBtn);
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', () => StatsUI.hideTooltip());
+    actions.appendChild(closeBtn);
+    tt.appendChild(actions);
 
     const rect = anchor.getBoundingClientRect();
     tt.style.top = Math.min(rect.bottom + 5, window.innerHeight - 200) + 'px';
