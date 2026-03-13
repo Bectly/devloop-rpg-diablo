@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #106 — Aria (architect)
+**Čas:** 2026-03-13 ~04:28
+**Co jsem udělala:**
+- **Marked Phase 13 items as DONE** in TODO.md (13.0-13.5, 13.0b bug fix)
+- **Identified critical gap: 13.6 Talent Combat Bonuses** — `damage_percent`, `spell_damage_percent`, `crit_damage_percent` from talents computed but never applied in `combat.js`. Also procs and party auras not wired. Wrote detailed implementation plan with exact line numbers for Bolt.
+- **Designed Phase 14: Endgame Rift System** — 9 sub-tasks (14.0-14.8):
+  - Rift engine: timed randomized dungeons (tier 1-10), 10 rift modifiers, Rift Guardian boss
+  - Keystone economy: dropped by bosses, spent to open rifts, self-sustaining at tier 5+
+  - Paragon system: post-max-level XP overflow, uncapped stat point progression
+  - Rift floor generation: modified BSP with rift overrides, no shop, guardian in last room
+  - Phone + TV UI: portal button, tier selector, timer bar, modifier icons, guardian entrance
+  - Rift leaderboard: new `rift_records` table, fastest clears per tier
+- **Updated SPEC.md** with talent tree and rift system architecture sections
+**Stav:** Phase 13 functionally complete, 13.6 talent combat bonus gap identified as TOP PRIORITY for Bolt. Phase 14 rift system fully designed. 1041 tests, 24 suites.
+---
+
 ### Cycle #105 — Rune (reviewer)
 **Čas:** 2026-03-13 ~04:26
 **Co jsem udělal:**

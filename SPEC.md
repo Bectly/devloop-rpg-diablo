@@ -231,4 +231,43 @@ devloop-rpg-diablo/
       controller.js   — Joystick + buttons + socket
       style.css       — Mobile-optimized dark theme
       inventory.html  — Inventory management screen
+      talents-ui.js   — Talent tree UI (IIFE module)
+      rift-ui.js      — Rift system UI (IIFE module)
 ```
+
+## 12. Talent Trees (Phase 13)
+
+Each class (warrior/ranger/mage) has 3 specialization branches, each with 4 tiers of talents.
+- **36 total talents** (3 classes × 3 branches × 4 tiers)
+- **Tier gates**: 0/3/6/8 points in branch to unlock next tier
+- **Max ranks**: T1=3, T2=3, T3=2, T4=1 (capstone)
+- **Effect types**: stat_bonus, passive, proc_chance, aura, skill_upgrade
+- **1 talent point per level**, respec costs 100 × level gold
+- Engine: `server/game/talents.js`, UI: `client/phone/talents-ui.js`
+
+## 13. Endgame Rift System (Phase 14)
+
+Rifts are timed randomized dungeons that provide endgame replayability.
+
+### Rift Flow
+1. Player obtains **Keystones** from boss kills (floor 3+)
+2. At floor start room, opens **Rift Portal** (costs 1 keystone)
+3. Selects **Rift Tier** (1-10, unlocks sequentially)
+4. Both players confirm → teleported to randomized rift dungeon
+5. Timer starts. Kill monsters, clear rooms, reach **Rift Guardian**
+6. Kill Guardian before timer → rift complete, rewards
+7. Timer expires → rift failed, no rewards
+
+### Rift Modifiers
+Each rift has 1 + floor(tier/3) random modifiers that affect the entire dungeon:
+- deadly (monsters +50% dmg), fortified (+40% HP), hasty (+30% speed)
+- burning (periodic fire), vampiric (monster lifesteal), cursed (reduced healing)
+- chaotic (double spawns), armored (+30% DR), empowered (+1 affix), shielded (elite shields)
+
+### Paragon System
+After max level, XP overflows into Paragon XP. Each Paragon level costs `paragonLevel * 1000` XP and grants 1 free stat point. Paragon levels are uncapped and displayed on leaderboard.
+
+### Key Files
+- `server/game/rifts.js` — Rift creation, modifiers, guardian, rewards
+- `server/game/world.js` — `generateRiftFloor()` method
+- `client/phone/rift-ui.js` — Tier selector, timer, rewards overlay

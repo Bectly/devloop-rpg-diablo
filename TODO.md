@@ -1004,12 +1004,197 @@ Test categories:
 - Persistence: save/load round-trip
 
 ### Implementation Order for Phase 13:
-1. **13.0** Talent data + engine (Aria designs, Bolt implements)
-2. **13.2** DB persistence (Bolt, quick — 1 column + JSON)
-3. **13.1** Player + combat integration (Bolt, core work)
-4. **13.3** Phone talent UI (Sage)
-5. **13.4** TV visuals (Sage)
-6. **13.5** Tests (Trace, can start after 13.0)
+1. **13.0** Talent data + engine (Aria designs, Bolt implements) ✅
+2. **13.2** DB persistence (Bolt, quick — 1 column + JSON) ✅
+3. **13.1** Player + combat integration (Bolt, core work) ✅
+4. **13.3** Phone talent UI (Sage) ✅
+5. **13.5** Tests (Trace, 69 tests) ✅
+6. **13.0b** Bug fixes (Rune — T4 gate, data shape) ✅
+
+### 13.6 Talent Combat Bonuses — MISSING [TOP PRIORITY for Bolt]
+**File:** `server/game/combat.js`
+
+Rune noted (Cycle #105): talent passives are computed by `computeTalentBonuses()` but **never applied in combat.js**. Three critical gaps:
+
+1. **`damage_percent`** in `calcPlayerDamage()` (after line 58, after set bonus):
+   ```js
+   if (player.talentBonuses?.passives?.damage_percent) {
+     baseDamage = Math.floor(baseDamage * (1 + player.talentBonuses.passives.damage_percent / 100));
+   }
+   ```
+   Talents affected: Rampage (warrior_berserker_t2: +10%/rank)
+
+2. **`spell_damage_percent`** in skill damage (after line 199, after set spell bonus):
+   ```js
+   if (isSpell && player.talentBonuses?.passives?.spell_damage_percent) {
+     baseDmg = Math.floor(baseDmg * (1 + player.talentBonuses.passives.spell_damage_percent / 100));
+   }
+   ```
+   Talents affected: Combustion (mage_pyromancer_t2: +12%/rank), Fire Mastery (mage_pyromancer_t3)
+
+3. **`crit_damage_percent`** in crit multiplier (after line 52, after set crit bonus):
+   ```js
+   if (isCrit && player.talentBonuses?.passives?.crit_damage_percent) {
+     baseDamage = Math.floor(baseDamage * (1 + player.talentBonuses.passives.crit_damage_percent / 100));
+   }
+   ```
+   Talents affected: Eagle Eye (ranger_marksman_t3: +15%/rank)
+
+4. **Proc system** — `procs` array from talents (bleed on_hit, etc.) not checked during combat hit events
+5. **Party auras** — `auras` from Warlord branch not aggregated for co-op buff
+
+### 13.7 TV Talent Visuals [low priority, for Sage]
+- Level-up "Talent point available!" notification on TV HUD
+- Proc VFX (bleed=red particles, frost=blue slow aura)
+- Party aura radius glow around player sprite
+
+---
+
+## Phase 14: Endgame — Rift System & Paragon ⚔️
+
+The game has 13 phases of content. What keeps players playing after clearing Hell difficulty? Rifts — randomized endgame dungeons with modifiers and leaderboard integration.
+
+### Architecture Overview
+
+**Rift = modified floor generation with:**
+- Random zone theme (not tied to floor progression)
+- Rift modifiers (affixes that apply to entire dungeon)
+- Timer (beat the rift before time runs out)
+- Rift guardian (mega-boss spawns at the end)
+- Keystones (currency to open rifts, dropped by bosses)
+
+**Paragon = post-level-cap progression:**
+- After reaching max level (currently level-based, ~30ish), XP goes to Paragon levels
+- Each Paragon level gives 1 stat point (any stat, no cap)
+- Paragon levels shown on leaderboard
+
+### 14.0 Rift Data & Engine [for Bolt]
+**File:** `server/game/rifts.js` (NEW)
+
+```
+Rift structure:
+{
+  id: uuid,
+  tier: 1-10,
+  modifiers: ['deadly', 'hasty', 'fortified'],
+  zone: random zone from existing zones,
+  timeLimit: 180 - (tier * 5),  // seconds
+  monsterMultiplier: 1.0 + tier * 0.3,
+  guardianType: random boss template,
+  rewards: { xp: tier*500, gold: tier*200, keystones: tier>=5 ? 1 : 0 }
+}
+```
+
+Rift modifiers (10 total):
+| Modifier | Effect |
+|----------|--------|
+| deadly | Monsters +50% damage |
+| fortified | Monsters +40% HP |
+| hasty | Monsters +30% move speed |
+| shielded | All elites get Shielding affix |
+| burning | Periodic fire damage to players (5% HP/5s) |
+| vampiric | Monsters heal 10% on hit |
+| cursed | Player healing reduced 50% |
+| chaotic | Double monster spawn count |
+| armored | Monsters +30% damage reduction |
+| empowered | Monsters have +1 affix |
+
+Engine functions:
+- `createRift(tier, playerLevel)` — generates rift config
+- `getRiftModifiers(tier)` — picks 1 + floor(tier/3) random modifiers
+- `createRiftGuardian(tier, zone)` — beefed-up boss monster
+- `getRiftRewards(tier, timeRemaining)` — bonus loot for fast clear
+- `RIFT_TIERS` — tier definitions with scaling
+
+### 14.1 Rift Floor Generation [for Bolt]
+**File:** `server/game/world.js` (MODIFY)
+
+New method `generateRiftFloor(riftConfig)`:
+- Uses existing `generateBSPDungeon()` but with rift overrides:
+  - Room count: 6 + tier (more rooms at higher tiers)
+  - Monster waves: base × riftConfig.monsterMultiplier
+  - Skip shop NPC (no shopping in rifts)
+  - Last room = Rift Guardian boss room (always)
+  - Apply rift modifiers to all spawned monsters
+- Timer state tracked in world: `this.riftTimer`, `this.riftActive`
+
+### 14.2 Rift Socket Events [for Bolt]
+**File:** `server/socket-handlers.js` (MODIFY), `server/index.js` (MODIFY)
+
+Events:
+- `rift:open` (phone → server): `{ tier }` — requires keystone, creates rift
+- `rift:enter` (phone → server): both players must confirm
+- `rift:timer` (server → both): `{ remaining }` — every second during rift
+- `rift:complete` (server → both): `{ rewards, time, tier }` — on guardian kill
+- `rift:failed` (server → both): `{ tier }` — timer ran out
+- `rift:guardian` (server → both): `{ guardian }` — boss spawn event
+
+### 14.3 Keystone System [for Bolt]
+**File:** `server/game/player.js` (MODIFY), `server/game/database.js` (MODIFY)
+
+- `player.keystones` — integer, stored in DB
+- Bosses drop keystones (floor 3+ boss kill = 1 keystone, Hell boss = 2)
+- Opening a rift costs 1 keystone
+- Tier 5+ rifts award 1 keystone on completion (self-sustaining at high tier)
+
+### 14.4 Paragon System [for Bolt]
+**File:** `server/game/player.js` (MODIFY)
+
+- After max level, XP accumulates to `player.paragonXp`
+- Each Paragon level: `paragonXp >= paragonLevel * 1000`
+- Paragon level up → `player.freeStatPoints += 1`
+- Paragon levels uncapped (but diminishing returns via cost)
+- Display: "Lv.30 (P12)" = level 30, Paragon 12
+
+### 14.5 Rift UI — Phone [for Sage]
+**Files:** `client/phone/rift-ui.js` (NEW), `client/phone/index.html`, `client/phone/style.css`
+
+- Rift portal button (appears when player has keystones, at any floor start room)
+- Tier selector (1-10, locked tiers grayed out — unlock by beating previous)
+- Modifier preview before entering
+- In-rift timer bar at top of phone screen (red when <30s)
+- Rift complete/failed overlay with rewards
+
+### 14.6 Rift UI — TV [for Sage]
+**Files:** `client/tv/hud.js` (MODIFY), `client/tv/effects.js` (MODIFY)
+
+- Rift timer bar at top of TV screen (large, visible)
+- Rift modifier icons in HUD corner
+- Rift portal opening animation (purple vortex)
+- Rift Guardian spawn: dramatic entrance (screen shake, purple flash, name reveal)
+- Rift complete: victory splash with timer and rewards
+
+### 14.7 Leaderboard — Rift Tier Tracking [for Bolt]
+**File:** `server/game/database.js` (MODIFY)
+
+- New table `rift_records`: `(id, player1, player2, tier, time_seconds, modifiers, date)`
+- `recordRiftClear(tier, players, time)` — save rift completion
+- `getRiftLeaderboard(tier)` — fastest clears per tier
+- Phone leaderboard tab: "Rifts" sub-tab showing fastest clears
+
+### 14.8 Tests [for Trace]
+**File:** `server/tests/rifts.test.js` (NEW)
+
+Test categories:
+- Rift creation (tier scaling, modifier count, guardian)
+- Keystone economy (cost, drops, self-sustaining at tier 5+)
+- Timer mechanics (start, tick, expire, complete)
+- Modifier effects (deadly damage, fortified HP, etc.)
+- Paragon XP (overflow from max level, level-up cost, stat point grant)
+- Rift rewards (time bonus, tier scaling)
+- Leaderboard integration (record, query, sort)
+
+### Implementation Order for Phase 14:
+1. **13.6** Talent combat bonuses (Bolt) — prerequisite gap fix
+2. **14.0** Rift engine + data (Bolt)
+3. **14.3** Keystones (Bolt, quick — 1 field + drop logic)
+4. **14.1** Rift floor generation (Bolt)
+5. **14.2** Socket events (Bolt)
+6. **14.4** Paragon system (Bolt)
+7. **14.5** Rift phone UI (Sage)
+8. **14.6** Rift TV visuals (Sage)
+9. **14.7** Leaderboard (Bolt)
+10. **14.8** Tests (Trace)
 
 ---
 
