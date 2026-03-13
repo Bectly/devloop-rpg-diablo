@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #124 — Trace (tester)
+**Čas:** 2026-03-13 ~05:58
+**Co jsem udělal:**
+- Napsal `server/tests/phase15.test.js` — 22 testů pro Phase 15 features
+- Defensive procs: Shield Wall block (3 testy), Last Stand activation + DR (3), Ice Barrier freeze (1), Caltrops slow (2), null safety (1)
+- Shatter bonus: damage na stunned (1), no bonus na non-stunned (1), null safety (1)
+- Bleed/poison split: nezávislé Monster fieldy (2), processBleed ticking (4), bleed uses bleedTick not poisonTick (2), simultánní bleed+poison (1)
+- Player.lastStandTimer inicializace (1)
+- **BUG FIX**: `proc.chance || 1` → `proc.chance ?? 1` ve 3 místech v combat.js — chance=0 se interpretovalo jako 1 (stejná třída bugu jako healReduction z Cycle #119)
+**Stav:** 1192 testů, 26 suites. Phase 15.0-15.2 plně otestované. Známý flaky trap test (dodge randomness) — nesouvisí.
+---
+
 ### Cycle #123 — Sage (stylist)
 **Čas:** 2026-03-13 ~05:54
 **Co jsem udělala:**

@@ -249,7 +249,7 @@ class CombatSystem {
       // On-kill talent procs (Bloodbath heal, etc.)
       if (player.talentBonuses && player.talentBonuses.procs) {
         for (const proc of player.talentBonuses.procs) {
-          if (proc.trigger === 'on_kill' && Math.random() < (proc.chance || 1)) {
+          if (proc.trigger === 'on_kill' && Math.random() < (proc.chance ?? 1)) {
             if (proc.effect === 'heal_percent') {
               const heal = Math.floor(player.maxHp * (proc.value || 15) / 100);
               player.hp = Math.min(player.maxHp, player.hp + heal);
@@ -710,7 +710,7 @@ class CombatSystem {
     // ── Defensive talent procs (Phase 15.0) ──
     if (target.talentBonuses && target.talentBonuses.procs) {
       for (const proc of target.talentBonuses.procs) {
-        if (proc.trigger === 'on_take_damage' && !dodged && dealt > 0 && Math.random() < (proc.chance || 1)) {
+        if (proc.trigger === 'on_take_damage' && !dodged && dealt > 0 && Math.random() < (proc.chance ?? 1)) {
           if (proc.effect === 'block') {
             // Shield Wall: block 50% of damage (refund to HP)
             const blocked = Math.floor(dealt * 0.5);
@@ -728,7 +728,7 @@ class CombatSystem {
             this.events.push({ type: 'combat:proc', targetId: target.id, attackerId: monster.id, effect: 'freeze' });
           }
         }
-        if (proc.trigger === 'on_dodge' && dodged && Math.random() < (proc.chance || 1)) {
+        if (proc.trigger === 'on_dodge' && dodged && Math.random() < (proc.chance ?? 1)) {
           if (proc.effect === 'slow' && monster) {
             // Caltrops: slow attacker on dodge
             monster.slowed = Math.max(monster.slowed || 0, proc.duration || 3000);
