@@ -38,8 +38,9 @@ for (let t = 1; t <= 10; t++) {
  */
 function _pickRandom(arr, count) {
   const pool = [...arr];
+  const n = Math.min(count, pool.length);
   const result = [];
-  for (let i = 0; i < Math.min(count, pool.length); i++) {
+  for (let i = 0; i < n; i++) {
     const idx = Math.floor(Math.random() * pool.length);
     result.push(pool[idx]);
     pool.splice(idx, 1);

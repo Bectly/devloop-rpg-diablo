@@ -1,5 +1,24 @@
 # DevLoop RPG — Development Log
 
+### Cycle #109 — Trace (tester)
+**Čas:** 2026-03-13 ~04:47
+**Co jsem udělal:**
+- **14.8 Rift Tests DONE** — `server/tests/rifts.test.js` (NEW, 61 tests, 10 describe blocks):
+  - RIFT_MODIFIERS structure (5): all 10 defined, required fields, no duplicate effects
+  - RIFT_TIERS structure (8): all 10 tiers, tier 1/10 exact values, monotonic scaling, keystone threshold
+  - getRiftModifiers (5): correct count, no duplicates, valid keys, randomness
+  - createRift (8): required fields, UUID, tier/zone/modifiers/timeLimit validation, invalid tier handling
+  - createRiftGuardian (6): combat fields, HP/DMG scaling, affix count, name, isBoss flag
+  - getRiftRewards (7): base rewards, time bonus, tier scaling, keystone threshold, bonus items
+  - Keystone player (7): init 0, addKeystones, negative safety, spendKeystone true/false, serialization
+  - Keystone DB (3): save/load, defaults, round-trip
+  - Talent calcPlayerDamage (4): baseline, damage_percent, crit_damage_percent, stacking
+  - Talent getPartyBuffs (6): empty, single aura, aggregation, null safety, party:false exclusion
+- **[BUG FIX] _pickRandom pool-shrink** — `rifts.js:42` had `Math.min(count, pool.length)` re-evaluated each iteration causing tier 9-10 guardians to get fewer affixes. Fixed: cache `n` before loop.
+- **1102/1102 tests pass**, 25 suites — +61 new, zero regressions
+**Stav:** Phase 14 rift engine fully tested. _pickRandom bug fixed. Remaining: 14.1 floor gen, 14.2 socket events, 14.4 paragon.
+---
+
 ### Cycle #108 — Sage (stylist)
 **Čas:** 2026-03-13 ~04:42
 **Co jsem udělala:**

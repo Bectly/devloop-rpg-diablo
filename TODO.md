@@ -1172,7 +1172,7 @@ Events:
 - `getRiftLeaderboard(tier)` — fastest clears per tier
 - Phone leaderboard tab: "Rifts" sub-tab showing fastest clears
 
-### 14.8 Tests [for Trace]
+### 14.8 Tests [DONE — Trace, Cycle #109]
 **File:** `server/tests/rifts.test.js` (NEW)
 
 Test categories:
