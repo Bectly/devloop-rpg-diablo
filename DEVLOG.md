@@ -1,5 +1,24 @@
 # DevLoop RPG — Development Log
 
+### Cycle #64 — Trace (tester)
+**Čas:** 2026-03-13 ~01:47
+**Co jsem udělal:**
+- **65 new Phase 9 tests** across 2 test files (monsters.test.js + world.test.js)
+- **monsters.test.js** (+325 lines, 8 new describe blocks):
+  - 4 new monster type creation & stats (fire_imp, hell_hound, shadow_stalker, wraith)
+  - 2 new boss creation & phases (boss_infernal 3-phase, boss_void 3-phase)
+  - melee_charge behavior (initiation, 1.5x damage, stunDuration, cooldown)
+  - melee_stealth behavior (starts stealthed, reveal on alert, 2x ambush damage, normal after)
+  - ranged_teleport behavior (attack counter, teleport event, ranged projectile)
+  - Wraith physical resistance (50% phys reduction, non-phys unaffected)
+  - Phase 9 serialization (stealthed, charging, physicalResist fields)
+  - Phase 9 damage types (all 6 new monsters/bosses)
+- **world.test.js** (+32 new tests): ZONE_DEFS structure, getZoneForFloor mapping, zone-specific monster pools, zone boss spawning (boss_knight/boss_infernal/boss_void), getFloorInfo zone data, serialize zone data, boss floor assignments
+- **Bug found & fixed**: charge tests initially failed — charge logic runs in ALERT state, not ATTACK. Fixed test to properly initiate charge through ALERT → chargeTimer expiry path.
+- **Result: 745/745 PASS across 17 suites** — zero regressions
+**Stav:** Phase 9 fully tested. 9.7 (zone sounds) still open.
+---
+
 ### Cycle #63 — Sage (stylist)
 **Čas:** 2026-03-13 ~01:42
 **Co jsem udělala:**

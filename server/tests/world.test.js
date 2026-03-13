@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { World, TILE_SIZE, TILE, GRID_W, GRID_H } = require('../game/world');
+const { World, TILE_SIZE, TILE, GRID_W, GRID_H, ZONE_DEFS, getZoneForFloor } = require('../game/world');
 
 describe('World', () => {
   let world;
@@ -714,6 +714,299 @@ describe('World', () => {
           expect(npc.y).toBeGreaterThan(0);
         }
       }
+    });
+  });
+
+  // ─── Phase 9: Zone System Tests ──────────────────────────────────
+
+  describe('ZONE_DEFS structure', () => {
+    it('has exactly 3 zones: catacombs, inferno, abyss', () => {
+      const keys = Object.keys(ZONE_DEFS);
+      expect(keys).toHaveLength(3);
+      expect(keys).toContain('catacombs');
+      expect(keys).toContain('inferno');
+      expect(keys).toContain('abyss');
+    });
+
+    it('catacombs: floors=[0,1], boss=boss_knight, bossFloor=1', () => {
+      const z = ZONE_DEFS.catacombs;
+      expect(z.floors).toEqual([0, 1]);
+      expect(z.boss).toBe('boss_knight');
+      expect(z.bossFloor).toBe(1);
+    });
+
+    it('inferno: floors=[2,3], boss=boss_infernal, bossFloor=3', () => {
+      const z = ZONE_DEFS.inferno;
+      expect(z.floors).toEqual([2, 3]);
+      expect(z.boss).toBe('boss_infernal');
+      expect(z.bossFloor).toBe(3);
+    });
+
+    it('abyss: floors=[4,5,6], boss=boss_void, bossFloor=6', () => {
+      const z = ZONE_DEFS.abyss;
+      expect(z.floors).toEqual([4, 5, 6]);
+      expect(z.boss).toBe('boss_void');
+      expect(z.bossFloor).toBe(6);
+    });
+
+    it('each zone has id, name, floors, tileColor, wallColor, monsterPool, boss, bossFloor', () => {
+      const requiredKeys = ['id', 'name', 'floors', 'tileColor', 'wallColor', 'monsterPool', 'boss', 'bossFloor'];
+      for (const zone of Object.values(ZONE_DEFS)) {
+        for (const key of requiredKeys) {
+          expect(zone).toHaveProperty(key);
+        }
+      }
+    });
+
+    it('every zone has non-empty monsterPool array', () => {
+      for (const zone of Object.values(ZONE_DEFS)) {
+        expect(Array.isArray(zone.monsterPool)).toBe(true);
+        expect(zone.monsterPool.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('all zone floors cover 0-6 without gaps', () => {
+      const allFloors = Object.values(ZONE_DEFS)
+        .flatMap(z => z.floors)
+        .sort((a, b) => a - b);
+      expect(allFloors).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    });
+  });
+
+  describe('getZoneForFloor', () => {
+    it('floor 0 → catacombs', () => {
+      expect(getZoneForFloor(0)).toBe(ZONE_DEFS.catacombs);
+    });
+
+    it('floor 1 → catacombs', () => {
+      expect(getZoneForFloor(1)).toBe(ZONE_DEFS.catacombs);
+    });
+
+    it('floor 2 → inferno', () => {
+      expect(getZoneForFloor(2)).toBe(ZONE_DEFS.inferno);
+    });
+
+    it('floor 3 → inferno', () => {
+      expect(getZoneForFloor(3)).toBe(ZONE_DEFS.inferno);
+    });
+
+    it('floor 4 → abyss', () => {
+      expect(getZoneForFloor(4)).toBe(ZONE_DEFS.abyss);
+    });
+
+    it('floor 5 → abyss', () => {
+      expect(getZoneForFloor(5)).toBe(ZONE_DEFS.abyss);
+    });
+
+    it('floor 6 → abyss', () => {
+      expect(getZoneForFloor(6)).toBe(ZONE_DEFS.abyss);
+    });
+
+    it('floor 99 → fallback to abyss', () => {
+      expect(getZoneForFloor(99)).toBe(ZONE_DEFS.abyss);
+    });
+  });
+
+  describe('Zone-specific monster pools', () => {
+    function getSpawnedMonsterTypes(floorNum, trials = 10) {
+      const types = new Set();
+      for (let t = 0; t < trials; t++) {
+        const w = new World();
+        w.generateFloor(floorNum);
+        // Find a monster room and discover it to spawn monsters
+        const monsterRoom = w.rooms.find(r => r.type === 'monster' || r.type === 'boss');
+        if (!monsterRoom) continue;
+        const cx = (monsterRoom.room.x + monsterRoom.room.w / 2) * TILE_SIZE;
+        const cy = (monsterRoom.room.y + monsterRoom.room.h / 2) * TILE_SIZE;
+        w.updateRoomDiscovery([{ alive: true, x: cx, y: cy }]);
+        for (const m of w.monsters) {
+          types.add(m.type);
+        }
+      }
+      return types;
+    }
+
+    it('floor 0 monsters come from catacombs pool (skeleton, slime, archer)', () => {
+      const types = getSpawnedMonsterTypes(0);
+      const catacombsUnique = [...new Set(ZONE_DEFS.catacombs.monsterPool)];
+      for (const t of types) {
+        expect(catacombsUnique).toContain(t);
+      }
+    });
+
+    it('floor 2 monsters come from inferno pool (demon, fire_imp, hell_hound, archer)', () => {
+      const types = getSpawnedMonsterTypes(2);
+      const infernoUnique = [...new Set(ZONE_DEFS.inferno.monsterPool)];
+      for (const t of types) {
+        expect(infernoUnique).toContain(t);
+      }
+    });
+
+    it('floor 5 monsters come from abyss pool (shadow_stalker, demon, wraith, zombie)', () => {
+      const types = getSpawnedMonsterTypes(5);
+      const abyssUnique = [...new Set(ZONE_DEFS.abyss.monsterPool)];
+      for (const t of types) {
+        expect(abyssUnique).toContain(t);
+      }
+    });
+  });
+
+  describe('Zone boss spawning', () => {
+    function findAndSpawnBoss(floorNum) {
+      const w = new World();
+      w.generateFloor(floorNum);
+      const bossRoom = w.rooms.find(r => r.type === 'boss');
+      if (!bossRoom) return { world: w, bossRoom: null, monsters: [] };
+      const cx = (bossRoom.room.x + bossRoom.room.w / 2) * TILE_SIZE;
+      const cy = (bossRoom.room.y + bossRoom.room.h / 2) * TILE_SIZE;
+      w.updateRoomDiscovery([{ alive: true, x: cx, y: cy }]);
+      return { world: w, bossRoom, monsters: w.monsters };
+    }
+
+    it('floor 1 boss room spawns boss_knight', () => {
+      const { bossRoom, monsters } = findAndSpawnBoss(1);
+      expect(bossRoom).not.toBeNull();
+      const boss = monsters.find(m => m.type === ZONE_DEFS.catacombs.boss);
+      expect(boss).toBeDefined();
+      expect(boss.type).toBe('boss_knight');
+    });
+
+    it('floor 3 boss room spawns boss_infernal', () => {
+      const { bossRoom, monsters } = findAndSpawnBoss(3);
+      expect(bossRoom).not.toBeNull();
+      const boss = monsters.find(m => m.type === ZONE_DEFS.inferno.boss);
+      expect(boss).toBeDefined();
+      expect(boss.type).toBe('boss_infernal');
+    });
+
+    it('floor 6 boss room spawns boss_void', () => {
+      const { bossRoom, monsters } = findAndSpawnBoss(6);
+      expect(bossRoom).not.toBeNull();
+      const boss = monsters.find(m => m.type === ZONE_DEFS.abyss.boss);
+      expect(boss).toBeDefined();
+      expect(boss.type).toBe('boss_void');
+    });
+
+    it('non-boss floors (0, 2, 4, 5) do NOT have boss rooms', () => {
+      for (const floor of [0, 2, 4, 5]) {
+        const w = new World();
+        w.generateFloor(floor);
+        const bossRoom = w.rooms.find(r => r.type === 'boss');
+        expect(bossRoom).toBeUndefined();
+      }
+    });
+  });
+
+  describe('getFloorInfo includes zone data', () => {
+    it('getFloorInfo has zoneId, zoneName, tileColor, wallColor', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const info = w.getFloorInfo();
+      expect(info).toHaveProperty('zoneId');
+      expect(info).toHaveProperty('zoneName');
+      expect(info).toHaveProperty('tileColor');
+      expect(info).toHaveProperty('wallColor');
+    });
+
+    it('floor 0: zoneId=catacombs, zoneName=The Catacombs', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const info = w.getFloorInfo();
+      expect(info.zoneId).toBe('catacombs');
+      expect(info.zoneName).toBe('The Catacombs');
+    });
+
+    it('floor 3: zoneId=inferno, zoneName=The Inferno', () => {
+      const w = new World();
+      w.generateFloor(3);
+      const info = w.getFloorInfo();
+      expect(info.zoneId).toBe('inferno');
+      expect(info.zoneName).toBe('The Inferno');
+    });
+
+    it('floor 6: zoneId=abyss, zoneName=The Abyss', () => {
+      const w = new World();
+      w.generateFloor(6);
+      const info = w.getFloorInfo();
+      expect(info.zoneId).toBe('abyss');
+      expect(info.zoneName).toBe('The Abyss');
+    });
+  });
+
+  describe('serialize() includes zone data', () => {
+    it('serialize has zoneId and zoneName', () => {
+      const w = new World();
+      w.generateFloor(0);
+      const s = w.serialize();
+      expect(s).toHaveProperty('zoneId');
+      expect(s).toHaveProperty('zoneName');
+    });
+
+    it('values match the zone for current floor', () => {
+      for (let floor = 0; floor <= 6; floor++) {
+        const w = new World();
+        w.generateFloor(floor);
+        const s = w.serialize();
+        const zone = getZoneForFloor(floor);
+        expect(s.zoneId).toBe(zone.id);
+        expect(s.zoneName).toBe(zone.name);
+      }
+    });
+  });
+
+  describe('Zone boss floor assignments', () => {
+    it('boss floors have boss room as last room', () => {
+      const bossFloors = [1, 3, 6];
+      for (const floor of bossFloors) {
+        const w = new World();
+        w.generateFloor(floor);
+        const lastRoom = w.rooms[w.rooms.length - 1];
+        expect(lastRoom.type).toBe('boss');
+      }
+    });
+
+    it('non-boss floors have treasure as last room', () => {
+      const nonBossFloors = [0, 2, 4, 5];
+      for (const floor of nonBossFloors) {
+        const w = new World();
+        w.generateFloor(floor);
+        const lastRoom = w.rooms[w.rooms.length - 1];
+        expect(lastRoom.type).toBe('treasure');
+      }
+    });
+
+    it('catacombs: floor 0 → treasure, floor 1 → boss', () => {
+      const w0 = new World();
+      w0.generateFloor(0);
+      expect(w0.rooms[w0.rooms.length - 1].type).toBe('treasure');
+
+      const w1 = new World();
+      w1.generateFloor(1);
+      expect(w1.rooms[w1.rooms.length - 1].type).toBe('boss');
+    });
+
+    it('inferno: floor 2 → treasure, floor 3 → boss', () => {
+      const w2 = new World();
+      w2.generateFloor(2);
+      expect(w2.rooms[w2.rooms.length - 1].type).toBe('treasure');
+
+      const w3 = new World();
+      w3.generateFloor(3);
+      expect(w3.rooms[w3.rooms.length - 1].type).toBe('boss');
+    });
+
+    it('abyss: floors 4,5 → treasure, floor 6 → boss', () => {
+      const w4 = new World();
+      w4.generateFloor(4);
+      expect(w4.rooms[w4.rooms.length - 1].type).toBe('treasure');
+
+      const w5 = new World();
+      w5.generateFloor(5);
+      expect(w5.rooms[w5.rooms.length - 1].type).toBe('treasure');
+
+      const w6 = new World();
+      w6.generateFloor(6);
+      expect(w6.rooms[w6.rooms.length - 1].type).toBe('boss');
     });
   });
 });

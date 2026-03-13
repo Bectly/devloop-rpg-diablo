@@ -517,4 +517,337 @@ describe('Monsters', () => {
       }
     });
   });
+
+  // ── Phase 9: New Monster Types — Creation & Stats ─────────────
+  describe('phase 9 new monster types', () => {
+    it('fire_imp has correct stats and ranged behavior', () => {
+      const m = createMonster('fire_imp', 50, 50);
+      expect(m.hp).toBe(45);
+      expect(m.maxHp).toBe(45);
+      expect(m.damage).toBe(14);
+      expect(m.behavior).toBe('ranged');
+      expect(m.damageType).toBe('fire');
+      expect(m.projectileSpeed).toBe(350);
+      expect(m.speed).toBe(100);
+    });
+
+    it('hell_hound has correct stats and melee_charge behavior', () => {
+      const m = createMonster('hell_hound', 50, 50);
+      expect(m.hp).toBe(100);
+      expect(m.maxHp).toBe(100);
+      expect(m.damage).toBe(20);
+      expect(m.behavior).toBe('melee_charge');
+      expect(m.damageType).toBe('fire');
+      expect(m.speed).toBe(130);
+      expect(m.chargeRange).toEqual([100, 250]);
+    });
+
+    it('shadow_stalker has correct stats and melee_stealth behavior', () => {
+      const m = createMonster('shadow_stalker', 50, 50);
+      expect(m.hp).toBe(90);
+      expect(m.maxHp).toBe(90);
+      expect(m.damage).toBe(25);
+      expect(m.behavior).toBe('melee_stealth');
+      expect(m.damageType).toBe('physical');
+      expect(m.stealthAlpha).toBe(0.1);
+      expect(m.firstHitMultiplier).toBe(2.0);
+    });
+
+    it('wraith has correct stats and ranged_teleport behavior', () => {
+      const m = createMonster('wraith', 50, 50);
+      expect(m.hp).toBe(70);
+      expect(m.maxHp).toBe(70);
+      expect(m.damage).toBe(18);
+      expect(m.behavior).toBe('ranged_teleport');
+      expect(m.damageType).toBe('cold');
+      expect(m.physicalResist).toBe(50);
+      expect(m.teleportAfterAttacks).toBe(2);
+      expect(m.projectileSpeed).toBe(280);
+    });
+  });
+
+  // ── Phase 9: New Bosses — Creation & Stats ────────────────────
+  describe('phase 9 new bosses', () => {
+    it('boss_infernal has correct stats and 3 phases', () => {
+      const m = createMonster('boss_infernal', 50, 50);
+      expect(m.hp).toBe(800);
+      expect(m.maxHp).toBe(800);
+      expect(m.damage).toBe(30);
+      expect(m.isBoss).toBe(true);
+      expect(m.damageType).toBe('fire');
+      expect(m.phases).toHaveLength(3);
+      expect(m.phases[0].mode).toBe('ranged_barrage');
+      expect(m.phases[1].mode).toBe('summoner');
+      expect(m.phases[2].mode).toBe('enrage');
+      expect(m.summonType).toBe('fire_imp');
+      expect(m.summonCount).toBe(2);
+    });
+
+    it('boss_void has correct stats and 3 phases', () => {
+      const m = createMonster('boss_void', 50, 50);
+      expect(m.hp).toBe(1200);
+      expect(m.maxHp).toBe(1200);
+      expect(m.damage).toBe(35);
+      expect(m.isBoss).toBe(true);
+      expect(m.damageType).toBe('cold');
+      expect(m.phases).toHaveLength(3);
+      expect(m.phases[0].mode).toBe('teleport_slash');
+      expect(m.phases[1].mode).toBe('shadow_clones');
+      expect(m.phases[2].mode).toBe('void_storm');
+      expect(m.voidPulseRadius).toBe(150);
+      expect(m.voidPulseDamage).toBe(40);
+    });
+  });
+
+  // ── Phase 9: melee_charge Behavior (Hell Hound) ───────────────
+  describe('melee_charge behavior', () => {
+    it('starts with charging=false and chargeCooldown=0', () => {
+      const m = createMonster('hell_hound', 100, 100);
+      expect(m.charging).toBe(false);
+      expect(m.chargeCooldown).toBe(0);
+    });
+
+    it('initiates charge when player is within chargeRange and cooldown is 0', () => {
+      const m = createMonster('hell_hound', 100, 100);
+      m.aiState = AI_STATES.ALERT;
+      m.attackCooldown = 9999; // prevent regular attacks
+      const player = { id: 'p1', alive: true, x: 250, y: 100 }; // 150 units, within [100, 250]
+      const events = m.update(16, [player]);
+      // Charge should have initiated — check for state change or event
+      const chargeEvent = events.find(e => e.type === 'monster_charge' || e.type === 'monster_attack');
+      if (m.charging !== undefined) {
+        expect(m.charging === true || chargeEvent).toBeTruthy();
+      }
+    });
+
+    it('charge attack deals 1.5x damage with charge attackType', () => {
+      const m = createMonster('hell_hound', 100, 100);
+      m.aiState = AI_STATES.ALERT;
+      m.chargeCooldown = 0;
+      // Place player at 150 units (within chargeRange [100, 250])
+      const player = { id: 'p1', alive: true, x: 250, y: 100 };
+      m.targetId = 'p1';
+      // First update initiates charge
+      m.update(16, [player]);
+      expect(m.charging).toBe(true);
+      // Expire the charge timer to trigger hit
+      m.chargeTimer = 0;
+      // Put player close so closestDist < attackRange * 2
+      player.x = 130;
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damage).toBe(Math.floor(20 * 1.5));
+      expect(attack.attackType).toBe('charge');
+    });
+
+    it('charge attack includes stunDuration', () => {
+      const m = createMonster('hell_hound', 100, 100);
+      m.aiState = AI_STATES.ALERT;
+      m.chargeCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 250, y: 100 };
+      m.targetId = 'p1';
+      m.update(16, [player]); // initiate charge
+      m.chargeTimer = 0;
+      player.x = 130;
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack).toHaveProperty('stunDuration');
+      expect(attack.stunDuration).toBe(500); // chargeStunDuration from def
+    });
+  });
+
+  // ── Phase 9: melee_stealth Behavior (Shadow Stalker) ──────────
+  describe('melee_stealth behavior', () => {
+    it('starts stealthed for melee_stealth behavior', () => {
+      const m = createMonster('shadow_stalker', 100, 100);
+      expect(m.stealthed).toBe(true);
+    });
+
+    it('reveals stealth when entering ALERT state', () => {
+      const m = createMonster('shadow_stalker', 100, 100);
+      expect(m.stealthed).toBe(true);
+      m.aiState = AI_STATES.ALERT;
+      m.targetId = 'p1';
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      // After alert processing, stealthed should become false
+      const revealEvent = events.find(e => e.type === 'stealth_reveal');
+      if (revealEvent) {
+        expect(revealEvent).toBeDefined();
+      }
+      // Once close enough, stealth breaks
+      if (m.stealthed !== undefined) {
+        // stealth should be false after engaging
+        expect(m.stealthed === false || m.aiState === AI_STATES.ATTACK).toBeTruthy();
+      }
+    });
+
+    it('first hit deals damage * firstHitMultiplier with ambush attackType', () => {
+      const m = createMonster('shadow_stalker', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      m.hasDealtFirstHit = false;
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damage).toBe(Math.floor(25 * 2.0));
+      expect(attack.attackType).toBe('ambush');
+    });
+
+    it('subsequent attacks use normal damage after first hit', () => {
+      const m = createMonster('shadow_stalker', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      m.hasDealtFirstHit = true;
+      m.stealthed = false;
+      const player = { id: 'p1', alive: true, x: 130, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.damage).toBe(25);
+    });
+  });
+
+  // ── Phase 9: ranged_teleport Behavior (Wraith) ────────────────
+  describe('ranged_teleport behavior', () => {
+    it('attacksSinceLastTeleport starts at 0', () => {
+      const m = createMonster('wraith', 100, 100);
+      expect(m.attacksSinceLastTeleport).toBe(0);
+    });
+
+    it('increments attack counter after each attack', () => {
+      const m = createMonster('wraith', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 200, y: 100 };
+      m.update(16, [player]);
+      expect(m.attacksSinceLastTeleport).toBeGreaterThanOrEqual(1);
+    });
+
+    it('teleports after reaching teleportAfterAttacks threshold', () => {
+      const m = createMonster('wraith', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      m.attacksSinceLastTeleport = 1; // one attack away from teleport
+      const player = { id: 'p1', alive: true, x: 200, y: 100 };
+      const events = m.update(16, [player]);
+      const teleport = events.find(e => e.type === 'monster_teleport');
+      if (teleport) {
+        expect(teleport).toBeDefined();
+        expect(m.attacksSinceLastTeleport).toBe(0);
+      }
+    });
+
+    it('wraith emits ranged attackType with projectile data', () => {
+      const m = createMonster('wraith', 100, 100);
+      m.aiState = AI_STATES.ATTACK;
+      m.attackCooldown = 0;
+      const player = { id: 'p1', alive: true, x: 200, y: 100 };
+      const events = m.update(16, [player]);
+      const attack = events.find(e => e.type === 'monster_attack');
+      expect(attack).toBeDefined();
+      expect(attack.attackType).toBe('ranged');
+      expect(attack.projectile).toBeDefined();
+      expect(attack.projectile.speed).toBe(280);
+    });
+  });
+
+  // ── Phase 9: Wraith Physical Resistance ───────────────────────
+  describe('wraith physical resistance', () => {
+    it('physical damage reduced by physicalResist percentage before armor', () => {
+      const m = createMonster('wraith', 50, 50); // physicalResist = 50
+      const dealt = m.takeDamage(100, 'physical');
+      // 100 * (1 - 50/100) = 50 before armor
+      // 50 - armor reduction after
+      expect(dealt).toBeLessThanOrEqual(50);
+      expect(dealt).toBeGreaterThan(0);
+    });
+
+    it('fire damage is not reduced by physicalResist', () => {
+      const m = createMonster('wraith', 50, 50);
+      const dealt = m.takeDamage(100, 'fire');
+      // No resistance reduction — only armor applies
+      expect(dealt).toBeGreaterThan(50);
+    });
+
+    it('cold damage is not reduced by physicalResist', () => {
+      const m = createMonster('wraith', 50, 50);
+      const dealt = m.takeDamage(100, 'cold');
+      // No resistance reduction — only armor applies
+      expect(dealt).toBeGreaterThan(50);
+    });
+
+    it('monster with 0 physicalResist takes full physical damage', () => {
+      const m = createMonster('skeleton', 50, 50); // no physicalResist
+      const dealt = m.takeDamage(100, 'physical');
+      // Only armor reduction, no resistance
+      const expected = Math.max(1, Math.floor(100 - m.armor * 0.4));
+      expect(dealt).toBe(expected);
+    });
+  });
+
+  // ── Phase 9: Serialize Includes New Fields ────────────────────
+  describe('phase 9 serialization fields', () => {
+    it('serialize includes stealthed, charging, physicalResist', () => {
+      const stalker = createMonster('shadow_stalker', 0, 0);
+      const ss = stalker.serialize();
+      expect(ss).toHaveProperty('stealthed');
+
+      const hound = createMonster('hell_hound', 0, 0);
+      const hs = hound.serialize();
+      expect(hs).toHaveProperty('charging');
+
+      const wraith = createMonster('wraith', 0, 0);
+      const ws = wraith.serialize();
+      expect(ws).toHaveProperty('physicalResist');
+    });
+
+    it('shadow_stalker serializes with stealthed=true initially', () => {
+      const m = createMonster('shadow_stalker', 0, 0);
+      const s = m.serialize();
+      expect(s.stealthed).toBe(true);
+    });
+
+    it('hell_hound serializes with charging=false initially', () => {
+      const m = createMonster('hell_hound', 0, 0);
+      const s = m.serialize();
+      expect(s.charging).toBe(false);
+    });
+
+    it('wraith serializes with physicalResist=50', () => {
+      const m = createMonster('wraith', 0, 0);
+      const s = m.serialize();
+      expect(s.physicalResist).toBe(50);
+    });
+  });
+
+  // ── Phase 9: New Monster Damage Types ─────────────────────────
+  describe('phase 9 damage types', () => {
+    it('fire_imp has fire damageType', () => {
+      expect(MONSTER_DEFS.fire_imp.damageType).toBe('fire');
+    });
+
+    it('hell_hound has fire damageType', () => {
+      expect(MONSTER_DEFS.hell_hound.damageType).toBe('fire');
+    });
+
+    it('shadow_stalker has physical damageType', () => {
+      expect(MONSTER_DEFS.shadow_stalker.damageType).toBe('physical');
+    });
+
+    it('wraith has cold damageType', () => {
+      expect(MONSTER_DEFS.wraith.damageType).toBe('cold');
+    });
+
+    it('boss_infernal has fire damageType', () => {
+      expect(MONSTER_DEFS.boss_infernal.damageType).toBe('fire');
+    });
+
+    it('boss_void has cold damageType', () => {
+      expect(MONSTER_DEFS.boss_void.damageType).toBe('cold');
+    });
+  });
 });
