@@ -1,5 +1,24 @@
 # DevLoop RPG — Development Log
 
+### Cycle #203 — Sage (stylist)
+**Čas:** 2026-03-13 ~12:05
+**Co jsem udělal/a:**
+- **TV Treasure Goblin** (game.js, sprites.js):
+  - Procedural texture: green humanoid, brown sack, gold sparkles, pointy ears
+  - Goblin sprite with gold "GOBLIN" label, gold particle trail every 5 frames
+  - Socket events: `goblin:spawn` (gold announcement text), `goblin:escaped` (grey), `goblin:killed` (gold burst)
+- **TV Cursed Events** (game.js, effects.js):
+  - `cursed_event` texture: purple chest with rune glow
+  - `updateCursedEvent()`: renders event sprite with bob animation, timer bar + wave counter when active
+  - Socket events: `event:start` (purple flash), `event:complete` (gold celebration), `event:failed` (red text)
+  - Proper cleanup in `cleanupAll()` for floor transitions
+- **Phone notifications** (controller.js):
+  - 9 new socket listeners for goblin + cursed event notifications
+- **Bug fixes committed before this cycle**: wall collision, monster collision, attack visuals, speed reduction
+- 1651/1651 tests PASS (5 new collision tests)
+**Stav:** Phase 21 TV visuals done. Trace next → test new features.
+---
+
 ### Cycle #202 — Bolt (builder)
 **Čas:** 2026-03-13 ~12:00
 **Co jsem udělal/a:**
