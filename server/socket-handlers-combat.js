@@ -223,6 +223,6 @@ exports.handleLootFilter = (socket, data, { players }) => {
   }
 
   player.lootFilter = data.mode;
-  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('stats:update', player.serializeForPhone());
   socket.emit('notification', { text: `Loot filter: ${data.mode.toUpperCase()}`, type: 'info' });
 };

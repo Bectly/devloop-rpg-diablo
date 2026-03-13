@@ -209,7 +209,7 @@ describe('handleGemUnsocket', () => {
     expect(returnedGem.gemTier).toBe(1);
     // Emits
     expect(socket._find('inventory:update')).toBeDefined();
-    expect(socket._find('player:stats')).toBeDefined();
+    expect(socket._find('stats:update')).toBeDefined();
     expect(socket._find('notification').data.type).toBe('info');
   });
 
@@ -417,7 +417,7 @@ describe('handleGemCombine', () => {
     handlers.handleGemCombine(socket, { gemIds: [g1.id, g2.id, g3.id] }, makeCtx(player, inv));
 
     expect(socket._find('inventory:update')).toBeDefined();
-    expect(socket._find('player:stats')).toBeDefined();
+    expect(socket._find('stats:update')).toBeDefined();
   });
 });
 

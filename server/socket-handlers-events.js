@@ -146,7 +146,7 @@ exports.handleEnchantExecute = (socket, data, { players, inventories }) => {
     enchantCount: item.enchantCount,
   });
 
-  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('stats:update', player.serializeForPhone());
   if (inv) socket.emit('inventory:update', inv.serialize());
   socket.emit('notification', {
     text: `✧ ${data.bonusKey}: ${oldValue} → ${newValue} (−${cost}g)`,
@@ -429,7 +429,7 @@ exports.handleGemUnsocket = (socket, data, { players, inventories }) => {
   }
 
   socket.emit('inventory:update', inv.serialize());
-  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('stats:update', player.serializeForPhone());
   socket.emit('notification', { text: `Unsocketed ${socketedGem.name} (−${cost}g)`, type: 'info' });
 };
 
@@ -495,6 +495,6 @@ exports.handleGemCombine = (socket, data, { players, inventories }) => {
   }
 
   socket.emit('inventory:update', inv.serialize());
-  socket.emit('player:stats', player.serializeForPhone());
+  socket.emit('stats:update', player.serializeForPhone());
   socket.emit('notification', { text: `Combined into ${result.name}! (−${cost}g)`, type: 'info' });
 };

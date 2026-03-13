@@ -1221,17 +1221,17 @@ function createGameLoop(ctx) {
 
           if (picked.type === 'currency') {
             player.gold += picked.quantity;
-            if (player.questManager) player.questManager.check('collect_gold', picked.quantity);
+            if (player.questManager) player.questManager.check('collect_gold', { amount: picked.quantity });
             sock.emit('notification', { text: `+${picked.quantity} gold`, type: 'gold' });
-            sock.emit('player:stats', player.serializeForPhone());
+            sock.emit('stats:update', player.serializeForPhone());
           } else if (picked.subType === 'health_potion') {
             player.healthPotions += picked.quantity;
             sock.emit('notification', { text: `+${picked.quantity} Health Potion`, type: 'info' });
-            sock.emit('player:stats', player.serializeForPhone());
+            sock.emit('stats:update', player.serializeForPhone());
           } else if (picked.subType === 'mana_potion') {
             player.manaPotions += picked.quantity;
             sock.emit('notification', { text: `+${picked.quantity} Mana Potion`, type: 'info' });
-            sock.emit('player:stats', player.serializeForPhone());
+            sock.emit('stats:update', player.serializeForPhone());
           } else {
             // Equipment/gem → inventory
             if (!inv) continue;

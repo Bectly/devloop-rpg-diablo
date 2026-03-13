@@ -204,7 +204,7 @@ describe('handleEnchantExecute', () => {
     player.equipment.weapon = weapon;
     handlers.handleEnchantExecute(socket, { itemId: 'w1', bonusKey: 'str' }, makeCtx(player, inv));
 
-    const stats = socket._find('player:stats');
+    const stats = socket._find('stats:update');
     expect(stats).toBeTruthy();
   });
 

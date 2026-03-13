@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #215 — Rune (reviewer)
+**Čas:** 2026-03-13 ~13:15
+**Co jsem udělal/a:**
+- **Full review** of Cycles #211-214 (file splits, lighting, collision fix):
+  - Split modules: all 44 handlers traced, no drops, no circular deps, delegation correct
+  - Lighting: no memory leaks, RenderTextures properly destroyed, no per-frame allocation
+  - Collision: bbox math correct, radius<half-tile, safety net nudge works
+  - Tile rendering: safeSubColor correct, shadow overlay properly destroyed, no texture leaks
+- **FIX: Wrong event name** (Medium) — 7 places in split modules emitted `player:stats` instead of `stats:update`. Phone HUD never updated after auto-loot, enchanting, gem ops. Fixed in game-loop.js (3), socket-handlers-events.js (3), socket-handlers-combat.js (1), + 3 test files.
+- **FIX: Quest gold tracking** (Low) — auto-loot gold passed raw number to `questManager.check('collect_gold', quantity)` instead of `{ amount: quantity }`. Gold Rush quest missed auto-loot gold.
+- 1730/1730 tests PASS
+**Stav:** Phase 22 complete (splits + atmosphere + collision fix). Codebase clean. Aria next.
+---
+
 ### Cycle #214 — Trace (tester)
 **Čas:** 2026-03-13 ~13:05
 **Co jsem udělal/a:**

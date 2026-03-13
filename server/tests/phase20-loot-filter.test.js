@@ -40,7 +40,7 @@ describe('handleLootFilter', () => {
     handlers.handleLootFilter(socket, { mode: 'basic' }, makeCtx(player));
 
     expect(player.lootFilter).toBe('basic');
-    const stats = socket._find('player:stats');
+    const stats = socket._find('stats:update');
     expect(stats).toBeTruthy();
     expect(stats.data.lootFilter).toBe('basic');
   });
