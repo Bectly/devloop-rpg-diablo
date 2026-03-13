@@ -2038,7 +2038,7 @@ Fix the L5 `partyCrit` bonus gap found by Rune in Cycle #160:
 ### Found in Cycle #159 (Trace — skill leveling QA)
 
 - [x] [BUG/MEDIUM] `skills.js` — **Projectile skill damage not level-scaled.** `executeMeteor`, `executeVolley`, `executeSniper` compute `projDamage = floor(attackPower/spellPower * skill.damage)` without applying `getDamageMult(skillLevel)`. **Fixed (Rune, Cycle #160):** Added `* getDamageMult(skillLevel)` to projDamage computation in all 3 handlers.
-- [ ] [BUG/LOW] `skills.js` — **Battle Shout L5 partyCrit bonus emitted but never consumed.** `executeBuffDebuff` emits `partyCritBonus: 5` in `buff:apply` event at Level 5, but nothing in `combat.js` reads or applies this value. Needs: store partyCrit in player buff, apply in crit roll.
+- [x] [BUG/LOW] `skills.js` — **Battle Shout L5 partyCrit bonus emitted but never consumed.** `executeBuffDebuff` emits `partyCritBonus: 5` in `buff:apply` event at Level 5, but nothing in `combat.js` reads or applies this value. Needs: store partyCrit in player buff, apply in crit roll. **Fixed (Bolt, Cycle #162):** Added `crit_up` buff to party members in `executeBuffDebuff`; updated crit roll in `combat.js` to check `crit_up` buff effect.
 
 ### Found in Cycle #44, Fixed in Cycle #45 (Rune)
 

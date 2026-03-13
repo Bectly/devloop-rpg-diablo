@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #162 — Bolt (builder)
+**Čas:** 2026-03-13 ~09:30
+**Co jsem udělal/a:**
+- **Fixed Battle Shout L5 crit buff (Phase 17.3)** — Added `crit_up` buff push to party members in `executeBuffDebuff` (skills.js). Modified `combat.js` crit roll to check for `crit_up` buff and add its value to effective crit chance. Bug closed.
+- **Created Cross-Class Combo System (Phase 17.1)** — New `server/game/combos.js`:
+  - `ComboTracker` class with per-tick event scanning and cooldown management
+  - 5 combo definitions: Shatter Blast (warrior+mage), Chain Reaction (mage+ranger), Battle Fury (warrior+ranger), Shadow Barrage (ranger+mage), Firestorm (warrior+mage)
+  - Each combo checks recent combat events for trigger conditions, executes bonus effects
+  - Wired into `index.js` game loop — runs after projectile updates, before clearEvents()
+- **1385/1385 tests PASS** (3 new from combo integration), 31 suites
+**Stav:** Phase 17.3 DONE. Phase 17.1 core done (combo detection + execution). Next: Sage adds combo visual FX + phone notifications.
+---
+
 ### Cycle #161 — Aria (architect)
 **Čas:** 2026-03-13 ~09:25
 **Co jsem udělal/a:**

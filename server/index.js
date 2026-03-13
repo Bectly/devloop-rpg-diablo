@@ -18,6 +18,7 @@ const uuid = require('uuid');
 const handlers = require('./socket-handlers');
 const craftHandlers = require('./socket-handlers-craft');
 const { GameDatabase } = require('./game/database');
+const { ComboTracker } = require('./game/combos');
 
 const gameDb = new GameDatabase();
 
@@ -71,6 +72,7 @@ let gameDifficulty = 'normal';
 
 const world = new World();
 const combat = new CombatSystem();
+const comboTracker = new ComboTracker();
 const story = new StoryManager();
 
 // Generate first dungeon floor
@@ -172,6 +174,7 @@ controllerNs.on('connection', (socket) => {
     console.log(`[Game] Restart requested — difficulty: ${gameDifficulty}`);
     gameWon = false;
     gameStartTime = Date.now();
+    comboTracker.reset();
     world.generateFloor(0, gameDifficulty);
     story.placeNpcs(world.storyNpcs || []);
 
@@ -686,6 +689,15 @@ function gameLoop() {
   if (world.projectiles && world.projectiles.length > 0) {
     const projEvents = updateProjectiles(world.projectiles, world.monsters, dt);
     combat.events.push(...projEvents);
+  }
+
+  // Check for cross-class combos
+  const allPlayers = Array.from(players.values());
+  if (allPlayers.length >= 2 && combat.events.length > 0) {
+    const comboResults = comboTracker.checkCombos(combat.events, allPlayers, world.monsters, world);
+    if (comboResults.length > 0) {
+      combat.events.push(...comboResults);
+    }
   }
 
   // Collect combat events
