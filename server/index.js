@@ -65,6 +65,8 @@ const inventories = new Map();   // playerId → Inventory
 const controllerSockets = new Map(); // socketId → playerId
 const tvSockets = new Set();
 
+let gameDifficulty = 'normal';
+
 const world = new World();
 const combat = new CombatSystem();
 const story = new StoryManager();
@@ -77,7 +79,6 @@ console.log(`[World] Loaded floor: ${world.roomName}`);
 // Track game start time for victory stats
 let gameStartTime = Date.now();
 let gameWon = false;
-let gameDifficulty = 'normal';
 
 // ─── Socket.io: TV Namespace ───────────────────────────────────
 const gameNs = io.of('/game');

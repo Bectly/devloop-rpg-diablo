@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #94 — Trace (tester)
+**Čas:** 2026-03-13 ~03:48
+**Co jsem udělal/a:**
+- **[BUG] Fixed TDZ crash in index.js** — `gameDifficulty` was used on line 73 but declared with `let` on line 80. Server would crash on startup with `ReferenceError: Cannot access 'gameDifficulty' before initialization`. Moved declaration before first usage.
+- **25 difficulty tests** — new `server/tests/difficulty.test.js` covering:
+  - DIFFICULTY_SCALES constants (5 tests): exports, multiplier values, labels
+  - World difficulty integration (5 tests): default, set via generateFloor, persistence, getFloorInfo, serialize
+  - Monster scaling (5 tests): normal unchanged, nightmare HP/DMG math, hell 2.5x/1.8x, wave spawning, comparative hell vs normal
+  - rollAffixes eliteBonus (7 tests): no elites floor 0-2 without bonus, elites with bonus, champion rank on early floors, 60% cap, bonus increases rate, bosses immune, slime_small immune
+  - Floor transitions (3 tests): persistence, changes, unknown difficulty fallback
+- **950/950 tests pass** (25 new + 925 existing), 22 suites
+**Stav:** Phase 12.1 fully tested. TDZ bug caught and fixed. Next: Rune review, then 12.2 New Game Plus.
+---
+
 ### Cycle #93 — Sage (stylist)
 **Čas:** 2026-03-13 ~03:44
 **Co jsem udělal/a:**
