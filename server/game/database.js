@@ -88,7 +88,17 @@ class GameDatabase {
         difficulty TEXT NOT NULL DEFAULT 'normal',
         date TEXT NOT NULL DEFAULT (datetime('now'))
       );
+
+      CREATE INDEX IF NOT EXISTS idx_rift_tier ON rift_records(tier, time_seconds);
+      CREATE INDEX IF NOT EXISTS idx_rift_player1 ON rift_records(player1);
     `);
+
+    // Schema migration — add columns that may be missing from older DB files
+    const cols = this.db.prepare("PRAGMA table_info(characters)").all().map(c => c.name);
+    if (!cols.includes('talents'))       this.db.exec("ALTER TABLE characters ADD COLUMN talents TEXT NOT NULL DEFAULT '{}'");
+    if (!cols.includes('keystones'))     this.db.exec("ALTER TABLE characters ADD COLUMN keystones INTEGER NOT NULL DEFAULT 0");
+    if (!cols.includes('paragon_level')) this.db.exec("ALTER TABLE characters ADD COLUMN paragon_level INTEGER NOT NULL DEFAULT 0");
+    if (!cols.includes('paragon_xp'))    this.db.exec("ALTER TABLE characters ADD COLUMN paragon_xp INTEGER NOT NULL DEFAULT 0");
   }
 
   _prepareStatements() {
@@ -135,6 +145,21 @@ class GameDatabase {
       ORDER BY CASE difficulty WHEN 'hell' THEN 0 WHEN 'nightmare' THEN 1 ELSE 2 END,
         victory DESC, floor_reached DESC, time_seconds ASC
       LIMIT 5
+    `);
+
+    this._stmtRiftInsert = this.db.prepare(`
+      INSERT INTO rift_records (player1, player2, tier, time_seconds, modifiers, difficulty)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    this._stmtRiftLeaderboard = this.db.prepare(`
+      SELECT player1, player2, tier, time_seconds, modifiers, difficulty, date
+      FROM rift_records WHERE tier = ? ORDER BY time_seconds ASC LIMIT 20
+    `);
+
+    this._stmtRiftPersonal = this.db.prepare(`
+      SELECT tier, MIN(time_seconds) as best_time, COUNT(*) as clears
+      FROM rift_records WHERE player1 = ? OR player2 = ? GROUP BY tier ORDER BY tier ASC
     `);
   }
 
@@ -295,11 +320,7 @@ class GameDatabase {
    * @param {string} difficulty  'normal' | 'nightmare' | 'hell'
    */
   recordRiftClear(tier, playerNames, timeSeconds, modifiers, difficulty) {
-    const stmt = this.db.prepare(`
-      INSERT INTO rift_records (player1, player2, tier, time_seconds, modifiers, difficulty)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
+    this._stmtRiftInsert.run(
       playerNames[0] || 'Unknown',
       playerNames[1] || null,
       tier,
@@ -315,14 +336,7 @@ class GameDatabase {
    * @returns {object[]}
    */
   getRiftLeaderboard(tier) {
-    const stmt = this.db.prepare(`
-      SELECT player1, player2, tier, time_seconds, modifiers, difficulty, date
-      FROM rift_records
-      WHERE tier = ?
-      ORDER BY time_seconds ASC
-      LIMIT 20
-    `);
-    return stmt.all(tier).map(row => ({
+    return this._stmtRiftLeaderboard.all(tier).map(row => ({
       ...row,
       modifiers: JSON.parse(row.modifiers || '[]'),
     }));
@@ -334,14 +348,7 @@ class GameDatabase {
    * @returns {object[]}  Each row: { tier, best_time, clears }
    */
   getPersonalRiftRecords(playerName) {
-    const stmt = this.db.prepare(`
-      SELECT tier, MIN(time_seconds) as best_time, COUNT(*) as clears
-      FROM rift_records
-      WHERE player1 = ? OR player2 = ?
-      GROUP BY tier
-      ORDER BY tier ASC
-    `);
-    return stmt.all(playerName, playerName);
+    return this._stmtRiftPersonal.all(playerName, playerName);
   }
 
   close() {

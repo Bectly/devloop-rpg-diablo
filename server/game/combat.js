@@ -157,6 +157,29 @@ class CombatSystem {
               damage: bleedDmg,
             });
           }
+          if (proc.effect === 'execute') {
+            // Execute: bonus damage to targets below threshold HP
+            const hpPercent = nearest.hp / nearest.maxHp;
+            if (hpPercent <= (proc.threshold_hp_percent || 30) / 100) {
+              const bonusDmg = Math.floor(damage * ((proc.damage_multiplier || 2) - 1));
+              nearest.takeDamage(bonusDmg, 'physical');
+              this.events.push({
+                type: 'combat:proc', attackerId: player.id, targetId: nearest.id,
+                effect: 'execute', damage: bonusDmg,
+              });
+            }
+          }
+          if (proc.effect === 'sniper') {
+            // Sniper: bonus damage to full-HP targets
+            if (nearest.hp === nearest.maxHp) {
+              const bonusDmg = Math.floor(damage * ((proc.damage_multiplier || 3) - 1));
+              nearest.takeDamage(bonusDmg, 'physical');
+              this.events.push({
+                type: 'combat:proc', attackerId: player.id, targetId: nearest.id,
+                effect: 'sniper', damage: bonusDmg,
+              });
+            }
+          }
         }
       }
     }
@@ -212,6 +235,19 @@ class CombatSystem {
       if (player.setBonuses && player.setBonuses.xpPercent) {
         xpReward = Math.floor(xpReward * (1 + player.setBonuses.xpPercent / 100));
       }
+      // On-kill talent procs (Bloodbath heal, etc.)
+      if (player.talentBonuses && player.talentBonuses.procs) {
+        for (const proc of player.talentBonuses.procs) {
+          if (proc.trigger === 'on_kill' && Math.random() < (proc.chance || 1)) {
+            if (proc.effect === 'heal_percent') {
+              const heal = Math.floor(player.maxHp * (proc.value || 15) / 100);
+              player.hp = Math.min(player.maxHp, player.hp + heal);
+              this.events.push({ type: 'combat:proc', attackerId: player.id, effect: 'heal_on_kill', heal });
+            }
+          }
+        }
+      }
+
       const levelResult = player.gainXp(xpReward);
       if (levelResult) {
         this.events.push({
@@ -219,6 +255,8 @@ class CombatSystem {
           playerId: player.id,
           playerName: player.name,
           level: levelResult.level,
+          isParagon: levelResult.isParagon || false,
+          paragonLevel: levelResult.paragonLevel || 0,
         });
       }
     }

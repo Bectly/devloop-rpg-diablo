@@ -579,7 +579,8 @@ class World {
   applyRiftModifiers(monsters) {
     if (!this.riftActive || !this.riftConfig) return;
 
-    for (const mod of this.riftConfig.modifiers) {
+    const modifiers = this.riftConfig.modifiers || [];
+    for (const mod of modifiers) {
       for (const m of monsters) {
         switch (mod.effect) {
           case 'monster_damage':
@@ -618,11 +619,13 @@ class World {
   }
 
   endRift() {
+    if (!this.riftActive) return; // Guard against double-end
     this.riftActive = false;
     this.riftConfig = null;
     this.riftTimer = 0;
     this.riftTimeLimit = 0;
     this.riftStartTime = 0;
+    // Caller must trigger generateFloor() to return to normal dungeon
   }
 
   getRiftTimeRemaining() {
@@ -640,6 +643,7 @@ class World {
 
     // Lazy require to avoid circular dependency (rifts.js requires world.js for ZONE_DEFS)
     const { createRiftGuardian } = require('./rifts');
+    const { Monster } = require('./monsters');
     const guardian = createRiftGuardian(this.riftConfig.tier, this.riftConfig.zone);
 
     // Position in center of boss room (same formula as generateWaveMonsters)
@@ -652,42 +656,27 @@ class World {
     guardian.spawnX = gx;
     guardian.spawnY = gy;
 
-    // Add a serialize() method so world.serialize() doesn't crash —
-    // mirrors the shape produced by Monster.serialize()
-    guardian.serialize = function () {
-      return {
-        id: this.id,
-        type: this.type,
-        name: this.name,
-        x: Math.round(this.x),
-        y: Math.round(this.y),
-        facing: this.facing,
-        hp: this.hp,
-        maxHp: this.maxHp,
-        alive: this.alive,
-        aiState: this.aiState,
-        isBoss: this.isBoss,
-        color: this.color,
-        size: this.size,
-        stunned: this.stunned > 0,
-        slowed: this.slowed > 0,
-        behavior: this.behavior,
-        damageType: this.damageType,
-        stealthed: false,
-        charging: false,
-        physicalResist: 0,
-        affixes: this.affixes || null,
-        isElite: this.isElite || false,
-        eliteRank: this.eliteRank || null,
-        shieldActive: this.shieldActive || false,
-        fireEnchanted: this.fireEnchanted || false,
-        coldEnchanted: this.coldEnchanted || false,
-        isRiftGuardian: true,
-        riftTier: this.riftTier,
-        phases: this.phases,
-        currentPhase: this.currentPhase,
-      };
-    };
+    // Add missing fields needed by Monster.prototype methods
+    guardian.physicalResist = 0;
+    guardian.goldMult = 1.5 + this.riftConfig.tier * 0.3;
+    guardian.wanderTimer = 0;
+    guardian.wanderDx = 0;
+    guardian.wanderDy = 0;
+    guardian.targetId = null;
+    guardian.stealthed = false;
+    guardian.charging = false;
+
+    // Borrow Monster.prototype methods so the game loop can call them
+    guardian.update = Monster.prototype.update;
+    guardian.takeDamage = Monster.prototype.takeDamage;
+    guardian.distanceTo = Monster.prototype.distanceTo;
+    guardian.findClosestPlayer = Monster.prototype.findClosestPlayer;
+    guardian.moveToward = Monster.prototype.moveToward;
+    guardian.moveAwayFrom = Monster.prototype.moveAwayFrom;
+    guardian.applyStun = Monster.prototype.applyStun;
+    guardian.applySlow = Monster.prototype.applySlow;
+    guardian.getSplitMonsters = function () { return []; };
+    guardian.serialize = Monster.prototype.serialize;
 
     this.monsters.push(guardian);
     return guardian;
@@ -764,6 +753,9 @@ class World {
     roomData.wavesSpawned++;
 
     const waveMonsters = generateWaveMonsters(roomData, roomData.wavesSpawned - 1, this.currentFloor, this.difficulty);
+    if (this.riftActive) {
+      this.applyRiftModifiers(waveMonsters);
+    }
     for (const m of waveMonsters) this.monsters.push(m);
     roomData.monstersAlive += waveMonsters.length;
 

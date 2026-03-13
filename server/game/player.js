@@ -309,15 +309,21 @@ class Player {
 
   gainXp(amount) {
     if (!this.alive) return null;
+    if (amount <= 0) return null;
 
     // At max level, overflow XP goes to paragon
     if (this.level >= MAX_LEVEL) {
       this.paragonXp += amount;
-      const paragonCost = (this.paragonLevel + 1) * 1000;
-      if (this.paragonXp >= paragonCost) {
+      let leveled = false;
+      let paragonCost = (this.paragonLevel + 1) * 1000;
+      while (this.paragonXp >= paragonCost) {
         this.paragonXp -= paragonCost;
         this.paragonLevel += 1;
         this.freeStatPoints += 1;
+        leveled = true;
+        paragonCost = (this.paragonLevel + 1) * 1000;
+      }
+      if (leveled) {
         return { level: this.level, paragonLevel: this.paragonLevel, isParagon: true, talentPoints: 0 };
       }
       return null;
@@ -326,7 +332,20 @@ class Player {
     // Normal leveling
     this.xp += amount;
     if (this.xp >= this.xpToNext) {
-      return this.levelUp();
+      const result = this.levelUp();
+      // If we just hit MAX_LEVEL, feed leftover XP into paragon
+      if (this.level >= MAX_LEVEL && this.xp > 0) {
+        this.paragonXp += this.xp;
+        this.xp = 0;
+        let paragonCost = (this.paragonLevel + 1) * 1000;
+        while (this.paragonXp >= paragonCost) {
+          this.paragonXp -= paragonCost;
+          this.paragonLevel += 1;
+          this.freeStatPoints += 1;
+          paragonCost = (this.paragonLevel + 1) * 1000;
+        }
+      }
+      return result;
     }
     return null;
   }
@@ -655,6 +674,10 @@ class Player {
       debuffs: this.debuffs.map(d => ({ effect: d.effect, ticksRemaining: d.ticksRemaining })),
       activeSets: this.activeSets,
       setBonuses: this.setBonuses,
+      keystones: this.keystones,
+      paragonLevel: this.paragonLevel,
+      paragonXp: this.paragonXp,
+      paragonXpToNext: (this.paragonLevel + 1) * 1000,
     };
   }
 
@@ -695,8 +718,8 @@ class Player {
     }
 
     // Restore paragon progression
-    this.paragonLevel = savedData.paragonLevel || 0;
-    this.paragonXp = savedData.paragonXp || 0;
+    this.paragonLevel = savedData.paragonLevel ?? 0;
+    this.paragonXp = savedData.paragonXp ?? 0;
 
     // Recalc bonuses from restored equipment (also recalcs resistances), then set HP/MP to max
     this.recalcEquipBonuses();
@@ -763,7 +786,8 @@ class Player {
    * @param {number} n
    */
   addKeystones(n) {
-    this.keystones = (this.keystones || 0) + Math.max(0, Math.floor(n));
+    if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) return;
+    this.keystones = (this.keystones || 0) + Math.floor(n);
   }
 
   /**

@@ -1,5 +1,34 @@
 # DevLoop RPG — Development Log
 
+### Cycle #115 — Rune (reviewer)
+**Čas:** 2026-03-13 ~05:15
+**Co jsem udělal:**
+- Deep review of Cycles #111-114 (world.js, player.js, database.js, combat.js) using 4 parallel review agents
+- Found **19 bugs** total — 6 critical, 4 high, 5 moderate, 4 low
+- **CRITICAL FIX: Guardian crash** — rift guardian was a plain object missing `update()`, `takeDamage()`, `distanceTo()` etc. Server would crash on next game tick after guardian spawn. Fixed by borrowing Monster.prototype methods.
+- **CRITICAL FIX: DB migration** — existing `game.db` files missing 4 new columns (talents, keystones, paragon_level, paragon_xp). `CREATE TABLE IF NOT EXISTS` doesn't add columns. Added ALTER TABLE migration in `_createTables()`.
+- **CRITICAL FIX: applyRiftModifiers never called** — rift monsters spawned at base difficulty. Added call in `spawnWave()` when rift active.
+- **CRITICAL FIX: Execute/Sniper procs dead** — 2 of 12 capstone talents had no combat handler. Added execute (bonus dmg below 30% HP) and sniper (bonus dmg to full HP) handlers.
+- **CRITICAL FIX: on_kill procs dead** — Bloodbath (heal on kill) talent never fired. Added on_kill proc processing after kill XP award.
+- **HIGH FIX: gainXp multi-level** — single `if` meant only 1 paragon level per `gainXp()` call. Changed to `while` loop. Also fixed XP overflow at level 29→30 transition (leftover XP now feeds into paragon).
+- **HIGH FIX: addKeystones NaN guard** — `addKeystones(NaN)` permanently corrupted keystones. Added type/finite validation.
+- **HIGH FIX: serialize() missing paragon** — TV client never received paragon data. Added keystones/paragonLevel/paragonXp/paragonXpToNext fields.
+- **MODERATE FIX: endRift() double-end guard** — added `if (!this.riftActive) return`
+- **MODERATE FIX: restoreFrom || vs ??** — `paragonLevel || 0` technically safe but inconsistent; changed to `??`
+- **MODERATE FIX: DB performance** — cached 3 rift prepared statements, added indexes on rift_records(tier, time_seconds) and rift_records(player1)
+- Added `isParagon`/`paragonLevel` fields to `player:levelup` event for client notifications
+- 1145 tests, 25 suites — all passing
+
+**Remaining issues (documented for future cycles):**
+- Defensive procs (Shield Wall, Ice Barrier, Caltrops, Last Stand) never fire in processMonsterAttack — needs handler
+- shatter_bonus passive (Frost Mage) computed but never consumed
+- Bleed and poison share one slot (poisonTick/poisonDamage) — poison arrow overwrites active bleed
+- Party aura xp_percent/attack_speed/move_speed computed but unused
+- updateRiftTimer() not yet called in game loop — part of 14.2 (socket events)
+
+**Stav:** Phase 14 nearly complete. 14.2 (socket events) is the LAST remaining item — wires rift:open/enter/cancel handlers and game loop timer.
+---
+
 ### Cycle #114 — Trace (tester)
 **Čas:** 2026-03-13 ~05:08
 **Co jsem udělal:**
