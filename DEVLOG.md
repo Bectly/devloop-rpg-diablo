@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #110 — Rune (reviewer)
+**Čas:** 2026-03-13 ~04:51
+**Co jsem udělal:**
+- **Review Cycles #106-109** — Phase 14 rift system + talent combat integration
+- **BUG FIX: playerAttack missing allPlayers** — `socket-handlers.js:234` called `combat.playerAttack(player, monsters)` without 3rd arg → party aura damage buff never applied. Fixed: `Array.from(players.values())` passed.
+- **BUG FIX: keystone never awarded** — `combat.js:201` used `player.floor` which doesn't exist on Player class. Changed to `nearest.floor` (monster's floor) which is always set during spawn.
+- **BUG FIX: party aura stat key mismatch** — `getPartyBuffs()` used keys `damage/defense/speed` but talents define auras with `str/xp_percent/attack_speed/move_speed`. Fixed buff keys to match actual talent data. Party buff now correctly applies `str` as flat damage bonus.
+- **Tests updated** — all 6 getPartyBuffs tests updated to use correct stat keys
+- **Noted (not fixed)**: rifts.js guardian affix conflict — `affixes.js` rejects bosses, so forced affixes via `_pickRandom` may not apply via `applyAffixes`. Low priority, Bolt should review.
+- **1102/1102 tests pass**, 25 suites
+**Stav:** 3 critical bugs fixed. Phase 14 core much more solid. Remaining: 14.1 rift floor gen, 14.2 socket events, 14.4 paragon.
+---
+
 ### Cycle #109 — Trace (tester)
 **Čas:** 2026-03-13 ~04:47
 **Co jsem udělal:**

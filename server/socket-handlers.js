@@ -231,7 +231,8 @@ exports.handleMoveStop = (socket, data, { players }) => {
 exports.handleAttack = (socket, data, { players, world, combat }) => {
   const player = players.get(socket.id);
   if (!player || !player.alive || player.isDying) return;
-  combat.playerAttack(player, world.monsters);
+  const allPlayers = Array.from(players.values());
+  combat.playerAttack(player, world.monsters, allPlayers);
 };
 
 // ── Skills ──

@@ -569,59 +569,60 @@ describe('Talent combat bonuses — CombatSystem', () => {
   describe('getPartyBuffs', () => {
     it('empty players array returns all-zero buffs', () => {
       const buffs = combat.getPartyBuffs([]);
-      expect(buffs.damage).toBe(0);
-      expect(buffs.defense).toBe(0);
-      expect(buffs.speed).toBe(0);
+      expect(buffs.str).toBe(0);
+      expect(buffs.xp_percent).toBe(0);
+      expect(buffs.attack_speed).toBe(0);
+      expect(buffs.move_speed).toBe(0);
     });
 
-    it('one player with a damage aura → damage > 0', () => {
+    it('one player with a str aura → str > 0', () => {
       const player = mockPlayer({
         talentBonuses: {
-          auras: [{ stat: 'damage', value: 0.15, party: true }],
+          auras: [{ stat: 'str', value: 2, party: true }],
         },
       });
       const buffs = combat.getPartyBuffs([player]);
-      expect(buffs.damage).toBeGreaterThan(0);
-      expect(buffs.damage).toBeCloseTo(0.15);
+      expect(buffs.str).toBe(2);
     });
 
     it('two players with different party auras → both aggregate correctly', () => {
       const p1 = mockPlayer({
         talentBonuses: {
-          auras: [{ stat: 'damage', value: 0.1, party: true }],
+          auras: [{ stat: 'str', value: 3, party: true }],
         },
       });
       const p2 = mockPlayer({
         talentBonuses: {
-          auras: [{ stat: 'damage', value: 0.2, party: true }],
+          auras: [{ stat: 'attack_speed', value: 5, party: true }],
         },
       });
       const buffs = combat.getPartyBuffs([p1, p2]);
-      expect(buffs.damage).toBeCloseTo(0.3);
+      expect(buffs.str).toBe(3);
+      expect(buffs.attack_speed).toBe(5);
     });
 
     it('player without talentBonuses does not crash and contributes 0', () => {
       const p1 = mockPlayer({ talentBonuses: null });
       const p2 = mockPlayer({
         talentBonuses: {
-          auras: [{ stat: 'damage', value: 0.1, party: true }],
+          auras: [{ stat: 'str', value: 4, party: true }],
         },
       });
       let buffs;
       expect(() => {
         buffs = combat.getPartyBuffs([p1, p2]);
       }).not.toThrow();
-      expect(buffs.damage).toBeCloseTo(0.1);
+      expect(buffs.str).toBe(4);
     });
 
     it('aura with party:false is not counted', () => {
       const player = mockPlayer({
         talentBonuses: {
-          auras: [{ stat: 'damage', value: 0.5, party: false }],
+          auras: [{ stat: 'str', value: 10, party: false }],
         },
       });
       const buffs = combat.getPartyBuffs([player]);
-      expect(buffs.damage).toBe(0);
+      expect(buffs.str).toBe(0);
     });
 
     it('aura stat not in buffs object is safely ignored', () => {
@@ -634,21 +635,20 @@ describe('Talent combat bonuses — CombatSystem', () => {
       expect(() => {
         buffs = combat.getPartyBuffs([player]);
       }).not.toThrow();
-      // Known keys should still be 0
-      expect(buffs.damage).toBe(0);
+      expect(buffs.str).toBe(0);
     });
 
     it('multiple auras from same player stack', () => {
       const player = mockPlayer({
         talentBonuses: {
           auras: [
-            { stat: 'damage', value: 0.1, party: true },
-            { stat: 'damage', value: 0.05, party: true },
+            { stat: 'move_speed', value: 5, party: true },
+            { stat: 'move_speed', value: 3, party: true },
           ],
         },
       });
       const buffs = combat.getPartyBuffs([player]);
-      expect(buffs.damage).toBeCloseTo(0.15);
+      expect(buffs.move_speed).toBe(8);
     });
   });
 });

@@ -109,11 +109,11 @@ class CombatSystem {
     player.startAttackCooldown();
     let { damage, isCrit, damageType } = this.calcPlayerDamage(player);
 
-    // Party aura: damage buff
+    // Party aura: str bonus adds flat damage from co-op partner
     if (allPlayers) {
       const partyBuffs = this.getPartyBuffs(allPlayers);
-      if (partyBuffs.damage > 0) {
-        damage = Math.floor(damage * (1 + partyBuffs.damage));
+      if (partyBuffs.str > 0) {
+        damage += partyBuffs.str;
       }
     }
 
@@ -197,8 +197,8 @@ class CombatSystem {
         }
       }
 
-      // Award keystone for boss kill on floor 3+ (floor is 0-indexed, so >= 3 = physical floor 4+)
-      if (nearest.isBoss && (player.floor || 0) >= 3) {
+      // Award keystone for boss kill on floor 3+ (use monster's floor, not player's)
+      if (nearest.isBoss && (nearest.floor || 0) >= 3) {
         const keystones = player.difficulty === 'hell' ? 2 : 1;
         player.addKeystones(keystones);
         deathEvent.keystoneReward = keystones;
@@ -707,8 +707,10 @@ class CombatSystem {
   }
 
   // Aggregate party aura buffs from all players' talent bonuses
+  // Talent aura stats: str, xp_percent, attack_speed, move_speed
   getPartyBuffs(players) {
-    const buffs = { damage: 0, defense: 0, speed: 0 };
+    const buffs = { str: 0, xp_percent: 0, attack_speed: 0, move_speed: 0 };
+    if (!players) return buffs;
     for (const p of players) {
       if (p.talentBonuses && p.talentBonuses.auras) {
         for (const aura of p.talentBonuses.auras) {
