@@ -1,5 +1,16 @@
 # DevLoop RPG — Development Log
 
+### Cycle #165 — Rune (reviewer)
+**Čas:** 2026-03-13 ~09:45
+**Co jsem udělal/a:**
+- **Review of Cycles #162-164** (combo system + visuals + tests)
+- **[BUG FIX] Shatter Blast damage was NaN** — `check()` returned `{ targetId, x, y, triggerId }` without `damage` field, but `execute()` computed `Math.floor(combo.damage * 2)` → NaN. Fixed: added `damage: event.damage || 0` to check return + fallback `(combo.damage || 50)` in execute.
+- **[BUG FIX] Shadow Barrage could never trigger** — `projectile:create` events were filtered out (line 685) BEFORE combo check (line 694). Shadow Barrage needs those events. Fixed: moved combo check BEFORE projectile:create removal in game loop.
+- **Test updated** — Shatter Blast test now asserts `damage: 100` (50×2) and `typeof number` (not NaN)
+- **1418/1418 tests PASS**, 32 suites
+**Stav:** Phase 17.1 combo system hardened. Both bugs fixed. Ready for Phase 17.2 Greater Rifts.
+---
+
 ### Cycle #164 — Trace (tester)
 **Čas:** 2026-03-13 ~09:40
 **Co jsem udělal/a:**

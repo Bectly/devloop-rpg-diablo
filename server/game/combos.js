@@ -24,12 +24,12 @@ const COMBO_DEFS = [
       // We can't track who froze, so just require 2+ players alive
       const alivePlayers = players.filter(p => p.alive);
       if (alivePlayers.length < 2) return null;
-      return { targetId: monster.id, x: monster.x, y: monster.y, triggerId: event.attackerId };
+      return { targetId: monster.id, x: monster.x, y: monster.y, triggerId: event.attackerId, damage: event.damage || 0 };
     },
     execute(combo, monster, players) {
       const results = [];
       // Ice explosion: AOE 100px around the shattered monster
-      const aoeDamage = Math.floor(combo.damage * 2);
+      const aoeDamage = Math.floor((combo.damage || 50) * 2);
       results.push({
         type: 'combo:trigger',
         comboId: 'shatter_blast',

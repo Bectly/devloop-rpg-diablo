@@ -660,6 +660,16 @@ function gameLoop() {
     }
   }
 
+  // Check for cross-class combos BEFORE projectile:create removal
+  // (Shadow Barrage needs projectile:create events to detect Sniper Shot)
+  const allPlayers = Array.from(players.values());
+  if (allPlayers.length >= 2 && combat.events.length > 0) {
+    const comboResults = comboTracker.checkCombos(combat.events, allPlayers, world.monsters, world);
+    if (comboResults.length > 0) {
+      combat.events.push(...comboResults);
+    }
+  }
+
   // Process projectile:create events from skills (Phase 16.3)
   const projCreateEvents = combat.events.filter(e => e.type === 'projectile:create');
   if (projCreateEvents.length > 0) {
@@ -689,15 +699,6 @@ function gameLoop() {
   if (world.projectiles && world.projectiles.length > 0) {
     const projEvents = updateProjectiles(world.projectiles, world.monsters, dt);
     combat.events.push(...projEvents);
-  }
-
-  // Check for cross-class combos
-  const allPlayers = Array.from(players.values());
-  if (allPlayers.length >= 2 && combat.events.length > 0) {
-    const comboResults = comboTracker.checkCombos(combat.events, allPlayers, world.monsters, world);
-    if (comboResults.length > 0) {
-      combat.events.push(...comboResults);
-    }
   }
 
   // Collect combat events

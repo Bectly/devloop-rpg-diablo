@@ -119,6 +119,8 @@ describe('Shatter Blast combo', () => {
     expect(result[0].comboId).toBe('shatter_blast');
     expect(result[0].comboName).toBe('Shatter Blast');
     expect(result[0].radius).toBe(100);
+    expect(result[0].damage).toBe(100); // 50 * 2
+    expect(typeof result[0].damage).toBe('number'); // not NaN
   });
 
   it('does NOT trigger on magical damage', () => {
