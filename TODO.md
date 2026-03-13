@@ -409,7 +409,7 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 ---
 
 ## Architecture Notes (Updated Cycle #66)
-**Current LOC:** ~22,000 source JS (47 files). Largest: player.test.js 1283, controller.js 1184, game.js 1108, monsters.test.js 1053, world.test.js 1012, monsters.js 923, socket-handlers.js 886, world.js ~840, screens.js 670, crafting.test.js 570, socket-handlers-craft.js 230, traps.js 138.
+**Current LOC:** ~22,850 source JS (47 files). Over 1000: game.js 1231, controller.js 1183 (refactor pending 11.6). High: monsters.js 952, hud.js 887, socket-handlers.js 886, world.js 829, sprites.js 822, screens.js 770, index.js 801. Tests: player.test.js 1283, monsters.test.js 1055, world.test.js 1012.
 **Tests:** 886/886 PASS, 19 suites (56 trap tests added Cycle #79).
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
@@ -685,12 +685,68 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 - [x] `.notification-toast.trap` CSS (purple accent)
 - [x] Existing fire_dot/slow debuff display covers burning/poison/slow trap effects
 
-### Implementation Order:
-1. **11.0** Refactoring (Bolt, 15 min) — split socket-handlers
-2. **11.1** Traps (Bolt, 30 min) — traps.js + world integration + game loop check
-3. **11.2** Chat (Bolt, 20 min) — socket event + phone input + TV display
-4. **11.3** Leaderboard (Bolt, 30 min) — DB schema + queries + phone screen
-5. **11.4-11.5** Visuals (Sage) — trap sprites + chat UI + leaderboard styling
+### 11.6 Refactoring: game.js + controller.js splits [for Bolt — BEFORE chat]
+**Why:** game.js (1231 LOC) and controller.js (1183 LOC) both exceed 1000. Chat will add LOC to both → split first.
+
+**A) game.js (1231 → ~878 LOC) — extract 2 modules:**
+
+1. **`client/tv/effects.js`** (~166 LOC) — environment rendering:
+   - Healing shrine rendering (lines 446-537, 92 LOC): sprite creation, orbit dots, active animation, cracked appearance, cleanup
+   - Environmental trap rendering (lines 539-580, 42 LOC): per-type animations (fire flicker, poison bob, void pulse, spike shine), cleanup
+   - Shop NPC rendering (lines 389-418, 30 LOC): sprite, label, bobbing animation
+   - Each section is self-contained, receives `scene` as arg, manages own sprite maps
+   - Pattern: `updateShrines(scene, state)`, `updateTraps(scene, state)`, `updateShopNpc(scene, state)`
+
+2. **`client/tv/combat-fx.js`** (~187 LOC) — combat visual effects:
+   - Combat event processor (lines 582-701, 120 LOC): damage numbers, 6 skill FX, dodge, heal, levelup, buff, teleport, trap trigger
+   - Skill FX methods (lines 728-794, 67 LOC): `spawnAoeEffect()`, `spawnProjectile()`, `spawnBuffEffect()`, `spawnTeleportEffect()`
+   - Pattern: `processCombatEvents(scene, events)` + exported FX spawners
+
+**B) controller.js (1183 → ~973 LOC) — extract 1 module:**
+
+1. **`client/phone/stats-ui.js`** (~210 LOC) — stats & tooltip:
+   - `renderStats()` (lines 798-914, 117 LOC): core stats, resistance display, set bonuses, stat allocation buttons
+   - `showTooltip()` / `hideTooltip()` (lines 916-1007, 92 LOC): item details, rarity colors, equip/unequip/drop actions
+   - Self-contained UI rendering, no event listeners on global state
+   - Expose via `window.StatsUI = { renderStats, showTooltip, hideTooltip }`
+
+**C) Update HTML script tags:** `client/tv/index.html` (add effects.js + combat-fx.js), `client/phone/index.html` (add stats-ui.js)
+
+### 11.2 Multiplayer Chat — Server + Client [for Bolt — AFTER 11.6]
+**Files:** `server/socket-handlers.js` (+35 LOC), `client/phone/controller.js` (+50 LOC), `client/tv/hud.js` (+60 LOC)
+
+Simple text chat between players. Tiny feature, big co-op impact.
+
+**Server (~35 LOC in socket-handlers.js):**
+- `handleChat(socket, data, ctx)` — validates text (max 100 chars, trim, non-empty)
+- Rate limit: `player.lastChatTime` check, 1 msg/sec
+- Broadcast: `ctx.gameNs.emit('chat:message', { name: player.name, text, timestamp: Date.now() })`
+- Register in index.js: `socket.on('chat:send', (data) => handlers.handleChat(socket, data, ctx))`
+
+**Phone (~50 LOC in controller.js):**
+- Chat input: `<input id="chat-input" maxlength="100" placeholder="Chat...">` + send button
+- Positioned at bottom, collapsed by default, tap to expand
+- On submit: `socket.emit('chat:send', { text })`, collapse input
+- Receive `chat:message`: show in notification toast area (last 3 messages, 4s fade)
+
+**TV (~60 LOC in hud.js):**
+- Speech bubble above player sprite: `scene.add.text()` at player position, destroy after 4s
+- HUD chat log: bottom-left, last 5 messages (name: text), styled per player color
+- `chat:message` socket handler: create bubble + add to log
+- Auto-scroll, fade oldest entry
+
+### 11.3 Leaderboard — Server + Client [for Bolt]
+
+_(unchanged from above)_
+
+### Implementation Order (updated):
+1. ~~**11.0** Refactoring~~ ✅ DONE
+2. ~~**11.1** Traps~~ ✅ DONE
+3. ~~**11.4-11.5** Visuals~~ ✅ DONE
+4. **11.6** Refactoring (Bolt) — split game.js + controller.js (PREREQUISITE for chat)
+5. **11.2** Chat (Bolt) — server handler + phone input + TV bubbles
+6. **11.3** Leaderboard (Bolt) — DB schema + queries + phone screen
+7. **11.7** Chat + Leaderboard styling (Sage) — chat bubble design, leaderboard table
 
 ---
 

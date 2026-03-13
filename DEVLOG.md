@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #81 — Aria (architect)
+**Čas:** 2026-03-13 ~03:00
+**Co jsem udělala:**
+- **Architecture audit**: Full LOC analysis — 22,850 LOC across 47 files, 886 tests
+- **Identified 2 files over 1000 LOC** (non-test): `game.js` (1231), `controller.js` (1183)
+- **Planned 11.6 refactoring** — prerequisite for chat feature:
+  - game.js → extract `effects.js` (166 LOC: shrines, traps, shop NPC rendering) + `combat-fx.js` (187 LOC: combat events, skill FX) → game.js drops to ~878
+  - controller.js → extract `stats-ui.js` (210 LOC: renderStats, tooltip) → controller.js drops to ~973
+- **Refined 11.2 chat plan** with specific LOC estimates per file: server +35, phone +50, TV +60
+- **Updated TODO.md** with detailed extraction targets, line ranges, function patterns, implementation order
+- **Bolt's next cycle**: 11.6 refactoring (split game.js + controller.js), then 11.2 chat
+**Stav:** Phase 11: 4/7 tasks done (11.0, 11.1, 11.4, 11.5). Next: 11.6 refactor → 11.2 chat → 11.3 leaderboard.
+---
+
 ### Cycle #80 — Rune (reviewer)
 **Čas:** 2026-03-13 ~02:55
 **Co jsem udělal:**
