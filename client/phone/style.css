@@ -2220,3 +2220,57 @@ html, body {
   border-color: #4488aa;
   color: #88ccee;
 }
+
+/* ─── Leaderboard ─── */
+#leaderboard-screen {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 8, 16, 0.96);
+  z-index: 1100;
+  display: flex; flex-direction: column;
+  padding: 12px;
+  overflow-y: auto;
+}
+#leaderboard-screen.hidden { display: none; }
+
+.ldb-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.ldb-title { color: #ffd700; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+.ldb-close {
+  background: none; border: none; color: #888; font-size: 24px;
+  padding: 0 8px; cursor: pointer;
+}
+
+.ldb-tabs {
+  display: flex; gap: 8px; margin-bottom: 10px;
+}
+.ldb-tab {
+  flex: 1; padding: 8px; border: 1px solid #333; border-radius: 6px;
+  background: #1a1a2e; color: #888; font-size: 13px; font-weight: bold;
+  cursor: pointer; text-align: center;
+}
+.ldb-tab.active { background: #2a2a4e; color: #ffd700; border-color: #ffd700; }
+
+.ldb-list { flex: 1; overflow-y: auto; }
+.ldb-empty { color: #666; text-align: center; margin-top: 40px; font-size: 14px; }
+
+.ldb-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 4px; border-bottom: 1px solid #1a1a2e; font-size: 12px;
+  color: #ccc;
+}
+.ldb-header-row { color: #888; font-weight: bold; font-size: 11px; border-bottom: 1px solid #333; }
+.ldb-victory { background: rgba(255, 215, 0, 0.08); }
+.ldb-victory .ldb-name { color: #ffd700; }
+
+.ldb-rank { width: 22px; text-align: center; color: #888; }
+.ldb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ldb-class { width: 32px; text-align: center; color: #8888cc; font-size: 10px; }
+.ldb-lvl { width: 26px; text-align: center; }
+.ldb-floor { width: 24px; text-align: center; }
+.ldb-kills { width: 34px; text-align: center; }
+.ldb-time { width: 38px; text-align: right; font-family: monospace; }
+.ldb-badge { width: 18px; text-align: center; }
+
+.action-btn.ldb-btn { background: linear-gradient(135deg, #b8860b, #daa520); font-size: 11px; }

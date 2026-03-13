@@ -627,7 +627,7 @@ Traps are floor hazards placed during dungeon generation. Step on them → take 
 - [x] **TV**: Speech bubbles above players (4s fade), chat log bottom-left (5 msgs, 15s fade)
 - [x] **CSS**: Chat wrapper, focus glow, slide-in animation, MSG button styling
 
-### 11.3 Leaderboard — Server + Client [for Bolt]
+### 11.3 Leaderboard — Server + Client [DONE — Bolt, Cycle #87]
 
 Track run stats and show top players. Drives replayability.
 
@@ -794,8 +794,8 @@ Leaderboard overlay + table styles. Follow craft/shop pattern. Gold/green accent
 3. ~~**11.4-11.5** Visuals~~ ✅ DONE
 4. ~~**11.6** Refactoring~~ ✅ DONE
 5. ~~**11.2** Chat~~ ✅ DONE
-6. **11.3** Leaderboard (Bolt) — DB schema + queries + phone screen
-7. **11.7** Leaderboard styling (Sage) — leaderboard table
+6. ~~**11.3** Leaderboard~~ ✅ DONE
+7. **11.7** Leaderboard polish (Sage) — review styling, victory screen link
 
 ---
 

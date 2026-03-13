@@ -135,6 +135,8 @@ controllerNs.on('connection', (socket) => {
   socket.on('quest:claim', (data) => handlers.handleQuestClaim(socket, data, ctx));
   socket.on('chest:open', (data) => handlers.handleChestOpen(socket, data, ctx));
   socket.on('chat:send', (data) => handlers.handleChat(socket, data, ctx));
+  socket.on('leaderboard:get', (data) => handlers.handleLeaderboardGet(socket, data, ctx));
+  socket.on('leaderboard:personal', (data) => handlers.handleLeaderboardPersonal(socket, data, ctx));
 
   // ── New Game (restart after victory) ──
   socket.on('game:restart', () => {
@@ -659,6 +661,11 @@ function gameLoop() {
 
             // Save final stats before emitting victory
             saveAllPlayers();
+
+            // Record leaderboard entry for each player
+            for (const ps of playerStats) {
+              gameDb.recordRun(ps.name, ps.characterClass, ps.level, FLOOR_NAMES.length, ps.kills, ps.gold, Math.floor(elapsed / 1000), 1);
+            }
 
             gameNs.emit('game:victory', victoryData);
             controllerNs.emit('game:victory', victoryData);

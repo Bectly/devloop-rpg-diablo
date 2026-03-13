@@ -9,6 +9,10 @@
  *              equipment JSON, inventory JSON, gold INT, floor INT, kills INT,
  *              health_potions INT, mana_potions INT, updated_at TEXT)
  *
+ *   leaderboard(id INT PK AUTO, player_name TEXT, character_class TEXT,
+ *               level INT, floor_reached INT, kills INT, gold_earned INT,
+ *               time_seconds INT, victory INT, created_at TEXT)
+ *
  * Usage:
  *   const db = new GameDatabase('./data/game.db');
  *   db.saveCharacter(player, inventory);
@@ -55,6 +59,19 @@ class GameDatabase {
         free_stat_points INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
+
+      CREATE TABLE IF NOT EXISTS leaderboard (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        player_name TEXT NOT NULL,
+        character_class TEXT NOT NULL,
+        level INTEGER NOT NULL,
+        floor_reached INTEGER NOT NULL,
+        kills INTEGER NOT NULL,
+        gold_earned INTEGER NOT NULL,
+        time_seconds INTEGER NOT NULL,
+        victory INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
     `);
   }
 
@@ -78,6 +95,26 @@ class GameDatabase {
 
     this._stmtList = this.db.prepare(`
       SELECT name, class, level, floor, kills, updated_at FROM characters ORDER BY updated_at DESC
+    `);
+
+    this._stmtLeaderboardInsert = this.db.prepare(`
+      INSERT INTO leaderboard
+        (player_name, character_class, level, floor_reached, kills, gold_earned, time_seconds, victory)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    this._stmtLeaderboardTop = this.db.prepare(`
+      SELECT * FROM leaderboard
+      ORDER BY victory DESC, floor_reached DESC, time_seconds ASC
+      LIMIT 10
+    `);
+
+    this._stmtLeaderboardPersonal = this.db.prepare(`
+      SELECT * FROM leaderboard
+      WHERE player_name = ?
+      ORDER BY victory DESC, floor_reached DESC, time_seconds ASC
+      LIMIT 5
     `);
   }
 
@@ -162,6 +199,40 @@ class GameDatabase {
    */
   listCharacters() {
     return this._stmtList.all();
+  }
+
+  /**
+   * Record a completed run to the leaderboard.
+   * @param {string} playerName
+   * @param {string} characterClass
+   * @param {number} level
+   * @param {number} floorReached
+   * @param {number} kills
+   * @param {number} goldEarned
+   * @param {number} timeSeconds
+   * @param {number} victory 1 = won, 0 = died
+   */
+  recordRun(playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory) {
+    return this._stmtLeaderboardInsert.run(
+      playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory
+    );
+  }
+
+  /**
+   * Get the top 10 leaderboard runs.
+   * @returns {object[]}
+   */
+  getTopRuns() {
+    return this._stmtLeaderboardTop.all();
+  }
+
+  /**
+   * Get top 5 personal runs for a specific player.
+   * @param {string} playerName
+   * @returns {object[]}
+   */
+  getPersonalRuns(playerName) {
+    return this._stmtLeaderboardPersonal.all(playerName);
   }
 
   close() {

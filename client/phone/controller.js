@@ -300,6 +300,10 @@ socket.on('chat:message', (data) => {
   showChatMessage(data.name, data.text);
 });
 
+socket.on('leaderboard:data', (data) => {
+  Screens.renderLeaderboard(data.entries, data.type);
+});
+
 socket.on('game:victory', (data) => {
   console.log('[Phone] VICTORY!', data);
   Sound.victory();
@@ -687,6 +691,16 @@ function initButtons() {
     });
     chatBtn.addEventListener('click', () => toggleChatInput());
   }
+
+  // Leaderboard
+  const ldbBtn = document.getElementById('btn-leaderboard');
+  if (ldbBtn) {
+    ldbBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      Screens.toggleLeaderboard(socket);
+    });
+    ldbBtn.addEventListener('click', () => Screens.toggleLeaderboard(socket));
+  }
 }
 
 // ─── Haptic Feedback ────────────────────────────────────────────
@@ -1009,7 +1023,7 @@ if (soundBtn) {
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
 document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items')) return;
+  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items') || e.target.closest('.ldb-list')) return;
   e.preventDefault();
 }, { passive: false });
 

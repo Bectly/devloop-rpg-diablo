@@ -899,5 +899,18 @@ exports.handleChat = function(socket, data, ctx) {
   ctx.controllerNs.emit('chat:message', { name: player.name, text: trimmedText, timestamp: Date.now() });
 };
 
+// ── Leaderboard ──
+exports.handleLeaderboardGet = function(socket, data, ctx) {
+  const entries = ctx.gameDb.getTopRuns();
+  socket.emit('leaderboard:data', { entries, type: 'top' });
+};
+
+exports.handleLeaderboardPersonal = function(socket, data, ctx) {
+  const player = ctx.players.get(socket.id);
+  if (!player) return;
+  const entries = ctx.gameDb.getPersonalRuns(player.name);
+  socket.emit('leaderboard:data', { entries, type: 'personal' });
+};
+
 // ── Exports for external access ──
 exports.disconnectedPlayers = disconnectedPlayers;

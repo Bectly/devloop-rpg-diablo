@@ -739,6 +739,149 @@ window.Screens = (() => {
     }
   }
 
+  // ─── Leaderboard Screen ──────────────────────────────────────
+  function createLeaderboardScreen() {
+    if (document.getElementById('leaderboard-screen')) return;
+
+    const screen = document.createElement('div');
+    screen.id = 'leaderboard-screen';
+    screen.className = 'hidden';
+    screen.innerHTML = `
+      <div class="ldb-header">
+        <span class="ldb-title">LEADERBOARD</span>
+        <button class="ldb-close" id="ldb-close">&times;</button>
+      </div>
+      <div class="ldb-tabs">
+        <button class="ldb-tab active" id="ldb-tab-top">Top 10</button>
+        <button class="ldb-tab" id="ldb-tab-personal">My Runs</button>
+      </div>
+      <div class="ldb-list" id="ldb-list"></div>
+    `;
+    document.body.appendChild(screen);
+
+    document.getElementById('ldb-close').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      toggleLeaderboard();
+    });
+    document.getElementById('ldb-close').addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleLeaderboard();
+    });
+  }
+
+  let _ldbSocket = null;
+
+  function toggleLeaderboard(socket) {
+    createLeaderboardScreen();
+    if (socket) _ldbSocket = socket;
+    const screen = document.getElementById('leaderboard-screen');
+    screen.classList.toggle('hidden');
+
+    if (!screen.classList.contains('hidden')) {
+      // Wire tab buttons
+      const topTab = document.getElementById('ldb-tab-top');
+      const personalTab = document.getElementById('ldb-tab-personal');
+
+      topTab.onclick = () => {
+        topTab.classList.add('active');
+        personalTab.classList.remove('active');
+        if (_ldbSocket) _ldbSocket.emit('leaderboard:get');
+      };
+      personalTab.onclick = () => {
+        personalTab.classList.add('active');
+        topTab.classList.remove('active');
+        if (_ldbSocket) _ldbSocket.emit('leaderboard:personal');
+      };
+
+      // Request top runs by default
+      if (_ldbSocket) _ldbSocket.emit('leaderboard:get');
+    }
+  }
+
+  function renderLeaderboard(entries, type) {
+    const container = document.getElementById('ldb-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!entries || entries.length === 0) {
+      container.innerHTML = '<div class="ldb-empty">No runs recorded yet. Conquer the dungeon!</div>';
+      return;
+    }
+
+    // Table header
+    const header = document.createElement('div');
+    header.className = 'ldb-row ldb-header-row';
+    header.innerHTML = '<span class="ldb-rank">#</span><span class="ldb-name">Name</span><span class="ldb-class">Class</span><span class="ldb-lvl">Lvl</span><span class="ldb-floor">Flr</span><span class="ldb-kills">Kills</span><span class="ldb-time">Time</span>';
+    container.appendChild(header);
+
+    entries.forEach((entry, i) => {
+      const row = document.createElement('div');
+      row.className = 'ldb-row' + (entry.victory ? ' ldb-victory' : '');
+
+      const mins = Math.floor(entry.time_seconds / 60);
+      const secs = entry.time_seconds % 60;
+      const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+      const rankEl = document.createElement('span');
+      rankEl.className = 'ldb-rank';
+      rankEl.textContent = `${i + 1}`;
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'ldb-name';
+      nameEl.textContent = entry.player_name;
+
+      const classEl = document.createElement('span');
+      classEl.className = 'ldb-class';
+      classEl.textContent = entry.character_class ? entry.character_class.substring(0, 3).toUpperCase() : '???';
+
+      const lvlEl = document.createElement('span');
+      lvlEl.className = 'ldb-lvl';
+      lvlEl.textContent = entry.level;
+
+      const floorEl = document.createElement('span');
+      floorEl.className = 'ldb-floor';
+      floorEl.textContent = entry.floor_reached;
+
+      const killsEl = document.createElement('span');
+      killsEl.className = 'ldb-kills';
+      killsEl.textContent = entry.kills;
+
+      const timeEl = document.createElement('span');
+      timeEl.className = 'ldb-time';
+      timeEl.textContent = timeStr;
+
+      row.appendChild(rankEl);
+      row.appendChild(nameEl);
+      row.appendChild(classEl);
+      row.appendChild(lvlEl);
+      row.appendChild(floorEl);
+      row.appendChild(killsEl);
+      row.appendChild(timeEl);
+
+      if (entry.victory) {
+        const badge = document.createElement('span');
+        badge.className = 'ldb-badge';
+        badge.textContent = '\u2728';
+        row.appendChild(badge);
+      }
+
+      container.appendChild(row);
+    });
+
+    // Update active tab highlight
+    const topTab = document.getElementById('ldb-tab-top');
+    const personalTab = document.getElementById('ldb-tab-personal');
+    if (topTab && personalTab) {
+      if (type === 'top') {
+        topTab.classList.add('active');
+        personalTab.classList.remove('active');
+      } else {
+        personalTab.classList.add('active');
+        topTab.classList.remove('active');
+      }
+    }
+  }
+
   // ─── Public API ─────────────────────────────────────────────
   return {
     // Quest
@@ -765,6 +908,11 @@ window.Screens = (() => {
     SKILL_DESCRIPTIONS,
     showSkillTooltip,
     hideSkillTooltip,
+
+    // Leaderboard
+    createLeaderboardScreen,
+    toggleLeaderboard,
+    renderLeaderboard,
   };
 
 })();

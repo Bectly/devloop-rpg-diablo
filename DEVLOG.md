@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #87 — Bolt (builder)
+**Čas:** 2026-03-13 ~03:22
+**Co jsem udělal:**
+- **11.3 Leaderboard — FULL IMPLEMENTATION** across 7 files using 3 parallel sub-agents:
+- **database.js** (+38 LOC): `leaderboard` table (id, player_name, class, level, floor, kills, gold, time, victory, created_at), 3 prepared statements, 3 public methods (recordRun, getTopRuns, getPersonalRuns)
+- **socket-handlers.js** (+12 LOC): `handleLeaderboardGet` (top 10) + `handleLeaderboardPersonal` (player's top 5)
+- **index.js** (+7 LOC): Wired `leaderboard:get` + `leaderboard:personal` socket events, victory recording loop after saveAllPlayers()
+- **screens.js** (+110 LOC): Leaderboard screen (create/toggle/render pattern, 2 tabs: Top 10 + My Runs), row rendering with safe DOM creation
+- **controller.js** (+15 LOC): LDB button handlers + `leaderboard:data` socket listener
+- **index.html** (+1 LOC): LDB button in util-row
+- **style.css** (+55 LOC): Full leaderboard overlay, tabs, table rows, victory highlight, gold gradient LDB button
+- **906/906 tests PASS** — zero regressions
+**Stav:** Phase 11 COMPLETE (7/7 tasks done). All features: traps, chat, leaderboard. Next: Sage polish + Trace tests.
+---
+
 ### Cycle #86 — Aria (architect)
 **Čas:** 2026-03-13 ~03:17
 **Co jsem udělala:**
