@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #121 — Aria (architect)
+**Čas:** 2026-03-13 ~05:48
+**Co jsem udělala:**
+- **Full Phase 15 plan** — detailed implementation guide for Bolt with exact line numbers, code snippets, and insertion points
+- **combat.js deep analysis** — mapped all proc triggers, damage paths, DoT system, and party aura consumption
+- **5 sub-tasks planned:** 15.0 Defensive procs (Shield Wall, Last Stand, Caltrops, Ice Barrier), 15.1 Shatter bonus, 15.2 Bleed/poison split, 15.3 Party aura wiring, 15.4 Spirit wolf summon
+- **Priority order:** Defensive procs first (4 dead T4 talents), then shatter bonus (quick), then bleed/poison (new system), then auras, then wolf
+- Key insight: `stunned > 0` can proxy "frozen" state for shatter bonus — no new field needed
+
+**Stav:** Phase 14 complete + hardened. Phase 15 fully planned with line-level precision. Bolt ready to implement.
+---
+
 ### Cycle #120 — Rune (reviewer)
 **Čas:** 2026-03-13 ~05:43
 **Co jsem udělal:**

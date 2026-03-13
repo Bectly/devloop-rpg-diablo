@@ -1378,26 +1378,141 @@ Test categories:
 
 ---
 
-## Phase 15: Combat Polish & Talent Completion (Planned)
+## 🔥 Phase 15: Combat Polish & Talent Completion
 
-### 15.0 Defensive Talent Procs
-- Wire Shield Wall, Last Stand, Caltrops, Ice Barrier in processMonsterAttack
-- Add shatter_bonus to damage calc for frozen targets
+### 15.0 Defensive Talent Procs [TOP PRIORITY — Bolt]
+**File:** `server/game/combat.js` → `processMonsterAttack()` (line ~691)
 
-### 15.1 Separate Bleed/Poison System
-- Bleed: own `bleedTick`/`bleedDamage` fields + `processBleed()` in combat tick
-- Poison Arrow keeps `poisonTick`/`poisonDamage`
-- Both can run simultaneously
+Currently defensive procs are defined in talents.js but **never checked** in combat.
 
-### 15.2 Party Aura Full Implementation
-- XP bonus from `xp_percent` aura in kill reward
-- Attack speed aura affects `attackCooldown`
-- Move speed aura affects player movement
+**Step A:** In `processMonsterAttack()`, AFTER `target.takeDamage()` (line 691), add defensive proc loop:
+```javascript
+// After line 691: const dealt = target.takeDamage(event.damage, damageType);
+if (target.talentBonuses && target.talentBonuses.procs) {
+  const dodged = dealt === -1;
+  for (const proc of target.talentBonuses.procs) {
+    if (proc.trigger === 'on_take_damage' && !dodged && Math.random() < (proc.chance || 1)) {
+      // Shield Wall: block — reduce dealt damage by 50%
+      if (proc.effect === 'block') {
+        const blocked = Math.floor(dealt * 0.5);
+        target.hp = Math.min(target.maxHp, target.hp + blocked); // refund blocked damage
+        this.events.push({ type: 'combat:proc', targetId: target.id, effect: 'block', value: blocked });
+      }
+      // Last Stand: below 20% HP → 50% DR for 5s
+      if (proc.effect === 'last_stand') {
+        if (target.hp / target.maxHp <= 0.2) {
+          target.lastStandTimer = (proc.duration || 5000);
+          this.events.push({ type: 'combat:proc', targetId: target.id, effect: 'last_stand' });
+        }
+      }
+      // Ice Barrier: freeze attacker
+      if (proc.effect === 'freeze') {
+        monster.stunned = Math.max(monster.stunned || 0, proc.duration || 2000);
+        this.events.push({ type: 'combat:proc', targetId: target.id, attackerId: monster.id, effect: 'freeze' });
+      }
+    }
+    if (proc.trigger === 'on_dodge' && dodged && Math.random() < (proc.chance || 1)) {
+      // Caltrops: slow attacker
+      if (proc.effect === 'slow') {
+        monster.slowed = Math.max(monster.slowed || 0, proc.duration || 3000);
+        this.events.push({ type: 'combat:proc', targetId: target.id, attackerId: monster.id, effect: 'caltrops' });
+      }
+    }
+  }
+}
+```
 
-### 15.3 Spirit Wolf Summon (Ranger T4)
+**Step B:** Add `lastStandTimer` to Player constructor (default 0). In game loop player update: decrement by dt, apply 50% DR while > 0.
+
+### 15.1 Shatter Bonus (Frozen Target Damage) [Bolt]
+**File:** `server/game/combat.js`
+
+`talentBonuses.passives.shatter_bonus` is computed but never consumed.
+
+**Step A:** In `playerAttack()` at line ~118 (after party buffs, before affix mods):
+```javascript
+if (nearest.stunned > 0 && player.talentBonuses?.passives?.shatter_bonus) {
+  damage = Math.floor(damage * (1 + player.talentBonuses.passives.shatter_bonus / 100));
+}
+```
+Note: Use `stunned > 0` as frozen proxy (Ice Barrier freeze sets `monster.stunned`).
+
+**Step B:** Same check in `playerSkill()` for all 4 paths: AOE (~line 310), single (~line 403), multi (~line 487), dot (~line 571).
+
+### 15.2 Separate Bleed/Poison System [Bolt]
+**Files:** `server/game/combat.js`, `server/game/monsters.js`, `server/index.js`
+
+Currently bleed (line 149-151) overwrites `poisonTick`/`poisonDamage` — both DoTs share one slot.
+
+**Step A:** Add to Monster class (`monsters.js` constructor):
+```javascript
+this.bleedTick = 0;
+this.bleedDamage = 0;
+```
+
+**Step B:** New function in `combat.js` (copy `processPoison` pattern at line 730-745):
+```javascript
+processBleed(monster, dt) {
+  if (monster.bleedTick > 0 && monster.alive) {
+    monster.bleedTick -= dt;
+    // Tick damage every second (same pattern as processPoison)
+    if (/* 1 second elapsed */) {
+      monster.takeDamage(monster.bleedDamage || 5);
+      this.events.push({ type: 'combat:hit', damageType: 'physical', ... });
+    }
+  }
+}
+```
+
+**Step C:** Change bleed proc in `playerAttack()` (line 149-151):
+```javascript
+// OLD: nearest.poisonTick = ...
+// NEW:
+nearest.bleedTick = Math.max(nearest.bleedTick || 0, proc.duration || 3000);
+nearest.bleedDamage = Math.max(nearest.bleedDamage || 0, bleedDmg);
+```
+
+**Step D:** Add `combat.processBleed(monster, dt)` call in game loop (`index.js:371`), right after `processPoison`.
+
+### 15.3 Party Aura Full Implementation [Bolt]
+**Files:** `server/game/combat.js`, `server/index.js`, `server/game/player.js`
+
+`getPartyBuffs()` (line 749-762) returns `xp_percent`, `attack_speed`, `move_speed` but only `str` is used.
+
+**Step A:** XP bonus — in `index.js` kill XP reward (line ~240):
+```javascript
+const partyBuffs = combat.getPartyBuffs(allPlayers);
+const xpMult = 1 + (partyBuffs.xp_percent || 0) / 100;
+const xpResult = player.gainXp(Math.floor(xpAmount * xpMult));
+```
+
+**Step B:** Attack speed — in `playerAttack()` after cooldown start:
+```javascript
+if (partyBuffs.attack_speed > 0) {
+  player.attackCooldown = Math.floor(player.attackCooldown * (1 - partyBuffs.attack_speed / 100));
+}
+```
+
+**Step C:** Move speed — in game loop player movement (index.js), apply speed multiplier:
+```javascript
+const moveMult = 1 + (partyBuffs.move_speed || 0) / 100;
+// Apply to player.x/y delta
+```
+
+### 15.4 Spirit Wolf Summon (Ranger T4) [Bolt — lower priority]
 - On kill 25% chance to summon wolf companion
-- Wolf as friendly Monster instance (AI targets nearest enemy)
-- Duration-based (10s), max 1 wolf active
+- Wolf: friendly Monster instance with `friendly: true` flag
+- AI: `findClosestPlayer` replaced with `findClosestEnemy` — targets nearest monster
+- Duration: 10s, max 1 wolf active (`player.summonedWolf`)
+- Visual: New wolf sprite on TV, nameplate "Spirit Wolf"
+- Despawn: timer expires OR player dies → wolf removed from world.monsters
+
+### Implementation Order for Bolt:
+1. **15.0** Defensive procs (highest impact — 4 dead talents)
+2. **15.1** Shatter bonus (quick fix — 5 insertion points)
+3. **15.2** Bleed/poison split (medium — new system)
+4. **15.3** Party auras (3 stat applications)
+5. **15.4** Spirit wolf (complex — new entity type)
 
 ---
 
