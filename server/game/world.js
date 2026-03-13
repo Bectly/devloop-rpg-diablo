@@ -278,27 +278,46 @@ function generateBSPDungeon(floor, roomCount) {
 }
 
 function carveCorridor(tiles, x1, y1, x2, y2) {
+  // Carve 3-tile-wide corridors for comfortable movement with bbox collision (radius=10)
   let cx = x1;
   let cy = y1;
 
   while (cx !== x2) {
-    if (cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H) {
-      if (tiles[cy][cx] === TILE.VOID || tiles[cy][cx] === TILE.WALL) {
-        tiles[cy][cx] = TILE.CORRIDOR;
+    // Carve center + 1 tile on each side (3 tiles wide vertically)
+    for (let offset = -1; offset <= 1; offset++) {
+      const ty = cy + offset;
+      if (cx >= 0 && cx < GRID_W && ty >= 0 && ty < GRID_H) {
+        if (tiles[ty][cx] === TILE.VOID || tiles[ty][cx] === TILE.WALL) {
+          tiles[ty][cx] = TILE.CORRIDOR;
+        }
       }
-      if (cy - 1 >= 0 && tiles[cy - 1][cx] === TILE.VOID) tiles[cy - 1][cx] = TILE.WALL;
-      if (cy + 1 < GRID_H && tiles[cy + 1][cx] === TILE.VOID) tiles[cy + 1][cx] = TILE.WALL;
+    }
+    // Place walls on outer edges (2 tiles from center)
+    for (const offset of [-2, 2]) {
+      const ty = cy + offset;
+      if (cx >= 0 && cx < GRID_W && ty >= 0 && ty < GRID_H) {
+        if (tiles[ty][cx] === TILE.VOID) tiles[ty][cx] = TILE.WALL;
+      }
     }
     cx += cx < x2 ? 1 : -1;
   }
 
   while (cy !== y2) {
-    if (cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H) {
-      if (tiles[cy][cx] === TILE.VOID || tiles[cy][cx] === TILE.WALL) {
-        tiles[cy][cx] = TILE.CORRIDOR;
+    // Carve center + 1 tile on each side (3 tiles wide horizontally)
+    for (let offset = -1; offset <= 1; offset++) {
+      const tx = cx + offset;
+      if (tx >= 0 && tx < GRID_W && cy >= 0 && cy < GRID_H) {
+        if (tiles[cy][tx] === TILE.VOID || tiles[cy][tx] === TILE.WALL) {
+          tiles[cy][tx] = TILE.CORRIDOR;
+        }
       }
-      if (cx - 1 >= 0 && tiles[cy][cx - 1] === TILE.VOID) tiles[cy][cx - 1] = TILE.WALL;
-      if (cx + 1 < GRID_W && tiles[cy][cx + 1] === TILE.VOID) tiles[cy][cx + 1] = TILE.WALL;
+    }
+    // Place walls on outer edges
+    for (const offset of [-2, 2]) {
+      const tx = cx + offset;
+      if (tx >= 0 && tx < GRID_W && cy >= 0 && cy < GRID_H) {
+        if (tiles[cy][tx] === TILE.VOID) tiles[cy][tx] = TILE.WALL;
+      }
     }
     cy += cy < y2 ? 1 : -1;
   }

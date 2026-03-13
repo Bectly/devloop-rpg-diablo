@@ -73,7 +73,15 @@ function createGameLoop(ctx) {
         player.inputDy = 0;
       }
 
+      // ── Teleport detector: log if position jumps > 100px in a single tick ──
+      const _prevX = player.x, _prevY = player.y;
+
       const result = player.update(dt);
+
+      const _dx = Math.abs(player.x - _prevX), _dy = Math.abs(player.y - _prevY);
+      if (_dx > 100 || _dy > 100) {
+        console.warn(`[TELEPORT] ${player.name} jumped ${Math.round(_dx)},${Math.round(_dy)}px (${Math.round(_prevX)},${Math.round(_prevY)} → ${Math.round(player.x)},${Math.round(player.y)}) alive=${player.alive} isDying=${player.isDying}`);
+      }
 
       // Decrement Last Stand timer (defensive proc — Phase 15.0)
       if (player.lastStandTimer > 0) player.lastStandTimer -= dt;
@@ -139,8 +147,15 @@ function createGameLoop(ctx) {
       }
     }
 
-    // Predictive collision in player.update() prevents entering walls.
-    // No safety-net teleport needed — it caused false positives with bbox checks.
+    // ── Wall collision safety: log ANY unexpected position change ──
+    // The old safety-net teleport (removed in 492d66f) was causing spawn teleports.
+    // Now we only LOG if a player somehow ends up in a wall (should never happen).
+    for (const player of allPlayers) {
+      if (!player.alive || player.isDying) continue;
+      if (!world.isWalkable(player.x, player.y)) {
+        console.error(`[BUG] ${player.name} is INSIDE A WALL at (${Math.round(player.x)},${Math.round(player.y)})! NOT teleporting — investigating.`);
+      }
+    }
 
     // Room discovery and wave spawning
     const roomEvents = world.updateRoomDiscovery(allPlayers);
@@ -1289,7 +1304,7 @@ function createGameLoop(ctx) {
       lastTick = Date.now();
       tickCount = 0;
       intervalId = setInterval(gameTick, TICK_MS);
-      console.log(`[GameLoop] Started (${TICK_RATE} ticks/sec)`);
+      console.log(`[GameLoop] Started (${TICK_RATE} ticks/sec) — safety-net teleport REMOVED (492d66f), wall-in detection ACTIVE`);
     },
     stop() {
       if (intervalId) {
