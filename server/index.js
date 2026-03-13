@@ -831,6 +831,14 @@ function gameLoop() {
         const wolf = createSpiritWolf(event.x, event.y, owner);
         world.monsters.push(wolf);
         owner.summonedWolf = wolf.id;
+        // Notify owner's phone
+        for (const [sid, pl] of players) {
+          if (pl.id === owner.id) {
+            const sock = controllerNs.sockets.get(sid);
+            if (sock) sock.emit('combat:proc', { effect: 'summon_spirit_wolf', targetId: owner.id });
+            break;
+          }
+        }
       }
     }
 

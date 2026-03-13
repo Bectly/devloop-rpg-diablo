@@ -277,6 +277,9 @@ socket.on('combat:proc', (data) => {
     showNotification('Caltrops! Attacker slowed', 'info');
   } else if (data.effect === 'heal_on_kill') {
     showNotification(`Heal on kill! +${data.heal} HP`, 'info');
+  } else if (data.effect === 'summon_spirit_wolf') {
+    showNotification('Spirit Wolf summoned!', 'levelup');
+    if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 60]);
   }
 });
 

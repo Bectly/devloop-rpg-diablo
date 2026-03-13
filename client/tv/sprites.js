@@ -309,6 +309,31 @@ window.Sprites = {
         g.fillStyle(0xff4444, 1);
         g.fillCircle(s - 2, 3, 1.5);
         g.fillCircle(s + 2, 3, 1.5);
+      } else if (m.type === 'spirit_wolf') {
+        // Spirit wolf — ghostly blue quadruped with glowing eyes
+        g.fillStyle(0x6688cc, 0.5);
+        g.fillRect(3, s - 2, d - 6, s - 1); // body
+        g.fillStyle(0x88aaee, 0.6);
+        g.fillCircle(d - 5, s - 2, 4); // head
+        g.fillStyle(0x7799dd, 0.4);
+        g.fillTriangle(d - 4, s - 6, d - 1, s - 3, d - 6, s - 4); // ear right
+        g.fillTriangle(d - 7, s - 5, d - 4, s - 3, d - 9, s - 3); // ear left
+        // Legs
+        g.fillStyle(0x6688cc, 0.45);
+        g.fillRect(5, d - 5, 3, 5);
+        g.fillRect(10, d - 5, 3, 5);
+        g.fillRect(d - 13, d - 5, 3, 5);
+        g.fillRect(d - 8, d - 5, 3, 5);
+        // Tail
+        g.lineStyle(2, 0x88aaee, 0.4);
+        g.lineBetween(3, s, 0, s - 4);
+        // Glowing eyes
+        g.fillStyle(0xaaddff, 1);
+        g.fillCircle(d - 6, s - 3, 1.5);
+        g.fillCircle(d - 3, s - 3, 1.5);
+        g.fillStyle(0xffffff, 0.8);
+        g.fillCircle(d - 6, s - 3, 0.7);
+        g.fillCircle(d - 3, s - 3, 0.7);
       } else if (m.type === 'slime' || m.type === 'slime_small') {
         // Slime blob — round body with top bump
         const isSmall = m.type === 'slime_small';
@@ -349,9 +374,16 @@ window.Sprites = {
       sprite.setScale(1.15);
     }
 
-    // Name color: boss > elite > normal
+    // Friendly monsters: blue tint + slight transparency
+    if (m.friendly) {
+      sprite.setTint(0x88bbff);
+      sprite.setAlpha(0.75);
+    }
+
+    // Name color: friendly > boss > elite > normal
     let nameColor = '#ff6666';
-    if (m.isBoss) nameColor = '#ff8800';
+    if (m.friendly) nameColor = '#88ddff';
+    else if (m.isBoss) nameColor = '#ff8800';
     else if (m.isElite && m.eliteRank === 'rare') nameColor = '#ffcc00';
     else if (m.isElite && m.eliteRank === 'champion') nameColor = '#4488ff';
 
@@ -385,6 +417,10 @@ window.Sprites = {
     if (m.isElite) {
       sprite.shieldGfx = scene.add.graphics().setDepth(9);
     }
+    // Friendly glow (spirit wolf etc.)
+    if (m.friendly) {
+      sprite.friendlyGlow = scene.add.graphics().setDepth(7);
+    }
     // Fire enchanted glow
     if (m.fireEnchanted) {
       sprite.fireGfx = scene.add.graphics().setDepth(7);
@@ -412,6 +448,12 @@ window.Sprites = {
       sprite.setTint(0xff8844);
       if (sprite.nameText) sprite.nameText.setAlpha(1);
       if (sprite.affixText) sprite.affixText.setAlpha(1);
+    } else if (m.friendly) {
+      // Friendly monsters: ghostly pulsing blue
+      const ghostAlpha = 0.55 + Math.sin(Date.now() / 700) * 0.15;
+      sprite.setAlpha(ghostAlpha);
+      sprite.setTint(0x88bbff);
+      if (sprite.nameText) sprite.nameText.setAlpha(0.8);
     } else {
       sprite.setAlpha(m.stunned ? 0.4 : m.slowed ? 0.7 : 1);
       sprite.clearTint();
@@ -444,7 +486,15 @@ window.Sprites = {
       }
     }
 
-    // HP bar
+    // Friendly glow (soft blue aura around spirit wolf)
+    if (sprite.friendlyGlow) {
+      sprite.friendlyGlow.clear();
+      const glowAlpha = 0.08 + Math.sin(Date.now() / 900) * 0.05;
+      sprite.friendlyGlow.fillStyle(0x88bbff, glowAlpha);
+      sprite.friendlyGlow.fillCircle(sprite.x, sprite.y, sprite.monsterSize + 5);
+    }
+
+    // HP bar — friendly: blue, hostile: red
     if (sprite.hpBar) {
       sprite.hpBar.clear();
       const mBarW = m.isBoss ? 60 : 30;
@@ -454,7 +504,7 @@ window.Sprites = {
       sprite.hpBar.fillStyle(0x333333, 0.8);
       sprite.hpBar.fillRect(mBarX, mBarY, mBarW, mBarH);
       const mHpRatio = m.hp / m.maxHp;
-      sprite.hpBar.fillStyle(0xcc2222, 1);
+      sprite.hpBar.fillStyle(m.friendly ? 0x4488cc : 0xcc2222, 1);
       sprite.hpBar.fillRect(mBarX, mBarY, mBarW * mHpRatio, mBarH);
     }
   },
@@ -511,6 +561,7 @@ window.Sprites = {
     if (sprite.hpBar) sprite.hpBar.destroy();
     if (sprite.shieldGfx) sprite.shieldGfx.destroy();
     if (sprite.fireGfx) sprite.fireGfx.destroy();
+    if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
     sprite.destroy();
     scene.monsterSprites.delete(id);
     const texKey = 'monster_' + id;
@@ -527,6 +578,7 @@ window.Sprites = {
         if (sprite.hpBar) sprite.hpBar.destroy();
         if (sprite.shieldGfx) sprite.shieldGfx.destroy();
         if (sprite.fireGfx) sprite.fireGfx.destroy();
+        if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
         sprite.destroy();
       }
       scene.monsterSprites.clear();
@@ -539,6 +591,7 @@ window.Sprites = {
         if (sprite.hpBar) sprite.hpBar.destroy();
         if (sprite.shieldGfx) sprite.shieldGfx.destroy();
         if (sprite.fireGfx) sprite.fireGfx.destroy();
+        if (sprite.friendlyGlow) sprite.friendlyGlow.destroy();
         sprite.destroy();
         scene.monsterSprites.delete(id);
         const texKey = 'monster_' + id;

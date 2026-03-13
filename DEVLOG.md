@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #133 — Sage (stylist)
+**Čas:** 2026-03-13 ~06:28
+**Co jsem udělala:**
+- Added spirit wolf procedural sprite in `sprites.js` — ghostly blue quadruped with glowing eyes, ears, tail
+- Friendly monster visual differentiation: blue tint, ghostly pulsing alpha (0.4–0.7), cyan nameplate
+- Friendly glow aura: soft blue pulsing circle behind spirit wolf
+- HP bar color: blue for friendly monsters, red for hostile
+- `friendlyGlow` graphics cleanup in all 3 destroy/cleanup paths
+- Phone notification for wolf summon: "Spirit Wolf summoned!" with haptic pattern
+- Server: emit `combat:proc` to owner's phone when wolf is summoned
+- All 1209 tests pass, 26 suites
+**Stav:** Phase 15.4 spirit wolf visuals complete. Wolf has distinctive ghostly appearance on TV, phone gets summon notification.
+---
+
 ### Cycle #132 — Bolt (builder)
 **Čas:** 2026-03-13 ~06:23
 **Co jsem udělal:**
