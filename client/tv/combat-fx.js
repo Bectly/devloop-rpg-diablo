@@ -66,6 +66,76 @@ const CombatFX = (() => {
     }
   }
 
+  function spawnBlockProc(scene, x, y) {
+    // Shield flash — expanding gold ring that fades (Shield Wall block)
+    const ring = scene.add.circle(x, y, 8, 0xffcc00, 0);
+    ring.setStrokeStyle(3, 0xffcc00, 0.9);
+    ring.setDepth(9);
+    scene.tweens.add({
+      targets: ring,
+      scale: 2.5,
+      alpha: 0,
+      duration: 400,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+    HUD.spawnDamageText(scene, x, y - 20, 'BLOCK', false, false, '#ffcc00');
+  }
+
+  function spawnFreezeProc(scene, x, y) {
+    // Ice burst — blue particles radiate outward (Ice Barrier freeze)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const shard = scene.add.circle(x, y, 3, 0x4488ff, 0.9);
+      shard.setDepth(9);
+      scene.tweens.add({
+        targets: shard,
+        x: x + Math.cos(angle) * 22,
+        y: y + Math.sin(angle) * 22,
+        alpha: 0,
+        scale: 0.3,
+        duration: 500,
+        ease: 'Cubic.easeOut',
+        onComplete: () => shard.destroy(),
+      });
+    }
+    HUD.spawnDamageText(scene, x, y - 20, 'FROZEN', false, false, '#4488ff');
+  }
+
+  function spawnLastStandProc(scene, x, y) {
+    // Fiery aura — orange ring pulse (Last Stand activated)
+    const ring = scene.add.circle(x, y, 20, 0xff6600, 0.15);
+    ring.setStrokeStyle(2, 0xff6600, 0.8);
+    ring.setDepth(9);
+    scene.tweens.add({
+      targets: ring,
+      scale: 1.8,
+      alpha: 0,
+      duration: 600,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+    HUD.spawnDamageText(scene, x, y - 25, 'LAST STAND', false, false, '#ff6600');
+  }
+
+  function spawnCaltropsProc(scene, x, y) {
+    // Ground scatter — small green dots spread at feet (Caltrops slow)
+    for (let i = 0; i < 5; i++) {
+      const ox = (Math.random() - 0.5) * 24;
+      const oy = (Math.random() - 0.5) * 12 + 6;
+      const dot = scene.add.circle(x + ox, y + oy, 2, 0x44cc44, 0.8);
+      dot.setDepth(9);
+      scene.tweens.add({
+        targets: dot,
+        alpha: 0,
+        duration: 800,
+        delay: i * 80,
+        onComplete: () => dot.destroy(),
+      });
+    }
+    HUD.spawnDamageText(scene, x, y - 20, 'SLOWED', false, false, '#44cc44');
+  }
+
   function spawnTeleportEffect(scene, fromX, fromY, toX, toY) {
     const vanish = scene.add.circle(fromX, fromY, 16, 0xbb44ff, 0.6);
     vanish.setDepth(9);
@@ -181,9 +251,23 @@ const CombatFX = (() => {
       if (ev.type === 'combat:proc') {
         const target = state.world.monsters?.find(m => m.id === ev.targetId)
           || state.players?.find(p => p.id === ev.targetId);
+        // Attacker lookup for effects that play on the monster (freeze, caltrops)
+        const attacker = ev.attackerId
+          ? (state.world.monsters?.find(m => m.id === ev.attackerId) || null)
+          : null;
         if (target) {
-          if (ev.procType === 'bleed') {
+          if (ev.effect === 'bleed') {
             spawnBleedProc(scene, target.x, target.y);
+          } else if (ev.effect === 'block') {
+            spawnBlockProc(scene, target.x, target.y);
+          } else if (ev.effect === 'last_stand') {
+            spawnLastStandProc(scene, target.x, target.y);
+          } else if (ev.effect === 'freeze' && attacker) {
+            spawnFreezeProc(scene, attacker.x, attacker.y);
+          } else if (ev.effect === 'caltrops' && attacker) {
+            spawnCaltropsProc(scene, attacker.x, attacker.y);
+          } else if (ev.effect === 'heal_on_kill') {
+            spawnBuffEffect(scene, target.x, target.y, 0x44ff44);
           }
         }
       }
@@ -227,5 +311,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnTeleportEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc };
 })();

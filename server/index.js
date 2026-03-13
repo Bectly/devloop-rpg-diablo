@@ -767,6 +767,17 @@ function gameLoop() {
       }
     }
 
+    // Forward defensive proc events to the target player's phone (Phase 15.0)
+    if (event.type === 'combat:proc' && event.targetId) {
+      for (const [sid, player] of players) {
+        if (player.id === event.targetId) {
+          const socket = controllerNs.sockets.get(sid);
+          if (socket) socket.emit('combat:proc', event);
+          break;
+        }
+      }
+    }
+
     // Send combat events to phones for feedback
     if (event.type === 'combat:hit' || event.type === 'combat:player_death') {
       for (const [sid, player] of players) {

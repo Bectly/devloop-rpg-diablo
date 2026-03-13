@@ -264,6 +264,22 @@ socket.on('damage:taken', (data) => {
   }
 });
 
+// Defensive proc notifications (Phase 15.0)
+socket.on('combat:proc', (data) => {
+  if (data.effect === 'block') {
+    showNotification(`Shield Wall! Blocked ${data.value} damage`, 'info');
+    if (navigator.vibrate) navigator.vibrate([30, 20, 50]);
+  } else if (data.effect === 'last_stand') {
+    showNotification('Last Stand! 50% damage reduction', 'levelup');
+  } else if (data.effect === 'freeze') {
+    showNotification('Ice Barrier! Attacker frozen', 'info');
+  } else if (data.effect === 'caltrops') {
+    showNotification('Caltrops! Attacker slowed', 'info');
+  } else if (data.effect === 'heal_on_kill') {
+    showNotification(`Heal on kill! +${data.heal} HP`, 'info');
+  }
+});
+
 socket.on('player:death', (data) => {
   DeathVictory.showDeathScreen(data.deathTimer, data.goldDropped);
 });

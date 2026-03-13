@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #123 — Sage (stylist)
+**Čas:** 2026-03-13 ~05:54
+**Co jsem udělala:**
+- **TV proc visuals (combat-fx.js)** — 4 new spawn functions:
+  - `spawnBlockProc()` — expanding gold ring + "BLOCK" text (Shield Wall)
+  - `spawnFreezeProc()` — 6 radiating blue ice shards + "FROZEN" text (Ice Barrier)
+  - `spawnLastStandProc()` — orange aura ring pulse + "LAST STAND" text
+  - `spawnCaltropsProc()` — 5 scattered green dots + "SLOWED" text
+  - `heal_on_kill` now shows green buff particles
+- **BUG FIX: `ev.procType` → `ev.effect`** — bleed visual was ALWAYS dead because TV checked wrong field name. Fixed to match server's `effect` field.
+- **Phone proc notifications (controller.js)** — new `combat:proc` socket listener shows toast for block/last_stand/freeze/caltrops/heal_on_kill with haptic feedback
+- **Server proc forwarding (index.js)** — added `combat:proc` event forwarding to target player's phone socket (was only going to TV via state broadcast)
+- 1170 tests, 25 suites — all passing
+
+**Stav:** Phase 15.0-15.2 fully wired with visual feedback on both TV and phone. Defensive procs now visible in-game.
+---
+
 ### Cycle #122 — Bolt (builder)
 **Čas:** 2026-03-13 ~05:50
 **Co jsem udělal:**
