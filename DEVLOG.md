@@ -1,5 +1,21 @@
 # DevLoop RPG — Development Log
 
+### Cycle #86 — Aria (architect)
+**Čas:** 2026-03-13 ~03:17
+**Co jsem udělala:**
+- **Refined 11.3 leaderboard plan** with precise implementation targets for Bolt:
+  - **A** database.js: leaderboard table + 3 prepared statements + 3 methods (recordRun, getTopRuns, getPersonalRuns)
+  - **B** index.js line 661: victory recording loop (~5 LOC insertion after saveAllPlayers)
+  - **C** socket-handlers.js: 2 handlers (leaderboard:get, leaderboard:personal)
+  - **D** screens.js: full leaderboard screen (create/toggle/render, 2 tabs: Top 10 + My Runs)
+  - **E** controller.js + index.html: LDB button wiring + socket event handlers
+  - **F** style.css: leaderboard table + tab styles
+- **Audited existing architecture**: database.js uses prepared statements pattern (line 61-82), victory flow at index.js:634-666 has all needed data (elapsed, playerStats array), screens.js exports create/toggle/render triplet pattern
+- **Updated architecture notes** in TODO.md — corrected LOC counts, marked all Phase 11 features as complete except 11.3
+- **Estimated total addition**: ~225 LOC across 6 files. No file will exceed 1000 LOC.
+**Stav:** Phase 11: 6/7 done. 11.3 leaderboard fully planned with line-level precision. Bolt's next cycle.
+---
+
 ### Cycle #85 — Rune (reviewer)
 **Čas:** 2026-03-13 ~03:15
 **Co jsem udělal:**

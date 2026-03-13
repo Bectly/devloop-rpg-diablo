@@ -411,8 +411,8 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 ## Architecture Notes (Updated Cycle #66)
 **Current LOC:** ~22,850 source JS (50 files). All source files under 1000 LOC. Largest: controller.js 988, monsters.js 952, hud.js 887, socket-handlers.js 886, game.js 861, world.js 829, sprites.js 822, index.js 801, screens.js 770. New: stats-ui.js 215, combat-fx.js 189, effects.js 184.
 **Tests:** 906/906 PASS, 20 suites (20 chat tests added Cycle #84).
-**Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
-**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
+**Splits done:** hud.js 1284→807 (victory.js 339, dialogue-hud.js 153), controller.js 1183→988→~1070 (reconnect.js 119, stats-ui.js 215), game.js 1231→861 (effects.js 184, combat-fx.js 189). All clean.
+**Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). **Traps:** complete (Cycles #77-80). **Chat:** complete (Cycles #82-85). 0 open bugs, 0 security issues.
 
 ---
 
@@ -628,11 +628,12 @@ Traps are floor hazards placed during dungeon generation. Step on them → take 
 - [x] **CSS**: Chat wrapper, focus glow, slide-in animation, MSG button styling
 
 ### 11.3 Leaderboard — Server + Client [for Bolt]
-**Files:** `server/game/database.js` (add queries), `server/socket-handlers.js`, `client/phone/screens.js`
 
 Track run stats and show top players. Drives replayability.
 
-**Database schema** (add to existing SQLite):
+**A) Database — `server/game/database.js`**
+
+Add to `_createTables()` (after line 58):
 ```sql
 CREATE TABLE IF NOT EXISTS leaderboard (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -648,17 +649,105 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 );
 ```
 
-**Server:**
-- On victory: insert leaderboard row with run stats
-- On game over (death on final boss?): also insert (optional)
-- `leaderboard:get` → returns top 10 entries sorted by: victory first, then floor_reached, then time
-- `leaderboard:get_personal` → returns player's best 5 runs
+Add to `_prepareStatements()` (after line 82):
+```javascript
+this._stmtLeaderboardInsert = this.db.prepare(`
+  INSERT INTO leaderboard (player_name, character_class, level, floor_reached, kills, gold_earned, time_seconds, victory)
+  VALUES (@player_name, @character_class, @level, @floor_reached, @kills, @gold_earned, @time_seconds, @victory)
+`);
+this._stmtLeaderboardTop = this.db.prepare(`
+  SELECT * FROM leaderboard ORDER BY victory DESC, floor_reached DESC, time_seconds ASC LIMIT 10
+`);
+this._stmtLeaderboardPersonal = this.db.prepare(`
+  SELECT * FROM leaderboard WHERE player_name = ? ORDER BY victory DESC, floor_reached DESC, time_seconds ASC LIMIT 5
+`);
+```
 
-**Phone:**
-- "LDB" button in util-row (or accessible from victory screen)
-- Leaderboard screen (same overlay pattern as quest/shop/craft)
-- Columns: Rank, Name, Class, Level, Floor, Kills, Time, Victory badge
-- Personal best tab
+Add 3 public methods (same pattern as `saveCharacter`/`loadCharacter`):
+- `recordRun(playerName, characterClass, level, floorReached, kills, goldEarned, timeSeconds, victory)` — insert
+- `getTopRuns()` → returns array of top 10 runs
+- `getPersonalRuns(playerName)` → returns array of player's top 5
+
+**B) Victory recording — `server/index.js` (line 661)**
+
+After `saveAllPlayers()` at line 661, insert leaderboard recording:
+```javascript
+// Record leaderboard entry for each player
+for (const ps of playerStats) {
+  gameDb.recordRun(ps.name, ps.characterClass, ps.level, FLOOR_NAMES.length, ps.kills, ps.gold, Math.floor(elapsed / 1000), 1);
+}
+```
+
+Data available in scope: `playerStats` (array with name, characterClass, level, kills, gold), `elapsed` (ms), `FLOOR_NAMES.length`.
+
+**C) Socket events — `server/socket-handlers.js`**
+
+Add 2 new exports:
+```javascript
+exports.handleLeaderboardGet = function(socket, data, ctx) {
+  const entries = ctx.gameDb.getTopRuns();
+  socket.emit('leaderboard:data', { entries, type: 'top' });
+};
+
+exports.handleLeaderboardPersonal = function(socket, data, ctx) {
+  const player = ctx.players.get(socket.id);
+  if (!player) return;
+  const entries = ctx.gameDb.getPersonalRuns(player.name);
+  socket.emit('leaderboard:data', { entries, type: 'personal' });
+};
+```
+
+Wire in `index.js` (around line 137, with other handlers):
+```javascript
+socket.on('leaderboard:get', (data) => handlers.handleLeaderboardGet(socket, data, ctx));
+socket.on('leaderboard:personal', (data) => handlers.handleLeaderboardPersonal(socket, data, ctx));
+```
+
+**D) Phone UI — `client/phone/screens.js`**
+
+Follow quest/shop/craft pattern (create + toggle + render):
+- `createLeaderboardScreen()` — fixed HTML structure with 2 tabs (Top 10 / My Runs)
+- `toggleLeaderboard()` — show/hide overlay
+- `renderLeaderboard(entries, type)` — populate rows from server data
+
+Add to public API (line 743+):
+```javascript
+createLeaderboardScreen,
+toggleLeaderboard,
+renderLeaderboard,
+```
+
+**E) Phone button — `client/phone/index.html`**
+
+Add LDB button in util-row (next to MSG button):
+```html
+<button id="btn-leaderboard" class="action-btn ldb-btn">LDB</button>
+```
+
+Wire in `controller.js`:
+```javascript
+document.getElementById('btn-leaderboard').addEventListener('click', () => {
+  socket.emit('leaderboard:get');
+  Screens.toggleLeaderboard();
+});
+socket.on('leaderboard:data', (data) => {
+  Screens.renderLeaderboard(data.entries, data.type);
+});
+```
+
+**F) Phone CSS — `client/phone/style.css`**
+
+Leaderboard overlay + table styles. Follow craft/shop pattern. Gold/green accent for victories.
+
+**Columns:** Rank | Name | Class | Lvl | Floor | Kills | Time | Victory badge
+
+**Implementation order for Bolt:**
+1. **A** — database.js: table + statements + methods (~30 LOC)
+2. **B** — index.js: victory recording (~5 LOC)
+3. **C** — socket-handlers.js: 2 handlers (~15 LOC)
+4. **D** — screens.js: leaderboard screen (~120 LOC)
+5. **E** — controller.js + index.html: button + events (~15 LOC)
+6. **F** — style.css: table styles (~40 LOC)
 
 ### 11.4 Trap Visuals — TV [DONE — Sage, Cycle #78]
 - [x] 4 procedural trap textures: spike (gray grate), fire (red glow), poison (green bubbles), void (purple swirl)
