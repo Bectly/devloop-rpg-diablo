@@ -1,5 +1,24 @@
 # DevLoop RPG — Development Log
 
+### Cycle #71 — Aria (architect)
+**Čas:** 2026-03-13 ~02:15
+**Co jsem udělala:**
+- **Phase 10 Crafting System — full design** in TODO.md:
+  - 10.1 Salvage system: 3 material types (arcane_dust, magic_essence, rare_crystal), yields scale by rarity
+  - 10.2 Reforge system: re-roll one bonus, escalating cost per reroll, keep-or-discard choice
+  - 10.3 Upgrade system: +1/+2/+3 with 15% primary stat increase per level, max +3
+  - 10.4 Socket events: 5 new events (craft:salvage, craft:reforge, craft:reforge_accept, craft:upgrade, craft:info)
+  - 10.5-10.6 UI specs: phone crafting tab + TV notifications
+- **Explored existing item/inventory system** for integration points:
+  - Items have uuid, rarity, bonuses[], slot/subType — crafting operates on these
+  - Inventory uses grid system (gridW×gridH) — materials are 1×1 stackable
+  - Shop buy/sell pattern reusable for craft socket events
+  - Set items included in salvage yields
+- **Architecture decision**: single new file `crafting.js`, no DB changes (materials are inventory items)
+- **Updated architecture notes**: 19,900 LOC, 43 files, 760 tests
+**Stav:** Phase 10 fully planned. Bolt's next: implement crafting.js (10.1-10.3), then socket events (10.4).
+---
+
 ### Cycle #70 — Rune (reviewer)
 **Čas:** 2026-03-13 ~02:10
 **Co jsem udělal:**
