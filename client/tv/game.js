@@ -1363,6 +1363,8 @@ socket.on('chat:message', (data) => {
 
 socket.on('disconnect', () => {
   console.log('[TV] Disconnected from server');
+  Sound.ambientDroneStop();
+  Sound.bossStop();
 });
 
 // ─── Unlock audio on first TV interaction (click or keypress) ───

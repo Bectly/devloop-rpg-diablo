@@ -73,14 +73,17 @@ function createGameLoop(ctx) {
         player.inputDy = 0;
       }
 
-      // ── Teleport detector: log if position jumps > 100px in a single tick ──
+      // ── Teleport detector: log if position jumps > 40px in a single tick ──
       const _prevX = player.x, _prevY = player.y;
 
       const result = player.update(dt);
 
-      const _dx = Math.abs(player.x - _prevX), _dy = Math.abs(player.y - _prevY);
-      if (_dx > 100 || _dy > 100) {
-        console.warn(`[TELEPORT] ${player.name} jumped ${Math.round(_dx)},${Math.round(_dy)}px (${Math.round(_prevX)},${Math.round(_prevY)} → ${Math.round(player.x)},${Math.round(player.y)}) alive=${player.alive} isDying=${player.isDying}`);
+      // Skip teleport check on respawn (respawn legitimately jumps to spawn)
+      if (!result || result.type !== 'player:respawn') {
+        const _dx = Math.abs(player.x - _prevX), _dy = Math.abs(player.y - _prevY);
+        if (_dx > 40 || _dy > 40) {
+          console.warn(`[TELEPORT] ${player.name} jumped ${Math.round(_dx)},${Math.round(_dy)}px (${Math.round(_prevX)},${Math.round(_prevY)} → ${Math.round(player.x)},${Math.round(player.y)}) alive=${player.alive} isDying=${player.isDying}`);
+        }
       }
 
       // Decrement Last Stand timer (defensive proc — Phase 15.0)
@@ -147,13 +150,15 @@ function createGameLoop(ctx) {
       }
     }
 
-    // ── Wall collision safety: log ANY unexpected position change ──
-    // The old safety-net teleport (removed in 492d66f) was causing spawn teleports.
-    // Now we only LOG if a player somehow ends up in a wall (should never happen).
+    // ── Wall collision safety: log if player somehow ends up in a wall ──
     for (const player of allPlayers) {
       if (!player.alive || player.isDying) continue;
       if (!world.isWalkable(player.x, player.y)) {
-        console.error(`[BUG] ${player.name} is INSIDE A WALL at (${Math.round(player.x)},${Math.round(player.y)})! NOT teleporting — investigating.`);
+        // Throttle: log at most once per 2s per player
+        if (!player._lastWallBugLog || Date.now() - player._lastWallBugLog > 2000) {
+          console.error(`[BUG] ${player.name} is INSIDE A WALL at (${Math.round(player.x)},${Math.round(player.y)})! tile=${world.tiles?.[Math.floor(player.y/32)]?.[Math.floor(player.x/32)]}`);
+          player._lastWallBugLog = Date.now();
+        }
       }
     }
 
@@ -1304,7 +1309,7 @@ function createGameLoop(ctx) {
       lastTick = Date.now();
       tickCount = 0;
       intervalId = setInterval(gameTick, TICK_MS);
-      console.log(`[GameLoop] Started (${TICK_RATE} ticks/sec) — safety-net teleport REMOVED (492d66f), wall-in detection ACTIVE`);
+      console.log(`[GameLoop] Started (${TICK_RATE} ticks/sec) — wall-in detection + teleport detector ACTIVE`);
     },
     stop() {
       if (intervalId) {

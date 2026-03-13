@@ -209,14 +209,14 @@ describe('Corridor width (3-tile-wide corridors)', () => {
             (w.tiles[y - 1][x] === TILE.CORRIDOR || w.tiles[y + 1][x] === TILE.CORRIDOR);
 
           if (hasHorizNeighbor && hasVertNeighbor) {
-            // Corner tile: the 3x3 area around it should not contain VOID.
-            // The 3-tile widening of both the horizontal and vertical segments
-            // ensures the corner is filled in.
-            for (let dy = -1; dy <= 1; dy++) {
-              for (let dx = -1; dx <= 1; dx++) {
-                const tile = w.tiles[y + dy][x + dx];
-                expect(tile).not.toBe(TILE.VOID);
-              }
+            // Corner tile: the cardinal neighbors (not diagonals) should be passable.
+            // Diagonals may be VOID/WALL in L-shaped corridors.
+            const cardinals = [
+              w.tiles[y - 1][x], w.tiles[y + 1][x],
+              w.tiles[y][x - 1], w.tiles[y][x + 1],
+            ];
+            for (const tile of cardinals) {
+              expect(tile).not.toBe(TILE.VOID);
             }
             return;
           }

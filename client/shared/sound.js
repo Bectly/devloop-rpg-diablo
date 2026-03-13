@@ -353,11 +353,14 @@ window.Sound = {
     const t = this.ctx ? this.ctx.currentTime : 0;
     const { master, osc, osc2, noiseSrc } = this._ambientNodes;
     try {
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
       master.gain.linearRampToValueAtTime(0, t + 1.0);
       setTimeout(() => {
-        try { osc.stop(); } catch (_) {}
-        try { osc2.stop(); } catch (_) {}
-        try { noiseSrc.stop(); } catch (_) {}
+        try { osc.stop(); osc.disconnect(); } catch (_) {}
+        try { osc2.stop(); osc2.disconnect(); } catch (_) {}
+        try { noiseSrc.stop(); noiseSrc.disconnect(); } catch (_) {}
+        try { master.disconnect(); } catch (_) {}
       }, 1200);
     } catch (_) {}
     this._ambientNodes = null;
@@ -422,9 +425,12 @@ window.Sound = {
     const t = this.ctx ? this.ctx.currentTime : 0;
     const { master, oscs } = this._bossNodes;
     try {
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
       master.gain.linearRampToValueAtTime(0, t + 1.0);
       setTimeout(() => {
-        for (const o of oscs) { try { o.stop(); } catch (_) {} }
+        for (const o of oscs) { try { o.stop(); o.disconnect(); } catch (_) {} }
+        try { master.disconnect(); } catch (_) {}
       }, 1200);
     } catch (_) {}
     this._bossNodes = null;

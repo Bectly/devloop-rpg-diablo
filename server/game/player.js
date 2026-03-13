@@ -39,9 +39,36 @@ class Player {
     this.name = name || 'Hero';
     this.characterClass = characterClass || 'warrior';
 
-    // Position
-    this.x = 400;
-    this.y = 300;
+    // Position — instrumented with setter to catch teleport bugs
+    this._px = 400;
+    this._py = 300;
+    this._posTraceThreshold = 40; // Log stack trace when position jumps > 40px
+    Object.defineProperty(this, 'x', {
+      get() { return this._px; },
+      set(v) {
+        const delta = Math.abs(v - this._px);
+        if (delta > this._posTraceThreshold && !this.isDying) {
+          console.warn(`[POS-TRACE] ${this.name} x: ${Math.round(this._px)} → ${Math.round(v)} (Δ${Math.round(delta)})`);
+          console.trace('[POS-TRACE] stack:');
+        }
+        this._px = v;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    Object.defineProperty(this, 'y', {
+      get() { return this._py; },
+      set(v) {
+        const delta = Math.abs(v - this._py);
+        if (delta > this._posTraceThreshold && !this.isDying) {
+          console.warn(`[POS-TRACE] ${this.name} y: ${Math.round(this._py)} → ${Math.round(v)} (Δ${Math.round(delta)})`);
+          console.trace('[POS-TRACE] stack:');
+        }
+        this._py = v;
+      },
+      enumerable: true,
+      configurable: true,
+    });
     this.facing = 'down';
     this.moving = false;
     this.moveSpeed = 120;
@@ -625,9 +652,9 @@ class Player {
       this.moving = false;
     }
 
-    // Clamp to world bounds
-    this.x = Math.max(16, Math.min(1920, this.x));
-    this.y = Math.max(16, Math.min(1280, this.y));
+    // Clamp to world bounds (keep bbox inside grid: GRID_W*32=1920, GRID_H*32=1280)
+    this.x = Math.max(16, Math.min(1904, this.x));
+    this.y = Math.max(16, Math.min(1264, this.y));
 
     // Attack cooldown
     if (this.attackCooldown > 0) {
