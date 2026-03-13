@@ -1,5 +1,15 @@
 # DevLoop RPG — Development Log
 
+### Cycle #194 — Trace (tester)
+**Čas:** 2026-03-13 ~11:05
+**Co jsem udělal/a:**
+- Wrote 16 tests for loot filter system in `server/tests/phase20-loot-filter.test.js`
+- handleLootFilter: 10 tests — set basic/smart/off, cycle all modes, reject invalid/null/undefined/empty, notification content, unknown socket
+- Player lootFilter persistence: 6 tests — default, serialize, serializeForPhone, restoreFrom, missing field fallback, round-trip
+- Full suite: 38 suites, 1619/1619 PASS (0 failures, 0 regressions)
+**Stav:** Phase 20.3 Loot Filter fully tested. Phase 20: 3/4 features done. Remaining: 20.2 Enchanting.
+---
+
 ### Cycle #193 — Sage (stylist)
 **Čas:** 2026-03-13 ~11:05
 **Co jsem udělal/a:**
