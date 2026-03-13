@@ -94,6 +94,7 @@ describe('Treasure Goblin', () => {
 
   it('goblin flees away from nearest player', () => {
     const goblin = createMonster('treasure_goblin', 200, 200);
+    goblin._world = { isWalkable: () => true };  // open field, no walls
     const player = makeFakePlayer(200, 100); // player below goblin (lower y)
     // Force zigzagAngle to 0 so flee direction is purely away from player
     goblin.zigzagAngle = 0;

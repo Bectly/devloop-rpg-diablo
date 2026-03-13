@@ -581,22 +581,8 @@ class Monster {
           this.x = newX;  // slide X
         } else if (this._world && this._world.isWalkable(this.x, newY)) {
           this.y = newY;  // slide Y
-        } else if (newX > margin && newX < worldW - margin && newY > margin && newY < worldH - margin) {
-          // Fallback: bounds check only (no world ref)
-          this.x = newX;
-          this.y = newY;
-        } else {
-          // Hit boundary — pick a random open direction
-          const randAngle = Math.random() * Math.PI * 2;
-          const tryX = this.x + Math.cos(randAngle) * step;
-          const tryY = this.y + Math.sin(randAngle) * step;
-          if (!this._world || this._world.isWalkable(tryX, tryY)) {
-            this.x = tryX;
-            this.y = tryY;
-          }
-          this.x = Math.max(margin, Math.min(worldW - margin, this.x));
-          this.y = Math.max(margin, Math.min(worldH - margin, this.y));
         }
+        // else: all directions blocked, goblin stays put
 
         // Update facing
         const dx = Math.cos(fleeAngle);
@@ -723,8 +709,25 @@ class Monster {
               this.attackCooldown = this.attackSpeed;
             }
           } else {
-            this.x += (cdx / cdist) * chargeStep;
-            this.y += (cdy / cdist) * chargeStep;
+            // Charge movement with wall collision
+            const chX = (cdx / cdist) * chargeStep;
+            const chY = (cdy / cdist) * chargeStep;
+            if (this._world) {
+              const newX = this.x + chX;
+              const newY = this.y + chY;
+              if (this._world.isWalkable(newX, newY)) {
+                this.x = newX;
+                this.y = newY;
+              } else if (this._world.isWalkable(newX, this.y)) {
+                this.x = newX;
+              } else if (this._world.isWalkable(this.x, newY)) {
+                this.y = newY;
+              }
+              // else: charge hits wall, stops
+            } else {
+              this.x += chX;
+              this.y += chY;
+            }
             this.chargeTimer -= dt;
           }
           break;
