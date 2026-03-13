@@ -479,6 +479,207 @@ const CombatFX = (() => {
     HUD.spawnDamageText(scene, x, y - 20, 'SLOWED', false, false, '#44cc44');
   }
 
+  // ── Cross-Class Combo Effects ──
+
+  const COMBO_COLORS = {
+    shatter_blast:   0x44ddff,
+    chain_reaction:  0xffff44,
+    battle_fury:     0xff8833,
+    firestorm:       0xff4400,
+    shadow_barrage:  0x6644aa,
+  };
+
+  function spawnComboEffect(scene, comboId, comboName, x, y, radius) {
+    const color = COMBO_COLORS[comboId] || 0xffffff;
+    const colorStr = '#' + color.toString(16).padStart(6, '0');
+
+    // ── Big combo name callout ──
+    const text = scene.add.text(x, y - 30, comboName, {
+      fontSize: '22px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      stroke: colorStr,
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(10).setScale(0.5).setAlpha(1);
+    // Scale up
+    scene.tweens.add({
+      targets: text,
+      scale: 1.5,
+      duration: 300,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        // Hold, then fade
+        scene.tweens.add({
+          targets: text,
+          alpha: 0,
+          y: text.y - 15,
+          duration: 400,
+          delay: 500,
+          onComplete: () => text.destroy(),
+        });
+      },
+    });
+
+    // ── Per-combo particle effects ──
+    if (comboId === 'shatter_blast') {
+      // Ice shards exploding outward
+      for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2;
+        const shard = scene.add.circle(x, y, 3 + Math.random() * 2, 0x44ddff, 0.9);
+        shard.setDepth(9);
+        scene.tweens.add({
+          targets: shard,
+          x: x + Math.cos(angle) * radius * (0.7 + Math.random() * 0.3),
+          y: y + Math.sin(angle) * radius * (0.7 + Math.random() * 0.3),
+          alpha: 0,
+          scale: 0.2,
+          duration: 400 + Math.random() * 200,
+          delay: i * 15,
+          onComplete: () => shard.destroy(),
+        });
+      }
+      scene.cameras.main.shake(250, 0.005);
+    } else if (comboId === 'chain_reaction') {
+      // Electric sparks bouncing within radius + flash
+      const flash = scene.add.circle(x, y, radius * 0.8, 0xffff44, 0.4);
+      flash.setDepth(8);
+      scene.tweens.add({
+        targets: flash,
+        alpha: 0,
+        scale: 1.3,
+        duration: 200,
+        onComplete: () => flash.destroy(),
+      });
+      for (let i = 0; i < 12; i++) {
+        const ox = (Math.random() - 0.5) * radius * 1.4;
+        const oy = (Math.random() - 0.5) * radius * 1.4;
+        const spark = scene.add.circle(x + ox, y + oy, 2, 0xffff44, 1);
+        spark.setDepth(10);
+        const bx = x + (Math.random() - 0.5) * radius;
+        const by = y + (Math.random() - 0.5) * radius;
+        scene.tweens.add({
+          targets: spark,
+          x: bx,
+          y: by,
+          alpha: 0,
+          duration: 300 + Math.random() * 200,
+          delay: i * 30,
+          onComplete: () => spark.destroy(),
+        });
+      }
+    } else if (comboId === 'battle_fury') {
+      // Vortex particles spiraling inward
+      for (let i = 0; i < 14; i++) {
+        const angle = (i / 14) * Math.PI * 2;
+        const startR = radius * 1.2;
+        const p = scene.add.circle(x + Math.cos(angle) * startR, y + Math.sin(angle) * startR, 3, 0xff8833, 0.9);
+        p.setDepth(9);
+        scene.tweens.add({
+          targets: p,
+          x: x + Math.cos(angle + Math.PI) * 5,
+          y: y + Math.sin(angle + Math.PI) * 5,
+          alpha: 0,
+          scale: 0.3,
+          duration: 500,
+          delay: i * 25,
+          onComplete: () => p.destroy(),
+        });
+      }
+      // Central burst after particles converge
+      const core = scene.add.circle(x, y, 6, 0xff8833, 0);
+      core.setDepth(9);
+      scene.tweens.add({
+        targets: core,
+        alpha: 0.7,
+        scale: 3,
+        duration: 200,
+        delay: 400,
+        onComplete: () => {
+          scene.tweens.add({
+            targets: core,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => core.destroy(),
+          });
+        },
+      });
+    } else if (comboId === 'firestorm') {
+      // Fire + ice particles colliding, then steam cloud
+      for (let i = 0; i < 10; i++) {
+        const angle = (i / 10) * Math.PI * 2;
+        const fire = scene.add.circle(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, 3, 0xff4400, 0.9);
+        fire.setDepth(9);
+        scene.tweens.add({
+          targets: fire,
+          x: x,
+          y: y,
+          alpha: 0,
+          duration: 400,
+          delay: i * 20,
+          onComplete: () => fire.destroy(),
+        });
+        const ice = scene.add.circle(x + Math.cos(angle + Math.PI) * radius, y + Math.sin(angle + Math.PI) * radius, 3, 0x44ddff, 0.9);
+        ice.setDepth(9);
+        scene.tweens.add({
+          targets: ice,
+          x: x,
+          y: y,
+          alpha: 0,
+          duration: 400,
+          delay: i * 20,
+          onComplete: () => ice.destroy(),
+        });
+      }
+      // Steam cloud after collision
+      const steam = scene.add.circle(x, y, 10, 0xcccccc, 0);
+      steam.setDepth(8);
+      scene.tweens.add({
+        targets: steam,
+        alpha: 0.35,
+        scale: radius / 10,
+        duration: 300,
+        delay: 350,
+        onComplete: () => {
+          scene.tweens.add({
+            targets: steam,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => steam.destroy(),
+          });
+        },
+      });
+    } else if (comboId === 'shadow_barrage') {
+      // Shadow streaks radiating outward
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const streak = scene.add.circle(x, y, 4, 0x6644aa, 0.8);
+        streak.setDepth(9);
+        scene.tweens.add({
+          targets: streak,
+          x: x + Math.cos(angle) * radius * 1.1,
+          y: y + Math.sin(angle) * radius * 1.1,
+          alpha: 0,
+          scaleX: 2,
+          scaleY: 0.5,
+          duration: 350 + Math.random() * 150,
+          delay: i * 20,
+          onComplete: () => streak.destroy(),
+        });
+      }
+      // Dark core flash
+      const core = scene.add.circle(x, y, radius * 0.4, 0x6644aa, 0.3);
+      core.setDepth(8);
+      scene.tweens.add({
+        targets: core,
+        alpha: 0,
+        scale: 2,
+        duration: 500,
+        onComplete: () => core.destroy(),
+      });
+    }
+  }
+
   // ── Process all combat events for a frame ──
   function processCombatEvents(scene, state) {
     if (!state.events) return;
@@ -650,6 +851,10 @@ const CombatFX = (() => {
       if (ev.type === 'effect:spawn' && ev.effectType === 'shadow_step') {
         spawnShadowStepEffect(scene, ev.fromX, ev.fromY, ev.toX, ev.toY);
       }
+      // Cross-class combo effects
+      if (ev.type === 'combo:trigger') {
+        spawnComboEffect(scene, ev.comboId, ev.comboName, ev.x, ev.y, ev.radius || 120);
+      }
       // Trap trigger burst effect
       if (ev.type === 'trap:trigger' && ev.x !== undefined) {
         const trapColors = {
@@ -672,5 +877,5 @@ const CombatFX = (() => {
     }
   }
 
-  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect, spawnMeteorCastEffect, spawnBlizzardEffect, spawnChainLightningEffect };
+  return { processCombatEvents, spawnAoeEffect, spawnProjectile, spawnBuffEffect, spawnBleedProc, spawnBlockProc, spawnFreezeProc, spawnLastStandProc, spawnCaltropsProc, spawnWhirlwindEffect, spawnChargeDashEffect, spawnBattleShoutEffect, spawnFearEffect, spawnArrowVolleyEffect, spawnSniperShotEffect, spawnShadowStepEffect, spawnMeteorCastEffect, spawnBlizzardEffect, spawnChainLightningEffect, spawnComboEffect };
 })();

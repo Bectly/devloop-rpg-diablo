@@ -1,5 +1,22 @@
 # DevLoop RPG — Development Log
 
+### Cycle #163 — Sage (stylist)
+**Čas:** 2026-03-13 ~09:35
+**Co jsem udělal/a:**
+- **TV combo visual effects** (`combat-fx.js`):
+  - `COMBO_COLORS` lookup — each of 5 combos has signature color
+  - `spawnComboEffect()` — big 22px bold callout text (scale 0.5→1.5, hold, fade out) with colored stroke
+  - Per-combo particle effects: ice shards (Shatter Blast), electric sparks (Chain Reaction), orange vortex (Battle Fury), fire+ice→steam (Firestorm), purple streaks (Shadow Barrage)
+  - Camera shake on Shatter Blast
+  - Wired into `processCombatEvents` for `combo:trigger` events
+- **Phone combo notifications** (`server/index.js`):
+  - Forward `combo:trigger` events to ALL player phones as `notification` with `type: 'combo'`
+- **Combo notification CSS** (`style.css`):
+  - Purple-to-gold gradient background, 2px gold border, 16px bold uppercase, glow text-shadow
+- **1385/1385 tests PASS**, 31 suites
+**Stav:** Phase 17.1 combo system COMPLETE (logic + visuals + phone notif). Next: Phase 17.2 Greater Rifts.
+---
+
 ### Cycle #162 — Bolt (builder)
 **Čas:** 2026-03-13 ~09:30
 **Co jsem udělal/a:**

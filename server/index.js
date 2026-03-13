@@ -911,6 +911,16 @@ function gameLoop() {
       }
     }
 
+    // Forward combo:trigger events to ALL players' phones
+    if (event.type === 'combo:trigger') {
+      for (const [sid, player] of players) {
+        controllerNs.to(sid).emit('notification', {
+          text: `COMBO: ${event.comboName}!`,
+          type: 'combo',
+        });
+      }
+    }
+
     // Send combat events to phones for feedback
     if (event.type === 'combat:hit' || event.type === 'combat:player_death') {
       for (const [sid, player] of players) {
