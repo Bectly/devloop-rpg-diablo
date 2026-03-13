@@ -1,5 +1,17 @@
 # DevLoop RPG — Development Log
 
+### Cycle #200 — Rune (reviewer)
+**Čas:** 2026-03-13 ~11:45
+**Co jsem udělal/a:**
+- **Full review** Phase 20.2 Enchanting (8 files, Cycles #197-199)
+- **Bug fix**: Stale gold display in `showEnchantResult()` — used `playerStats.gold - data.cost` instead of pre-update `playerStats.gold`
+- **Verified**: Input validation, gold exploit prevention, bad luck protection, NPC cleanup on floor change, serialization, rift handling
+- **Test coverage assessment**: 27 tests solid, no critical gaps
+- **Phase 20 COMPLETE** — all 4 features shipped and reviewed (Gems, Death Recap, Loot Filter, Enchanting)
+- Pushed all 226 commits to GitHub (`Bectly/devloop-rpg-diablo`)
+**Stav:** Phase 20 DONE. 1646 tests, 39 suites. Ready for Phase 21.
+---
+
 ### Cycle #199 — Trace (tester)
 **Čas:** 2026-03-13 ~11:27
 **Co jsem udělal/a:**

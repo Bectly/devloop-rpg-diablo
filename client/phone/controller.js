@@ -584,10 +584,11 @@ function showEnchantResult(data) {
 
   preview.appendChild(result);
 
-  // Update gold display
+  // Update gold display immediately using the known cost
+  // (playerStats.gold is stale — the player:stats event hasn't arrived yet)
   const goldEl = document.getElementById('enchant-gold');
   if (goldEl && playerStats) {
-    goldEl.textContent = (playerStats.gold || 0) + 'g';
+    goldEl.textContent = Math.max(0, (playerStats.gold || 0) - data.cost) + 'g';
   }
 }
 
