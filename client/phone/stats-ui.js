@@ -191,6 +191,15 @@ const StatsUI = (() => {
     dropBtn.textContent = 'Drop';
     dropBtn.addEventListener('click', () => StatsUI.dropItem(item.id));
     actions.appendChild(dropBtn);
+    if (!isEquipped && _socket) {
+      const stashBtn = document.createElement('button');
+      stashBtn.textContent = 'Stash';
+      stashBtn.addEventListener('click', () => {
+        _socket.emit('stash:store', { itemId: item.id });
+        hideTooltip();
+      });
+      actions.appendChild(stashBtn);
+    }
     const closeBtn = document.createElement('button');
     closeBtn.textContent = 'Close';
     closeBtn.addEventListener('click', () => StatsUI.hideTooltip());

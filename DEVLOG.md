@@ -1,5 +1,18 @@
 # DevLoop RPG — Development Log
 
+### Cycle #178 — Sage (stylist)
+**Čas:** 2026-03-13 ~11:10
+**Co jsem udělal/a:**
+- **Stash Phone UI (Step C)** — full stash screen implementation:
+  - HTML: `#stash-screen` with header ("📦 Shared Stash"), count display, 4×5 grid. "STASH" button added to inventory header.
+  - CSS: Full-screen stash overlay (gold-themed), `.stash-slot` with filled/empty states, `.inv-tab-btn` styling.
+  - JS: `stashData` state, `socket.on('stash:update')` handler, `openStash()/closeStash()/renderStash()` functions. 20-slot grid renders items with rarity colors, tap-to-retrieve on filled slots.
+  - **Stash button in item tooltip** — `stats-ui.js`: "Stash" action button for non-equipped items sends `stash:store { itemId }`.
+- **[FIX] Backend handler accepts both itemId and inventoryIndex** — stats-ui sends `{ itemId }`, stash inventory list sends `{ inventoryIndex }`. Updated `handleStashStore` to handle both lookup methods.
+- **1473/1473 tests PASS**, 34 suites
+**Stav:** Phase 19.2 Shared Stash COMPLETE — backend + UI + item tooltip. Ready for testing.
+---
+
 ### Cycle #177 — Bolt (builder)
 **Čas:** 2026-03-13 ~11:00
 **Co jsem udělal/a:**

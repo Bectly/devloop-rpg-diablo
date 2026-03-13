@@ -1231,9 +1231,14 @@ exports.handleStashStore = (socket, data, { players, inventories, gameDb }) => {
   const inv = inventories.get(player.id);
   if (!inv) return;
 
-  // Validate inventory index
+  // Find item by index or by ID (stats-ui sends itemId, stash list sends inventoryIndex)
   const items = inv.getAllItems();
-  const item = items[data.inventoryIndex];
+  let item;
+  if (data.itemId) {
+    item = items.find(i => i.id === data.itemId);
+  } else if (typeof data.inventoryIndex === 'number') {
+    item = items[data.inventoryIndex];
+  }
   if (!item) {
     socket.emit('notification', { text: 'Invalid item', type: 'error' });
     return;

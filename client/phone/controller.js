@@ -42,6 +42,7 @@ let buttonsInitialized = false;
 let notificationCount = 0;
 let shopData = null;
 let questData = [];
+let stashData = [];
 // encounteredElites moved to reconnect.js (Reconnect.encounteredElites)
 
 // ─── DOM Elements ───────────────────────────────────────────────
@@ -176,6 +177,11 @@ socket.on('hardcore:death', (data) => {
   }, 5000);
 });
 
+socket.on('stash:update', (data) => {
+  stashData = data.items || [];
+  renderStash();
+});
+
 let _prevSetBonusKeys = new Set();
 
 socket.on('stats:update', (data) => {
@@ -221,6 +227,91 @@ socket.on('inventory:update', (data) => {
   // Update crafting screen if open
   Screens.updateCraftingInventory(data);
 });
+
+// ── Stash ──────────────────────────────────────────────────────
+let stashData = null;
+
+socket.on('stash:update', (data) => {
+  stashData = data.items || [];
+  const stashScreen = document.getElementById('stash-screen');
+  if (stashScreen && !stashScreen.classList.contains('hidden')) {
+    renderStash();
+  }
+});
+
+function renderStash() {
+  const countEl = document.getElementById('stash-count');
+  const gridEl = document.getElementById('stash-grid');
+  if (!gridEl) return;
+
+  const items = stashData || [];
+  const occupiedSlots = new Map(items.map(e => [e.slot, e.item]));
+
+  if (countEl) countEl.textContent = `${items.length} / 20`;
+
+  gridEl.innerHTML = '';
+
+  // Render 20 slots in a 4×5 grid
+  for (let slot = 0; slot < 20; slot++) {
+    const item = occupiedSlots.get(slot);
+    const cell = document.createElement('div');
+    cell.dataset.slot = slot;
+
+    if (item) {
+      cell.className = `stash-slot filled rarity-${item.rarity || 'common'}`;
+      cell.innerHTML = `<span class="slot-num">${slot + 1}</span><span class="item-name">${item.name}</span>`;
+      cell.addEventListener('click', () => {
+        if (confirm(`Retrieve "${item.name}"?`)) {
+          socket.emit('stash:retrieve', { slot });
+        }
+      });
+    } else {
+      cell.className = 'stash-slot empty';
+      cell.innerHTML = `<span class="slot-num">${slot + 1}</span>`;
+      cell.addEventListener('click', () => _showStoreMenu(slot));
+    }
+
+    gridEl.appendChild(cell);
+  }
+
+  // Also render inventory items below for quick store access
+  _renderStashInvPanel();
+}
+
+function _renderStashInvPanel() {
+  let panel = document.getElementById('stash-inv-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'stash-inv-panel';
+    panel.innerHTML = '<h3>Store from Inventory</h3><div id="stash-inv-list"></div>';
+    const gridEl = document.getElementById('stash-grid');
+    if (gridEl && gridEl.parentNode) gridEl.parentNode.appendChild(panel);
+  }
+  const listEl = document.getElementById('stash-inv-list');
+  if (!listEl || !inventoryData) return;
+
+  const items = inventoryData.items || [];
+  listEl.innerHTML = '';
+  if (items.length === 0) {
+    listEl.innerHTML = '<p class="stash-empty">Inventory empty</p>';
+    return;
+  }
+  items.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = `stash-inv-row rarity-${item.rarity || 'common'}`;
+    row.innerHTML = `<span>${item.name}</span><button class="stash-store-btn">Store</button>`;
+    row.querySelector('.stash-store-btn').addEventListener('click', () => {
+      socket.emit('stash:store', { inventoryIndex: idx });
+    });
+    listEl.appendChild(row);
+  });
+}
+
+function _showStoreMenu(targetSlot) {
+  // Just focus the inv panel — slot selection is cosmetic for empty slots
+  const panel = document.getElementById('stash-inv-panel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+}
 
 socket.on('notification', (data) => {
   if (data.type === 'save') {
@@ -766,6 +857,30 @@ function initButtons() {
     });
     ldbBtn.addEventListener('click', () => Screens.toggleLeaderboard(socket));
   }
+
+  // Stash — accessible from inventory header tab
+  const stashBtn = document.getElementById('btn-stash');
+  if (stashBtn) {
+    const openStash = () => {
+      inventoryScreen.classList.add('hidden');
+      const stashScreen = document.getElementById('stash-screen');
+      if (stashScreen) stashScreen.classList.remove('hidden');
+      socket.emit('stash:list');
+    };
+    stashBtn.addEventListener('touchstart', (e) => { e.preventDefault(); openStash(); });
+    stashBtn.addEventListener('click', openStash);
+  }
+
+  const stashClose = document.getElementById('stash-close');
+  if (stashClose) {
+    const closeStash = () => {
+      const stashScreen = document.getElementById('stash-screen');
+      if (stashScreen) stashScreen.classList.add('hidden');
+      inventoryScreen.classList.remove('hidden');
+    };
+    stashClose.addEventListener('touchstart', (e) => { e.preventDefault(); closeStash(); });
+    stashClose.addEventListener('click', closeStash);
+  }
 }
 
 // ─── Haptic Feedback ────────────────────────────────────────────
@@ -890,6 +1005,80 @@ function renderInventory() {
 
   renderStats();
 }
+
+// ─── Stash ────────────────────────────────────────────────────
+function openStash() {
+  socket.emit('stash:list');
+  inventoryScreen.classList.add('hidden');
+  document.getElementById('stash-screen').classList.remove('hidden');
+}
+
+function closeStash() {
+  document.getElementById('stash-screen').classList.add('hidden');
+}
+
+function renderStash() {
+  const grid = document.getElementById('stash-grid');
+  const countEl = document.getElementById('stash-count');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  const filled = stashData.length;
+  if (countEl) countEl.textContent = filled + ' / 20';
+
+  // Build a map of slot → item
+  const slotMap = new Map();
+  for (const entry of stashData) {
+    slotMap.set(entry.slot, entry.item);
+  }
+
+  for (let i = 0; i < 20; i++) {
+    const slotEl = document.createElement('div');
+    slotEl.className = 'stash-slot';
+    slotEl.style.position = 'relative';
+
+    const item = slotMap.get(i);
+    if (item) {
+      slotEl.classList.add('filled');
+      const nameEl = document.createElement('div');
+      nameEl.className = 'item-name';
+      nameEl.textContent = item.name || 'Item';
+      nameEl.style.color = item.rarityColor || '#aaa';
+      slotEl.appendChild(nameEl);
+
+      // Tap to retrieve
+      slotEl.addEventListener('click', () => {
+        socket.emit('stash:retrieve', { slot: i });
+      });
+      slotEl.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        socket.emit('stash:retrieve', { slot: i });
+      });
+    } else {
+      slotEl.classList.add('empty');
+      const nameEl = document.createElement('div');
+      nameEl.className = 'item-name';
+      nameEl.textContent = '\u2014';
+      slotEl.appendChild(nameEl);
+    }
+
+    grid.appendChild(slotEl);
+  }
+}
+
+// Stash button in inventory opens stash
+document.getElementById('btn-stash').addEventListener('click', () => openStash());
+document.getElementById('btn-stash').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  openStash();
+});
+
+// Stash close
+document.getElementById('stash-close').addEventListener('click', () => closeStash());
+document.getElementById('stash-close').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  closeStash();
+});
 
 // ─── Stats & Tooltip — delegated to stats-ui.js (StatsUI) ──────
 function renderStats() {
@@ -1018,7 +1207,7 @@ if (soundBtn) {
 
 // ─── Prevent zoom/scroll on mobile ──────────────────────────────
 document.addEventListener('touchmove', (e) => {
-  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items') || e.target.closest('.ldb-list') || e.target.closest('#rift-screen-content')) return;
+  if (e.target.closest('#inv-content') || e.target.closest('.quest-list') || e.target.closest('.shop-items') || e.target.closest('.ldb-list') || e.target.closest('#rift-screen-content') || e.target.closest('#stash-screen')) return;
   e.preventDefault();
 }, { passive: false });
 
