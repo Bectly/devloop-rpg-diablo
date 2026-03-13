@@ -2240,30 +2240,19 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 **Contextual:** NPC/INTERACT button appears ONLY when near interactive object
 
 **Implementation:**
-- [ ] **Step A: Menu drawer** — new `#menu-drawer` element, slides up from bottom
-  - Grid of icon buttons: 🎒INV, ⚔️QST, 🔨CRF, 💬MSG, ⚡TLN, 🌀RIFT, 🏆LDB
-  - Tap ≡ to toggle, tap outside or any button to close
-  - CSS: `transform: translateY(100%)` → `translateY(0)` transition
-- [ ] **Step B: Remove util-row** — delete the 10-button util-row from HTML
-  - Replace with single `≡ MENU` button
-  - Keep ATK, S1-S3, HP, LOOT as direct buttons
-- [ ] **Step C: Contextual NPC button** — show INTERACT only when server sends `npc:nearby` event
-  - Appears as floating button near center-right
-  - Auto-hides after 2s or when player moves away
-- [ ] **Step D: Button sizing** — increase touch targets
-  - ATK: 84→96px
-  - Skills: 56→64px
-  - HP/LOOT: 50→56px
-  - MENU: 50×50px
+- [x] **Step A: Menu drawer** — DONE (Cycle #207)
+- [x] **Step B: Remove util-row** — DONE (Cycle #207, 14→6 core buttons + menu drawer)
+- [x] **Step C: Contextual NPC button** — DONE (floating btn-interact)
+- [x] **Step D: Button sizing** — DONE (ATK 96px, skills 64px, HP/LOOT 56px)
 
 **Files:** `client/phone/index.html`, `client/phone/style.css`, `client/phone/controller.js`
 
 ### P.2 TV Visual Improvements [for Sage]
 **Problem:** Procedural textures look basic. Dungeon is functional but not atmospheric.
 
-- [ ] **Step A: Better player sprites** — add idle bounce animation, weapon held visually, class-color tint
+- [x] **Step A: Better player sprites** — DONE (Cycle #208, idle bob + class tints)
 - [ ] **Step B: Dungeon atmosphere** — dark overlay on unexplored areas, torch light around players (radial gradient), ambient particles (dust motes)
-- [ ] **Step C: Monster death animation** — fade + shrink + particle burst instead of instant disappear
+- [x] **Step C: Monster death animation** — DONE (Cycle #208, red tint + scale-down + scatter particles)
 - [ ] **Step D: Floor tiles variation** — 2-3 floor tile variants (random per tile), crack patterns, debris
 - [ ] **Step E: Wall depth** — darker wall tops, slight 3D shadow effect
 
@@ -2436,6 +2425,86 @@ Validation: slot range 0-19, inventory item exists, stash not full (20 max), inv
 - Crit damage stacking is multiplicative (base 2x × dagger 1.2x × set 1.3x = 3.12x for Shadowweave rogue). Intentional power curve.
 - Cross-class set equipping has no validation — any class can wear any set. Could be a feature or a bug depending on design intent.
 - No validation prevents calling `recalcSetBonuses()` independently of `recalcStats()`, but in practice it's always called via `recalcEquipBonuses()` chain. Safe by convention.
+
+## 🔥 Phase 22: Dungeon Atmosphere & Refactoring
+
+**Goal:** Make the game FEEL like Diablo. Dark dungeon atmosphere on TV, fog of war, torch lighting, floor tile variation. Also split the 3 files over 1500 LOC before they become unmaintainable.
+
+### 22.1 Refactoring: Big File Splits [for Bolt — PRIORITY]
+**Why:** socket-handlers.js (1886 LOC), index.js (1635 LOC), controller.js (1567 LOC) are all past the 1500 LOC threshold. Must split before adding more features.
+
+**Step A: socket-handlers.js → extract combat + event handlers**
+- `server/socket-handlers-combat.js` (~300 LOC) — attack, skill, damage, death handlers
+- `server/socket-handlers-events.js` (~250 LOC) — goblin, cursed event, interact handlers
+- socket-handlers.js stays as hub that imports + delegates
+
+**Step B: index.js → extract game loop + spawning**
+- `server/game-loop.js` (~400 LOC) — tick function, monster AI update, projectile update, floor transitions
+- `server/spawning.js` (~200 LOC) — monster spawning, goblin spawning, cursed event spawning
+- index.js stays as entry point: server init, namespace setup, game start
+
+**Step C: controller.js → extract combat UI + menu**
+- `client/phone/combat-ui.js` (~300 LOC) — attack button, skill cooldowns, HP bar, damage flash
+- `client/phone/menu-ui.js` (~200 LOC) — menu drawer, button routing, toggle logic
+- controller.js stays as main controller: joystick, socket wiring, state management
+
+### 22.2 TV Fog of War + Torch Lighting [for Sage]
+**The biggest visual upgrade — makes dungeon feel dark and dangerous.**
+
+**Step A: Fog of war layer** (`client/tv/effects.js`)
+- Black overlay on ALL tiles by default (alpha 0.85)
+- Circular reveal around each player (radius ~5 tiles, soft edge via radial gradient)
+- Revealed tiles stay at alpha 0.3 (explored but not lit)
+- Current player area: fully visible (alpha 0)
+- Use Phaser `BlendMode` or render texture for performance
+
+**Step B: Torch light effect** (`client/tv/effects.js`)
+- Warm orange-yellow radial gradient centered on each player
+- Flicker animation: radius oscillates ±8px at ~3Hz (random noise, not sine)
+- Light radius scales slightly with floor (deeper = smaller radius, more oppressive)
+- Optional: torch particles (tiny orange dots floating up) near light edge
+
+**Step C: Ambient particles** (`client/tv/effects.js`)
+- Dust motes: 20-30 tiny white particles drifting slowly across visible area
+- Random drift direction, very slow speed (0.2-0.5 px/frame)
+- Alpha pulse: 0.1-0.3, fade in/out over 2-3 seconds
+- Only render in visible (non-fog) area for performance
+
+### 22.3 Floor Tile Variation [for Sage]
+**Problem:** Every floor tile looks identical. Feels flat and repetitive.
+
+**Step A: Tile texture variants** (`client/tv/game.js`)
+- 3 floor tile textures per zone: base, cracked, mossy/damaged
+- On room reveal: assign random variant per tile (seeded by position for consistency)
+- Use Phaser tilemap layer or individual sprites with texture frames
+
+**Step B: Wall depth/shadow** (`client/tv/game.js`)
+- Wall tiles get darker top edge (2px strip, alpha 0.4) → fake depth
+- Floor tiles adjacent to south wall get subtle shadow (alpha 0.15, 4px tall)
+- Creates illusion of wall height
+
+**Step C: Zone-specific color palettes**
+- Each zone already has a theme — apply color tint to floor/wall textures:
+  - Dusty Catacombs: warm brown
+  - Frozen Depths: cool blue-white
+  - Infernal Pit: red-orange
+  - Void Realm: dark purple
+- `generateTexture()` already supports tinting, just vary per zone
+
+### 22.4 Server Code Quality [for Bolt — secondary]
+**Small wins that prevent future bugs:**
+
+- [ ] **A:** Add JSDoc to all exported functions in monsters.js, player.js, combat.js (top-level only, no over-documentation)
+- [ ] **B:** Consolidate duplicate armor formula: combat.js and monsters.js both have `1 - armor/(armor+50)` — extract to `damage-types.js:applyArmor()` which already exists but isn't used
+- [ ] **C:** Replace magic numbers in index.js game loop (20 → TICK_RATE const, 50 → TICK_MS const)
+
+**Agent assignments:**
+1. Bolt: 22.1 A-C (file splits) + 22.4 A-C (code quality)
+2. Sage: 22.2 A-C (fog/torch/particles) + 22.3 A-C (tiles/walls/zones)
+3. Trace: test all visual changes don't break existing 1682 tests, write split-validation tests
+4. Rune: review splits for correct imports/exports, no behavior changes
+
+---
 
 ## Open Bugs
 

@@ -470,3 +470,35 @@ Kadala-style system — spend gold for mystery items at shop NPC.
 - Random item generated: 60% common, 25% uncommon, 10% rare, 4% epic, 1% legendary
 - Item level = current floor
 - Available at existing shop NPC (new "GAMBLE" tab)
+
+## 24. Dungeon Atmosphere (Phase 22)
+
+### Fog of War
+- Black overlay (alpha 0.85) covers all unvisited tiles
+- Circular reveal around each player (~5 tile radius, soft radial gradient edge)
+- Explored tiles remain at alpha 0.3 (dim but visible)
+- Current room: fully visible
+
+### Torch Lighting
+- Warm orange-yellow radial gradient per player
+- Flicker: radius oscillates ±8px at ~3Hz with random noise
+- Light radius shrinks on deeper floors (more oppressive)
+- Optional: tiny orange particles at light edge
+
+### Floor Tile Variation
+- 3 tile variants per zone (base, cracked, mossy)
+- Random assignment seeded by tile position (deterministic)
+- Zone-specific color palettes applied via tint
+
+### Wall Depth
+- Darker top edge on walls (2px, alpha 0.4)
+- Floor shadow adjacent to south walls (4px, alpha 0.15)
+
+## 25. Refactoring Targets (Phase 22)
+
+### File splits at 1500 LOC threshold:
+- `socket-handlers.js` (1886) → extract combat + event handlers
+- `index.js` (1635) → extract game loop + spawning
+- `controller.js` (1567) → extract combat UI + menu UI
+- Consolidate duplicate armor formula into `damage-types.js:applyArmor()`
+- Extract magic numbers to constants (TICK_RATE, TICK_MS)

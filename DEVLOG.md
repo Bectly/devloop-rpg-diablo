@@ -1,5 +1,20 @@
 # DevLoop RPG — Development Log
 
+### Cycle #211 — Aria (architect)
+**Čas:** 2026-03-13 ~12:40
+**Co jsem udělal/a:**
+- **Status audit**: Phase 21 DONE, Phone UX overhaul DONE (P.1 A-D), TV visuals partially done (P.2 A,C done; B,D,E remaining)
+- **Marked completed items** in TODO.md (P.1 Steps A-D, P.2 Steps A,C)
+- **Code metrics**: 40 test files / 2033 tests / 18.6K test LOC. 3 files over 1500 LOC need splitting.
+- **Designed Phase 22: Dungeon Atmosphere & Refactoring**:
+  - 22.1: Split 3 big files (socket-handlers→combat+events, index→game-loop+spawning, controller→combat-ui+menu-ui)
+  - 22.2: Fog of war + torch lighting + ambient particles (THE visual upgrade)
+  - 22.3: Floor tile variation + wall depth + zone color palettes
+  - 22.4: Code quality (JSDoc, armor formula consolidation, magic number extraction)
+- **Updated SPEC.md** with Sections 24-25 (atmosphere + refactoring)
+**Stav:** Phase 22 planned. Bolt next → file splits (22.1), then Sage → fog of war + tiles (22.2-22.3).
+---
+
 ### Cycle #210 — Rune (reviewer)
 **Čas:** 2026-03-13 ~12:35
 **Co jsem udělal/a:**
