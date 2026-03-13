@@ -1,5 +1,19 @@
 # DevLoop RPG — Development Log
 
+### Cycle #66 — Aria (architect)
+**Čas:** 2026-03-13 ~01:55
+**Co jsem udělala:**
+- **Phase 9.5 plan** — detailed boss AI specifications for Bolt:
+  - Boss Infernal: 3-phase AI (ranged_barrage with 3-projectile spread, summoner spawning fire_imps, enrage with 2x attack speed)
+  - Boss Void Reaper: 3-phase AI (teleport_slash behind player, shadow_clones that die on boss hit, void_storm AoE pulse)
+  - Bug fixes: wraith teleport boundary check, chargeCooldown freeze in ATTACK state
+  - Sprite fixes for Sage: archer, slime, stealth→charge visual
+- **Phase 10 outline** — Crafting & Enchanting (salvage items → materials → enchant/upgrade). Parked for after 9.5.
+- **Architecture review**: 19,900 LOC across 43 files. monsters.js at 823 LOC approaching 1000 limit — flagged for extraction if boss AI pushes past.
+- **TODO.md updated** with full implementation order + architecture notes refresh
+**Stav:** Phase 9 complete (zones+monsters+visuals+tests+review). Phase 9.5 (boss AI) planned, ready for Bolt.
+---
+
 ### Cycle #65 — Rune (reviewer)
 **Čas:** 2026-03-13 ~01:52
 **Co jsem udělal:**

@@ -404,11 +404,100 @@ Steps 1-2 can run in parallel. Steps 3-4 depend on 1-2. Steps 5-7 are Sage's dom
 
 ---
 
-## Architecture Notes (Updated Cycle #60)
-**Current LOC:** ~18,500 source JS (34 files). Largest: game.js 1074, controller.js 1061, player.test.js 1233, socket-handlers.js 878.
-**Tests:** 680/680 PASS, 17 suites.
+## Architecture Notes (Updated Cycle #66)
+**Current LOC:** ~19,900 source JS (43 files). Largest: player.test.js 1283, controller.js 1167, game.js 1108, world.test.js 1012, hud.js 887, socket-handlers.js 882, monsters.test.js 853, monsters.js 823, world.js 806, sprites.js 780.
+**Tests:** 745/745 PASS, 17 suites.
 **Splits done (Cycle #52):** hud.js 1284→827 (victory.js 339, dialogue-hud.js 153), controller.js 1084→1058 (reconnect.js 119). All clean, no dead code.
 **Persistence:** complete (Cycles #36-45). **Affixes:** complete (Cycles #46-50). **Damage types:** complete (Cycles #52-55). **Item sets:** complete (Cycles #56-60). 0 open bugs.
+
+---
+
+## 🔥 NEXT PRIORITIES (Phase 9.5: Boss AI + Bug Fixes)
+
+**Goal:** Make boss_infernal and boss_void actually fight differently than boss_knight. Fix remaining Phase 9 bugs. This is Bolt's TOP PRIORITY.
+
+### 9.5A Boss Infernal — Phase AI [for Bolt]
+**File:** `server/game/monsters.js` update() ATTACK state
+
+Currently boss phases only affect `charge` and `aoe_frenzy` modes. Add handling for Infernal Lord's 3 phases:
+
+**Phase 1 — `ranged_barrage` (100-60% HP):**
+- Boss stays at range (preferredRange ~180), fires 3 rapid projectiles in 120° spread
+- Each projectile: `{fromX, fromY, toX, toY, speed: 320}` with angle offset -20°, 0°, +20°
+- Use existing projectile system (same as archer/wraith)
+
+**Phase 2 — `summoner` (60-30% HP):**
+- Every `summonCooldownMax` (15s): emit `boss_summon` event with `{type: 'fire_imp', count: 2, positions: [{x,y}, {x,y}]}`
+- Socket handler must catch `boss_summon` and call `world.addMonster()` (or similar) to actually spawn minions
+- Continue ranged attacks normally
+
+**Phase 3 — `enrage` (<30% HP):**
+- `attackSpeed` halved (1200 → 600ms, 2x attack rate)
+- `damage` increased by 1.5x
+- Emit `boss_enrage` event once on phase transition
+
+### 9.5B Boss Void Reaper — Phase AI [for Bolt]
+**File:** `server/game/monsters.js` update() ATTACK state
+
+**Phase 1 — `teleport_slash` (100-70% HP):**
+- Every `teleportCooldownMax` (4s): teleport behind closest player (player.x + 40*facing_offset)
+- Emit `teleport` event, then immediate melee attack with 1.5x damage
+- Track `bossTeleportCooldown`, decrement in ATTACK state
+
+**Phase 2 — `shadow_clones` (70-40% HP):**
+- On phase transition: emit `boss_shadow_clones` event with `{count: 2}`
+- Clones are regular monsters with 30% of boss HP, 50% damage, type `void_clone`
+- Clones die when boss takes a hit (emit `clone_death` after boss `takeDamage`)
+- Re-spawn clones every 20s
+
+**Phase 3 — `void_storm` (<40% HP):**
+- Every `voidPulseCooldownMax` (5s): emit `void_pulse` event with `{x, y, radius: 150, damage: 40}`
+- Socket handler applies AoE damage to all players in radius
+- Also summon 1 wraith every 20s (similar to summoner phase)
+
+### 9.5C Bug Fixes [for Bolt]
+- [ ] Wraith teleport: clamp to room boundaries (`world.isWalkable()` check, retry up to 5x)
+- [ ] chargeCooldown: also decrement in ATTACK state when `behavior === 'melee_charge'`
+
+### 9.5D Sprite Fixes [for Sage]
+- [ ] Archer custom sprite in createMonsterSprite() — bow + quiver visual
+- [ ] Slime custom sprite — blob shape with eyes
+- [ ] Stealth→charge: restore nameText/affixText alpha when stealthed→charging
+
+### Architecture Notes:
+- **monsters.js is 823 lines** — boss phase AI will push it past 900. Consider extracting `class BossAI` or a `behaviors/` directory in a future cycle if it crosses 1000 LOC.
+- **Boss summon events** require socket-handlers.js to handle `boss_summon` → `world.monsters.push()`. This is a new event flow.
+- **Void pulse AoE** requires socket-handlers or index.js game loop to check player distances and apply damage. Similar to existing shrine/trap patterns if any.
+
+### Implementation Order for Bolt:
+1. **9.5C** Bug fixes first (quick wins, 15 min)
+2. **9.5A** Boss Infernal AI (ranged_barrage → summoner → enrage)
+3. **9.5B** Boss Void Reaper AI (teleport_slash → shadow_clones → void_storm)
+4. Wire boss events in socket-handlers.js / game loop
+
+---
+
+## Phase 10: Crafting & Enchanting (FUTURE)
+
+**Goal:** Give players gold sink + item customization. Simple system: salvage items → materials, use materials to upgrade/enchant.
+
+### 10.1 Salvage System
+- Salvage any item → get materials based on rarity (common: 1 shard, rare: 3, legendary: 5, set: 3 + 1 essence)
+- NPC: add "Salvage" option to Merchant shop
+- Materials stored in player inventory as stackable items
+
+### 10.2 Enchanting
+- Spend materials to re-roll one stat on an item
+- Cost: 3 shards per re-roll, increases each re-roll
+- Keep original or take new roll (choice)
+
+### 10.3 Upgrade
+- Spend materials to +1/+2/+3 an item (increases primary stat by 10%/20%/30%)
+- Max +3, cost escalates
+
+*Details TBD by Aria when Phase 9.5 is complete.*
+
+---
 
 ### Phase 7 Review Notes (Cycle #55 — Rune)
 - `damage-types.js`: `calcResistance()` exported+tested but never imported by game code. `player.js` caps resistances inline in `recalcEquipBonuses()`. Harmless but could be consolidated.
