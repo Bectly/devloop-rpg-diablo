@@ -1106,28 +1106,123 @@ Engine functions:
 - `getRiftRewards(tier, timeRemaining)` — bonus loot for fast clear
 - `RIFT_TIERS` — tier definitions with scaling
 
-### 14.1 Rift Floor Generation [for Bolt]
+### 14.1 Rift Floor Generation [TOP PRIORITY for Bolt]
 **File:** `server/game/world.js` (MODIFY)
 
 New method `generateRiftFloor(riftConfig)`:
-- Uses existing `generateBSPDungeon()` but with rift overrides:
-  - Room count: 6 + tier (more rooms at higher tiers)
-  - Monster waves: base × riftConfig.monsterMultiplier
-  - Skip shop NPC (no shopping in rifts)
-  - Last room = Rift Guardian boss room (always)
-  - Apply rift modifiers to all spawned monsters
-- Timer state tracked in world: `this.riftTimer`, `this.riftActive`
+- Reuses `generateBSPDungeon()` with rift overrides
+- Room count: `6 + rift.tier` (7-16 rooms)
+- Monster waves scaled by `rift.monsterHpMult` and `rift.monsterDmgMult`
+- **Skip** `spawnShopNpc()` and `placeStoryNpcs()` — no shopping in rifts
+- Last room type forced to `boss` → spawn Rift Guardian from `createRiftGuardian()`
+- Apply rift modifier effects to spawned monsters:
+  - `deadly`: monster.damage *= modifier.value
+  - `fortified`: monster.maxHp *= modifier.value, monster.hp = monster.maxHp
+  - `hasty`: monster.speed *= modifier.value
+  - `chaotic`: double spawn count per room
+  - `armored`: monster.armor += floor(monster.maxHp * modifier.value)
+  - `empowered`: call `rollAffixes()` with eliteBonus +1
+- New state fields: `this.riftActive = false`, `this.riftConfig = null`, `this.riftTimer = 0`, `this.riftStartTime = 0`
+- Method `startRiftTimer()` and `updateRiftTimer(dt)` — counts down, returns false when expired
 
-### 14.2 Rift Socket Events [for Bolt]
-**File:** `server/socket-handlers.js` (MODIFY), `server/index.js` (MODIFY)
+### 14.2 Rift Socket Events [for Bolt, depends on 14.1]
+**Files:** `server/socket-handlers.js` (MODIFY), `server/index.js` (MODIFY)
 
-Events:
-- `rift:open` (phone → server): `{ tier }` — requires keystone, creates rift
-- `rift:enter` (phone → server): both players must confirm
-- `rift:timer` (server → both): `{ remaining }` — every second during rift
-- `rift:complete` (server → both): `{ rewards, time, tier }` — on guardian kill
-- `rift:failed` (server → both): `{ tier }` — timer ran out
-- `rift:guardian` (server → both): `{ guardian }` — boss spawn event
+**socket-handlers.js — new handlers:**
+```
+handleRiftOpen(socket, data, ctx)    — { tier } → validate keystone, create rift config, emit rift:status to both
+handleRiftEnter(socket, data, ctx)   — both players confirm → spendKeystone, generateRiftFloor, emit floor:change + rift:status
+handleRiftCancel(socket, data, ctx)  — cancel before enter
+```
+
+**index.js — game loop integration:**
+- In the 50ms tick loop, if `world.riftActive`:
+  - Call `world.updateRiftTimer(dt)`
+  - Every 1000ms: emit `rift:timer` to both namespaces with `{ remaining }`
+  - If timer expired: emit `rift:failed`, reset rift state, generate normal floor
+- On boss kill during rift (`nearest.isRiftGuardian`):
+  - Calculate rewards via `getRiftRewards()`
+  - Emit `rift:complete` with rewards
+  - Award keystones, XP, gold
+  - Record in rift leaderboard (14.7)
+  - Reset rift state, generate next normal floor
+
+**index.js — socket bindings:**
+```
+socket.on('rift:open', (data) => handlers.handleRiftOpen(socket, data, ctx));
+socket.on('rift:enter', () => handlers.handleRiftEnter(socket, null, ctx));
+socket.on('rift:cancel', () => handlers.handleRiftCancel(socket, null, ctx));
+```
+
+**Rift modifier runtime effects (in world or index.js tick):**
+- `burning`: every 5s, all players take 5% maxHp fire damage (if rift active)
+- `cursed`: multiply heal amounts by 0.5 (check potion use + shrine healing)
+- `vampiric`: on monster hit, heal monster 10% of damage dealt
+
+### 14.4 Paragon System [for Bolt, can be parallel with 14.1]
+**File:** `server/game/player.js` (MODIFY)
+
+Add constants:
+```js
+const MAX_LEVEL = 30;
+```
+
+Modify `gainXp()`:
+```js
+gainXp(amount) {
+  if (!this.alive) return null;
+  if (this.level >= MAX_LEVEL) {
+    // Paragon XP
+    this.paragonXp = (this.paragonXp || 0) + amount;
+    const paragonCost = (this.paragonLevel || 0) * 1000 + 1000;
+    if (this.paragonXp >= paragonCost) {
+      this.paragonXp -= paragonCost;
+      this.paragonLevel = (this.paragonLevel || 0) + 1;
+      this.freeStatPoints += 1;
+      return { level: this.level, paragonLevel: this.paragonLevel, isParagon: true };
+    }
+    return null;
+  }
+  this.xp += amount;
+  if (this.xp >= this.xpToNext) return this.levelUp();
+  return null;
+}
+```
+
+Add fields to constructor: `this.paragonLevel = 0; this.paragonXp = 0;`
+Add to `serializeForPhone()`: `paragonLevel, paragonXp, paragonXpToNext`
+Add to `restoreFrom()`: load paragonLevel and paragonXp
+Add to `database.js`: `paragon_level INTEGER DEFAULT 0, paragon_xp INTEGER DEFAULT 0`
+
+### 14.7 Leaderboard — Rift Tier Tracking [for Bolt, after 14.2]
+**File:** `server/game/database.js` (MODIFY)
+
+New table in constructor:
+```sql
+CREATE TABLE IF NOT EXISTS rift_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player1 TEXT NOT NULL,
+  player2 TEXT,
+  tier INTEGER NOT NULL,
+  time_seconds REAL NOT NULL,
+  modifiers TEXT NOT NULL DEFAULT '[]',
+  difficulty TEXT NOT NULL DEFAULT 'normal',
+  date TEXT NOT NULL DEFAULT (datetime('now'))
+)
+```
+
+Methods:
+- `recordRiftClear(tier, players, timeSeconds, modifiers, difficulty)` — INSERT
+- `getRiftLeaderboard(tier)` — SELECT top 20 fastest by tier, ORDER BY time_seconds ASC
+- `getPersonalRiftRecords(playerName)` — player's best times per tier
+
+### Implementation Order for Bolt (Cycle #112):
+1. **14.4 Paragon** — quick, self-contained, no deps (parallel-safe)
+2. **14.1 Rift Floor Gen** — core rift gameplay
+3. **14.7 Rift Leaderboard** — DB table + methods (quick)
+4. **14.2 Socket Events** — wires everything together (depends on 14.1 + 14.7)
+
+**Bolt should run 14.4 + 14.1 in parallel, then 14.7 + 14.2.**
 
 ### 14.3 Keystone System [DONE — Bolt, Cycle #107]
 **File:** `server/game/player.js` (MODIFY), `server/game/database.js` (MODIFY)
